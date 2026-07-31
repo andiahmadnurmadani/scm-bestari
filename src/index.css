@@ -1,0 +1,49 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 72px; /* Sticky header height (64px) + 8px buffer */
+}
+
+@layer base {
+  * {
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  body {
+    background-color: #F7F7F5;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #221A12;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+.organic-shadow {
+  box-shadow: 0 10px 30px -5px rgba(67, 58, 48, 0.06);
+}
+
+.organic-card {
+  background-color: #FFFFFF;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px -5px rgba(67, 58, 48, 0.06);
+  border: 1px solid rgba(196, 200, 187, 0.25);
+}
+
+.active-pill {
+  background-color: #C3E28D;
+  color: #172C05;
+  font-weight: 600;
+}
+
+/* Custom scrollbar for admin layout */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #C4C8BB;
+  border-radius: 10px;
+}

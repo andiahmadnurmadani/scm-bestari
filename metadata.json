@@ -1,0 +1,6 @@
+{
+  "name": "Sorgum SCM",
+  "description": "Sistem Manajemen Rantai Pasok Sorgum - Transparansi Rantai Pasok Sorgum dari Akar hingga Meja",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
