@@ -11,11 +11,16 @@ import {
   ArrowRight,
   Eye,
   HeartHandshake,
+  TrendingUp,
+  Users,
+  PackageCheck,
+  Layers,
 } from 'lucide-react';
 import { PublicNavbar } from '../../components/layout/PublicNavbar';
 import { PublicFooter } from '../../components/layout/PublicFooter';
 import { FeatureDemoModal } from '../../components/landing/FeatureDemoModal';
 import { FaqAccordion } from '../../components/landing/FaqAccordion';
+import { useCms } from '../../context/CmsContext';
 import sorghumFieldImg from '../../assets/sorghum_field.png';
 import tepungSorgumImg from '../../assets/tepung_sorgum.png';
 import berasSorgumImg from '../../assets/beras_sorgum.png';
@@ -23,6 +28,7 @@ import gulaSorgumImg from '../../assets/gula_sorgum.png';
 import rengginangSorgumImg from '../../assets/rengginang_sorgum.png';
 
 export const LandingPage: React.FC = () => {
+  const { cms } = useCms();
   // Demo Modal State
   const [demoModalOpen, setDemoModalOpen] = useState(false);
   const [activeDemoCategory, setActiveDemoCategory] = useState<'panen' | 'produksi' | 'logistik'>('panen');
@@ -100,128 +106,184 @@ export const LandingPage: React.FC = () => {
       <PublicNavbar />
 
       <main className="flex-1">
-        {/* HERO SECTION - Redesigned to occupy full viewport height (1 halaman penuh) */}
+        {/* HERO SECTION - Full viewport height with enhanced UI/UX */}
         <section id="beranda" className="min-h-[calc(100vh-72px)] flex flex-col justify-center py-2 sm:py-4 overflow-hidden">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col justify-center gap-4 flex-1">
-            
-            {/* Top Container Hero Banner Card */}
-            <div className="bg-[#2C4219] text-white rounded-2xl p-4 sm:p-6 lg:p-6 relative overflow-hidden shadow-xl border border-[#C3E28D]/20 flex-1 flex flex-col justify-center min-h-[300px]">
-              {/* Subtle background atmospheric glow */}
-              <div className="absolute top-0 right-0 -mt-24 -mr-24 w-80 h-80 bg-[#C3E28D]/15 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute bottom-0 left-0 -mb-24 -ml-24 w-80 h-80 bg-[#A8B774]/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col justify-center gap-5 flex-1">
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center relative z-10">
-                
-                {/* Left Text Content */}
-                <div className="lg:col-span-7 space-y-3.5 text-left">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#C3E28D]/20 border border-[#C3E28D]/40 text-[#C3E28D] text-[10px] font-bold">
-                    <Sprout className="w-3 h-3 text-[#C3E28D]" />
-                    <span>Sistem Informasi Rantai Pasok Sorgum Indonesia</span>
+            {/* Hero Banner Card — Redesigned */}
+            <div className="bg-gradient-to-br from-[#2C4219] via-[#243816] to-[#1a2c0f] text-white rounded-3xl px-6 sm:px-8 lg:px-10 py-8 sm:py-10 relative overflow-hidden shadow-2xl border border-[#C3E28D]/15 flex-1 flex flex-col justify-center min-h-[340px]">
+
+              {/* Animated glow orbs */}
+              <div className="absolute -top-16 -right-16 w-72 h-72 bg-[#C3E28D]/20 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '4s' }} />
+              <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-[#6a9a2e]/20 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+              <div className="absolute top-1/2 left-1/3 w-40 h-40 bg-[#A8B774]/10 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center relative z-10">
+
+                {/* Left: Text Content */}
+                <div className="lg:col-span-7 space-y-5 text-left">
+
+                  {/* Badge */}
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#C3E28D]/15 border border-[#C3E28D]/35 text-[#C3E28D] text-[10px] font-bold tracking-wide backdrop-blur-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#C3E28D] animate-pulse" />
+                    <Sprout className="w-3.5 h-3.5" />
+                  <span>{cms.heroBadge}</span>
                   </div>
 
-                  <h1 className="text-xl sm:text-2xl lg:text-2xl font-semibold text-white tracking-tight leading-tight">
-                    Transparansi Rantai Pasok Sorgum dari Akar hingga Meja
+                  {/* Headline — larger & bolder */}
+                  <h1 className="text-2xl sm:text-3xl lg:text-3xl font-bold text-white tracking-tight leading-snug">
+                    {cms.heroHeadlinePre}{' '}
+                    <span className="text-[#C3E28D]">{cms.heroHeadlineHighlight}</span>{' '}
+                    {cms.heroHeadlinePost}
                   </h1>
 
-                  <p className="text-[11px] sm:text-xs text-[#efe0d2] leading-relaxed max-w-xl font-normal">
-                    Platform digital terpadu untuk monitoring panen, digitalisasi sertifikat halal & P-IRT, manajemen peralatan pertanian, hingga tata kelola logistik keuangan KWT & Kelompok Tani Sorgum.
+                  {/* Subtext */}
+                  <p className="text-sm text-[#d4e8b8]/80 leading-relaxed max-w-lg font-normal">
+                    {cms.heroSubtitle}
                   </p>
 
-                  {/* CTA Buttons */}
-                  <div className="flex flex-wrap items-center gap-2.5 pt-0.5">
+                  {/* CTA Buttons — more prominent */}
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
                     <Link
                       to="/dashboard"
-                      className="px-3 py-1.5 rounded-lg bg-[#C3E28D] text-[#172C05] hover:bg-white font-semibold text-xs flex items-center gap-1.5 shadow-xs hover:shadow-sm transition-all cursor-pointer"
+                      className="group px-5 py-2.5 rounded-xl bg-[#C3E28D] text-[#172C05] hover:bg-white font-bold text-sm flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
                     >
-                      <span>Jelajahi Dashboard Admin</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-[#172C05]" />
+                      <span>{cms.heroCta1}</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                     </Link>
                     <Link
                       to="/register"
-                      className="px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/30 text-white hover:bg-white/20 font-semibold text-xs transition-all cursor-pointer"
+                      className="px-5 py-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/25 text-white hover:bg-white/20 hover:border-white/40 font-semibold text-sm transition-all duration-200 cursor-pointer"
                     >
-                      Daftar Mitra KWT Baru
+                      {cms.heroCta2}
                     </Link>
+                  </div>
+
+                  {/* Trust indicators */}
+                  <div className="flex flex-wrap items-center gap-3 pt-0.5">
+                    <span className="flex items-center gap-1.5 text-[10px] text-[#A8B774] font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#A8B774]" />
+                      {cms.heroTrust1}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[10px] text-[#A8B774] font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#A8B774]" />
+                      {cms.heroTrust2}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[10px] text-[#A8B774] font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#A8B774]" />
+                      {cms.heroTrust3}
+                    </span>
                   </div>
                 </div>
 
-                {/* Right Column: Interactive Image Slider */}
+                {/* Right: Image Slider — larger & with better framing */}
                 <div className="lg:col-span-5 relative">
-                  <div className="relative rounded-xl overflow-hidden shadow-lg border border-white/20 group h-[180px] sm:h-[210px] w-full">
+                  <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/15 group h-[220px] sm:h-[260px] w-full ring-1 ring-[#C3E28D]/20">
+
+                    {/* Images */}
                     <img
                       src={heroImages[heroImageIndex].src}
                       alt={heroImages[heroImageIndex].title}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover transition-all duration-700 ease-in-out transform hover:scale-102"
+                      className="w-full h-full object-cover transition-all duration-700 ease-in-out group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                    
-                    {/* Floating Title Indicator */}
-                    <div className="absolute bottom-2.5 left-2.5 bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded text-[9px] text-[#C3E28D] font-bold border border-white/10">
-                      {heroImages[heroImageIndex].title}
+                    {/* Overlay gradients */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+
+                    {/* Image count badge (top right) */}
+                    <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded-full text-[9px] text-white/80 font-semibold border border-white/10">
+                      {heroImageIndex + 1} / {heroImages.length}
                     </div>
 
-                    {/* Navigation Arrows (Visible on Hover) */}
+                    {/* Floating Title */}
+                    <div className="absolute bottom-3 left-3 right-12 flex items-center gap-2">
+                      <div className="flex-1">
+                        <p className="text-[9px] text-[#A8B774] font-semibold uppercase tracking-wider">Galeri Produk</p>
+                        <p className="text-xs text-white font-bold leading-tight mt-0.5">{heroImages[heroImageIndex].title}</p>
+                      </div>
+                    </div>
+
+                    {/* Navigation Arrows */}
                     <button
                       onClick={() => setHeroImageIndex((prev) => (prev === 0 ? heroImages.length - 1 : prev - 1))}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 cursor-pointer shadow-sm border border-white/10"
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/70 transition-all opacity-0 group-hover:opacity-100 cursor-pointer shadow-md border border-white/15"
                       title="Sebelumnya"
                     >
-                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setHeroImageIndex((prev) => (prev + 1) % heroImages.length)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 cursor-pointer shadow-sm border border-white/10"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/70 transition-all opacity-0 group-hover:opacity-100 cursor-pointer shadow-md border border-white/15"
                       title="Berikutnya"
                     >
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <ChevronRight className="w-4 h-4" />
                     </button>
 
-                    {/* Bottom Dots Indicator */}
-                    <div className="absolute bottom-2.5 right-2.5 flex gap-1">
+                    {/* Progress Bar Dots */}
+                    <div className="absolute bottom-3 right-3 flex flex-col gap-1">
                       {heroImages.map((_, idx) => (
                         <button
                           key={idx}
                           onClick={() => setHeroImageIndex(idx)}
-                          className={`w-1 h-1 rounded-full transition-all duration-300 ${
-                            idx === heroImageIndex ? 'w-2 bg-[#C3E28D]' : 'bg-white/40'
+                          className={`h-1 rounded-full transition-all duration-300 cursor-pointer ${
+                            idx === heroImageIndex ? 'w-5 bg-[#C3E28D]' : 'w-2 bg-white/35 hover:bg-white/60'
                           }`}
                         />
                       ))}
                     </div>
-
                   </div>
                 </div>
 
               </div>
             </div>
 
-            {/* Integrated Metric Stats Bar Card */}
-            <div className="mt-4 bg-white rounded-2xl p-3.5 sm:p-4 border border-[#c4c8bb]/40 shadow-sm">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center divide-y md:divide-y-0 md:divide-x divide-[#c4c8bb]/20">
-                
-                <div className="pt-1 md:pt-0 md:px-3">
-                  <p className="text-base sm:text-lg font-bold text-[#172C05]">50.000+ Kg</p>
-                  <p className="text-[11px] font-semibold text-[#74796d] mt-0.5">Total Hasil Panen Terdata</p>
-                  <p className="text-[9px] text-[#6B7280] font-medium mt-0.5">Monitoring Sektor Lahan SCM</p>
+            {/* Stats Bar — redesigned with icons & colors */}
+            <div className="bg-white rounded-2xl px-4 sm:px-6 py-4 border border-[#c4c8bb]/30 shadow-sm">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-2 md:gap-0 text-center md:divide-x divide-[#c4c8bb]/25">
+
+                <div className="flex flex-col items-center md:px-4 gap-1.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <p className="text-lg font-bold text-[#172C05] leading-none">{cms.stats[0].value}</p>
+                  <p className="text-[10px] font-bold text-[#2C4219]">{cms.stats[0].label}</p>
+                  <span className="flex items-center gap-0.5 text-[9px] text-emerald-600 font-semibold">
+                    <TrendingUp className="w-3 h-3" /> {cms.stats[0].sublabel}
+                  </span>
                 </div>
 
-                <div className="pt-3 md:pt-0 md:px-3">
-                  <p className="text-base sm:text-lg font-bold text-[#2C4219]">Rp 1,2 Miliar</p>
-                  <p className="text-[11px] font-semibold text-[#74796d] mt-0.5">Nilai Transaksi Rantai Pasok</p>
-                  <p className="text-[9px] text-[#6B7280] font-medium mt-0.5">Transparan & Akuntabel</p>
+                <div className="flex flex-col items-center md:px-4 gap-1.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                    <PackageCheck className="w-4 h-4" />
+                  </div>
+                  <p className="text-lg font-bold text-[#2C4219] leading-none">{cms.stats[1].value}</p>
+                  <p className="text-[10px] font-bold text-[#2C4219]">{cms.stats[1].label}</p>
+                  <span className="flex items-center gap-0.5 text-[9px] text-amber-600 font-semibold">
+                    <TrendingUp className="w-3 h-3" /> {cms.stats[1].sublabel}
+                  </span>
                 </div>
 
-                <div className="pt-3 md:pt-0 md:px-3">
-                  <p className="text-base sm:text-lg font-bold text-[#172C05]">30%</p>
-                  <p className="text-[11px] font-semibold text-[#74796d] mt-0.5">Efisiensi Distribusi Logistik</p>
-                  <p className="text-[9px] text-[#6B7280] font-medium mt-0.5">Penghematan Biaya Operasional</p>
+                <div className="flex flex-col items-center md:px-4 gap-1.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <p className="text-lg font-bold text-[#172C05] leading-none">{cms.stats[2].value}</p>
+                  <p className="text-[10px] font-bold text-[#2C4219]">{cms.stats[2].label}</p>
+                  <span className="flex items-center gap-0.5 text-[9px] text-blue-600 font-semibold">
+                    <TrendingUp className="w-3 h-3" /> {cms.stats[2].sublabel}
+                  </span>
                 </div>
 
-                <div className="pt-3 md:pt-0 md:px-3">
-                  <p className="text-base sm:text-lg font-bold text-[#2C4219]">15+ KWT</p>
-                  <p className="text-[11px] font-semibold text-[#74796d] mt-0.5">Mitra Kelompok Tani</p>
-                  <p className="text-[9px] text-[#6B7280] font-medium mt-0.5">Pemberdayaan Ekonomi Desa</p>
+                <div className="flex flex-col items-center md:px-4 gap-1.5">
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <p className="text-lg font-bold text-[#2C4219] leading-none">{cms.stats[3].value}</p>
+                  <p className="text-[10px] font-bold text-[#2C4219]">{cms.stats[3].label}</p>
+                  <span className="flex items-center gap-0.5 text-[9px] text-purple-600 font-semibold">
+                    <TrendingUp className="w-3 h-3" /> {cms.stats[3].sublabel}
+                  </span>
                 </div>
 
               </div>
@@ -235,13 +297,13 @@ export const LandingPage: React.FC = () => {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col justify-center flex-1">
             <div className="text-center max-w-2xl mx-auto mb-6">
               <span className="px-2.5 py-0.5 rounded-full bg-[#C3E28D]/40 text-[#172C05] text-[10px] font-bold uppercase tracking-wider">
-                Solusi End-to-End Pengelolaan Sorgum
+                {cms.featuresBadge}
               </span>
               <h2 className="text-lg sm:text-xl font-semibold text-[#172C05] mt-2">
-                Tiga Pilar Utama Tata Kelola Rantai Pasok Sorgum
+                {cms.featuresTitle}
               </h2>
               <p className="text-[11px] text-[#6B7280] font-medium mt-1">
-                Setiap modul terintegrasi untuk membantu mempercepat digitalisasi kelompok wanita tani.
+                {cms.featuresSubtitle}
               </p>
             </div>
 
@@ -252,9 +314,9 @@ export const LandingPage: React.FC = () => {
                   <div className="w-8 h-8 rounded-lg bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center mb-3 group-hover:bg-[#2C4219] group-hover:text-[#C3E28D] transition-colors">
                     <Sprout className="w-4 h-4" />
                   </div>
-                  <h3 className="text-sm font-semibold text-[#172C05] mb-1.5">Monitoring Panen & Lahan</h3>
+                  <h3 className="text-sm font-semibold text-[#172C05] mb-1.5">{cms.featureCards[0].title}</h3>
                   <p className="text-xs text-[#6B7280] leading-relaxed font-normal">
-                    Pemetaan luas hektar tanah, irigasi teknis, jadwal tanam, hingga pencatatan tonase hasil panen berdasarkan varietas Bioguma, Numbu, & Suri 4.
+                    {cms.featureCards[0].desc}
                   </p>
                 </div>
                 <div className="pt-3 mt-3 border-t border-[#c4c8bb]/20 flex items-center justify-between">
@@ -280,9 +342,9 @@ export const LandingPage: React.FC = () => {
                   <div className="w-8 h-8 rounded-lg bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center mb-3 group-hover:bg-[#2C4219] group-hover:text-[#C3E28D] transition-colors">
                     <Award className="w-4 h-4" />
                   </div>
-                  <h3 className="text-sm font-semibold text-[#172C05] mb-1.5">Produksi & Sertifikasi Legal</h3>
+                  <h3 className="text-sm font-semibold text-[#172C05] mb-1.5">{cms.featureCards[1].title}</h3>
                   <p className="text-xs text-[#6B7280] leading-relaxed font-normal">
-                    Kelola batch olahan Tepung Sorgum, Rengginang, dan Gula Cair Nira. Pantau status Sertifikat Halal BPJPH, Izin P-IRT, dan Uji Lab Gluten-Free.
+                    {cms.featureCards[1].desc}
                   </p>
                 </div>
                 <div className="pt-3 mt-3 border-t border-[#c4c8bb]/20 flex items-center justify-between">
@@ -308,9 +370,9 @@ export const LandingPage: React.FC = () => {
                   <div className="w-8 h-8 rounded-lg bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center mb-3 group-hover:bg-[#2C4219] group-hover:text-[#C3E28D] transition-colors">
                     <Truck className="w-4 h-4" />
                   </div>
-                  <h3 className="text-sm font-semibold text-[#172C05] mb-1.5">Logistik & Transaksi Keuangan</h3>
+                  <h3 className="text-sm font-semibold text-[#172C05] mb-1.5">{cms.featureCards[2].title}</h3>
                   <p className="text-xs text-[#6B7280] leading-relaxed font-normal">
-                    Pencatatan pengeluaran pupuk, sewa truk distribusi, persediaan kemasan Pouch & Box, hingga verifikasi nota digital secara akurat.
+                    {cms.featureCards[2].desc}
                   </p>
                 </div>
                 <div className="pt-3 mt-3 border-t border-[#c4c8bb]/20 flex items-center justify-between">
@@ -488,26 +550,26 @@ export const LandingPage: React.FC = () => {
               <div className="relative z-10 space-y-3">
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-[#C3E28D] text-[10px] font-bold border border-white/20">
                   <HeartHandshake className="w-3.5 h-3.5 text-[#C3E28D]" />
-                  <span>Pendampingan Digital KWT Gratis</span>
+                  <span>{cms.ctaBadge}</span>
                 </div>
                 <h2 className="text-base sm:text-lg font-semibold leading-tight text-white">
-                  Siap Digitalisasi Rantai Pasok Sorgum Anda?
+                  {cms.ctaTitle}
                 </h2>
                 <p className="text-xs text-[#efe0d2] max-w-xl mx-auto font-medium leading-relaxed">
-                  Bergabunglah bersama 15+ Kelompok Wanita Tani yang telah merasakan kemudahan mencatat panen dan memantau legalitas sertifikat secara transparan.
+                  {cms.ctaSubtitle}
                 </p>
                 <div className="flex flex-wrap justify-center gap-2.5 pt-1">
                   <Link
                     to="/register"
                     className="px-3.5 py-1.5 rounded-lg bg-[#C3E28D] text-[#172C05] font-semibold text-xs hover:bg-[#b5d87b] transition-all cursor-pointer shadow-2xs"
                   >
-                    Daftar Akun KWT Baru
+                    {cms.ctaBtn1}
                   </Link>
                   <Link
                     to="/dashboard"
                     className="px-3.5 py-1.5 rounded-lg bg-white/10 text-white font-semibold text-xs border border-white/30 hover:bg-white/20 flex items-center gap-1.5 transition-all cursor-pointer"
                   >
-                    <span>Masuk ke Dashboard Admin</span>
+                    <span>{cms.ctaBtn2}</span>
                   </Link>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Bell, Settings, Menu, LogOut, Home, User as UserIcon } from 'lucide-react';
+import { Search, Bell, Settings, Menu, LogOut, User as UserIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/endpoints/authApi';
 import { Modal } from '../common/Modal';
@@ -97,12 +97,13 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           </div>
 
           {/* Settings gear */}
-          <button
+          <Link
+            to="/dashboard/cms"
             className="p-1.5 rounded-full hover:bg-[#efe0d2] transition-colors cursor-pointer text-[#44483e] min-w-[34px] min-h-[34px] flex items-center justify-center"
-            title="Pengaturan"
+            title="Manajemen Konten Website"
           >
             <Settings className="w-4 h-4" />
-          </button>
+          </Link>
 
           <div className="h-6 w-px bg-[#c4c8bb]/30 mx-1 hidden sm:block" />
 
@@ -137,12 +138,12 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                 </div>
 
                 <Link
-                  to="/"
+                  to="/dashboard/profil"
                   onClick={() => setShowProfileMenu(false)}
                   className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-semibold text-[#44483e] hover:bg-[#fff1e5] hover:text-[#2C4219] transition-colors"
                 >
-                  <Home className="w-4 h-4" />
-                  <span>Lihat Landing Page</span>
+                  <UserIcon className="w-4 h-4" />
+                  <span>Profil Saya</span>
                 </Link>
 
                 <button

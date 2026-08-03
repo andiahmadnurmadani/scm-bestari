@@ -34,6 +34,9 @@ export const AdminLayout: React.FC = () => {
       sertifikat: 'Kelola Sertifikat',
       kemasan: 'Kelola Data Kemasan',
       logistik: 'Logistik',
+      profil: 'Profil Saya',
+      integrasi: 'Pengaturan & Integrasi API',
+      cms: 'Manajemen Konten Website',
     };
 
     const currentLabel = labels[paths[1]] || paths[1];
