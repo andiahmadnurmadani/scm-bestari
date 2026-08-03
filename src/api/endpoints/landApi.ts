@@ -31,6 +31,8 @@ export const landApi = {
         jenisTanah: data.jenisTanah || 'Regosol Subur',
         pemilikKelompokTani: data.pemilikKelompokTani || 'Kelompok Tani Mitra',
         statusKesiapan: data.statusKesiapan || 'Siap Tanam',
+        latitude: data.latitude,
+        longitude: data.longitude,
       };
       localLandData.unshift(newItem);
       return { success: true, data: newItem };

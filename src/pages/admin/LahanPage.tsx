@@ -5,6 +5,34 @@ import { LandPlot } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
+import { MapContainer, TileLayer, Marker, useMapEvents, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix Leaflet's default icon path issues with Webpack/Vite
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+const LocationPicker: React.FC<{
+  position: [number, number] | null;
+  setPosition: (pos: [number, number]) => void;
+}> = ({ position, setPosition }) => {
+  useMapEvents({
+    click(e) {
+      setPosition([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+
+  return position === null ? null : (
+    <Marker position={position}>
+      <Popup>Lokasi Terpilih</Popup>
+    </Marker>
+  );
+};
 
 export const LahanPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
@@ -376,6 +404,34 @@ export const LahanPage: React.FC = () => {
 
                   <div>
                     <span className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider block mb-1">
+                      TITIK KOORDINAT PETA
+                    </span>
+                    <div className="h-32 rounded-xl overflow-hidden border border-[#c4c8bb]/40 shadow-inner z-0 relative">
+                      {detailPlot.latitude && detailPlot.longitude ? (
+                        <MapContainer 
+                          center={[detailPlot.latitude, detailPlot.longitude]} 
+                          zoom={13} 
+                          style={{ height: '100%', width: '100%', zIndex: 0 }}
+                          dragging={false}
+                          scrollWheelZoom={false}
+                          zoomControl={false}
+                        >
+                          <TileLayer
+                            attribution='&copy; OpenStreetMap'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          />
+                          <Marker position={[detailPlot.latitude, detailPlot.longitude]} />
+                        </MapContainer>
+                      ) : (
+                        <div className="w-full h-full bg-[#F7F7F5] flex items-center justify-center text-xs font-semibold text-[#9CA3AF]">
+                          Koordinat peta belum diatur
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider block mb-1">
                       VARIETAS & TANAH
                     </span>
                     <span className="inline-block px-3 py-0.5 rounded-full bg-[#D1E6A5] text-[#2C4219] text-xs font-bold">
@@ -519,6 +575,53 @@ export const LahanPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, panenLaluTon: Number(e.target.value) })}
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
               />
+            </div>
+          </div>
+
+          {/* Map Location Picker */}
+          <div>
+            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+              Titik Koordinat Lahan (Peta)
+            </label>
+            <p className="text-[10px] text-[#6B7280] mb-2 font-medium">Klik pada peta untuk meletakkan pin koordinat lahan.</p>
+            <div className="h-48 rounded-xl overflow-hidden border border-[#c4c8bb]/40 shadow-inner z-0 relative">
+              <MapContainer 
+                center={[formData.latitude || -6.914744, formData.longitude || 107.609810]} 
+                zoom={10} 
+                style={{ height: '100%', width: '100%', zIndex: 0 }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <LocationPicker 
+                  position={formData.latitude && formData.longitude ? [formData.latitude, formData.longitude] : null} 
+                  setPosition={(pos) => setFormData({ ...formData, latitude: pos[0], longitude: pos[1] })} 
+                />
+              </MapContainer>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              <div>
+                <label className="block text-[10px] font-bold text-[#6B7280] uppercase mb-1">Latitude</label>
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={formData.latitude || ''} 
+                  className="w-full p-2.5 bg-[#F7F7F5] border border-[#c4c8bb]/20 rounded-lg text-xs font-semibold text-[#6B7280]" 
+                  placeholder="Belum dipilih" 
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-[#6B7280] uppercase mb-1">Longitude</label>
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={formData.longitude || ''} 
+                  className="w-full p-2.5 bg-[#F7F7F5] border border-[#c4c8bb]/20 rounded-lg text-xs font-semibold text-[#6B7280]" 
+                  placeholder="Belum dipilih" 
+                />
+              </div>
             </div>
           </div>
 

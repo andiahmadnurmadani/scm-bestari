@@ -75,6 +75,8 @@ export interface LandPlot {
   panenLaluTon?: number;
   fotoUrl?: string;
   statusBadge?: 'AKTIF' | 'PERSIAPAN' | 'PEMBESARAN' | string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface ProductionBatch {
