@@ -12,6 +12,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Printer,
+  FileSpreadsheet,
+  Trash2,
+  Edit3,
 } from 'lucide-react';
 import { logisticsApi } from '../../api/endpoints/logisticsApi';
 import { FinancialExpense } from '../../types';
@@ -33,30 +36,64 @@ export const LogistikPage: React.FC = () => {
   const [activeReceipt, setActiveReceipt] = useState<FinancialExpense | null>(null);
 
   const [addExpenseModalOpen, setAddExpenseModalOpen] = useState(false);
-  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FinancialExpense | null>(null);
+
+  // Export dropdown state
+  const [exportOpen, setExportOpen] = useState(false);
+
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [formData, setFormData] = useState<Partial<FinancialExpense>>({
     kodeTransaksi: '',
-    tanggal: '14 Mei 2026',
+    tanggal: new Date().toLocaleDateString('id-ID'),
     kategori: 'Bahan Baku',
     keteranganVendor: '',
-    totalBiayaRp: 500000,
+    totalBiayaRp: 0,
     statusPembayaran: 'LUNAS',
     metodePembayaran: 'Transfer Bank',
     nomorNotaReceipt: '',
     catatanNota: '',
   });
 
-  const fetchExpenses = async () => {
+  // Rincian barang/jasa dinamis (diisi user, total otomatis)
+  const [detailItems, setDetailItems] = useState<{ nama: string; qty: number; hargaSatuan: number }[]>([
+    { nama: '', qty: 1, hargaSatuan: 0 },
+  ]);
+
+  const fetchExpenses = async (targetPage = page, search = searchTerm, cat = selectedCategoryTab) => {
     setLoading(true);
-    const data = await logisticsApi.getFinancialLogs();
-    setExpenses(data);
-    setLoading(false);
+    try {
+      const res = await logisticsApi.getFinancialLogs({
+        page: targetPage,
+        limit,
+        search: search || undefined,
+        kategori: cat === 'Semua Transaksi' ? undefined : cat,
+      });
+      setExpenses(res.data || []);
+      setTotal(res.pagination?.total || 0);
+      setTotalPages(res.pagination?.totalPages || 1);
+    } catch {
+      setExpenses([]);
+      setTotal(0);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetchExpenses();
-  }, []);
+    setPage(1); // Reset ke halaman 1 saat search/tab berubah
+  }, [searchTerm, selectedCategoryTab]);
+
+  useEffect(() => {
+    fetchExpenses(page, searchTerm, selectedCategoryTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, searchTerm, selectedCategoryTab]);
 
   const handleOpenReceipt = (expense: FinancialExpense) => {
     setActiveReceipt(expense);
@@ -64,8 +101,12 @@ export const LogistikPage: React.FC = () => {
   };
 
   const handleOpenAddExpense = () => {
+    // Preview kode otomatis: MAX(id) + 1 (sama seperti backend)
+    const maxId = expenses.reduce((max, e) => Math.max(max, Number(e.id) || 0), 0);
+    const nextKode = `LOG-TRX-${String(maxId + 1).padStart(3, '0')}`;
+    setEditingExpenseId(null);
     setFormData({
-      kodeTransaksi: `LOG-TRX-00${expenses.length + 1}`,
+      kodeTransaksi: nextKode,
       tanggal: new Date().toLocaleDateString('id-ID', {
         day: '2-digit',
         month: 'short',
@@ -73,43 +114,187 @@ export const LogistikPage: React.FC = () => {
       }),
       kategori: 'Bahan Baku',
       keteranganVendor: '',
-      totalBiayaRp: 1500000,
+      totalBiayaRp: 0,
       statusPembayaran: 'LUNAS',
       metodePembayaran: 'Transfer Bank',
-      nomorNotaReceipt: `INV/KWT/2026/${Math.floor(100 + Math.random() * 900)}`,
-      catatanNota: 'Pencatatan nota pengeluaran operasional terverifikasi.',
+      nomorNotaReceipt: '',
+      catatanNota: '',
     });
+    setDetailItems([{ nama: '', qty: 1, hargaSatuan: 0 }]);
+    setAddExpenseModalOpen(true);
+  };
+
+  const handleOpenEditExpense = (expense: FinancialExpense) => {
+    setEditingExpenseId(expense.id);
+    setFormData({
+      kodeTransaksi: expense.kodeTransaksi,
+      tanggal: expense.tanggal,
+      kategori: expense.kategori,
+      keteranganVendor: expense.keteranganVendor,
+      totalBiayaRp: expense.totalBiayaRp,
+      statusPembayaran: expense.statusPembayaran,
+      metodePembayaran: expense.metodePembayaran,
+      nomorNotaReceipt: expense.nomorNotaReceipt || '',
+      catatanNota: expense.catatanNota || '',
+    });
+    setDetailItems(
+      expense.detailItem && expense.detailItem.length > 0
+        ? expense.detailItem.map((it) => ({ nama: it.nama, qty: it.qty, hargaSatuan: it.hargaSatuan }))
+        : [{ nama: '', qty: 1, hargaSatuan: 0 }]
+    );
     setAddExpenseModalOpen(true);
   };
 
   const handleSaveExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    await logisticsApi.createExpense(formData);
+    // Total otomatis dari rincian barang/jasa
+    const total = detailItems.reduce((s, it) => s + (it.nama.trim() ? (it.qty || 0) * (it.hargaSatuan || 0) : 0), 0);
+    const payload: Partial<FinancialExpense> = {
+      ...formData,
+      totalBiayaRp: total,
+      detailItem: detailItems.filter((it) => it.nama.trim()),
+    };
+    if (editingExpenseId) {
+      await logisticsApi.updateExpense(editingExpenseId, payload);
+    } else {
+      await logisticsApi.createExpense(payload);
+    }
     setAddExpenseModalOpen(false);
+    setEditingExpenseId(null);
     fetchExpenses();
   };
 
-  const handleExportPdf = async () => {
-    await logisticsApi.exportPdf();
-    setPdfModalOpen(true);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await logisticsApi.deleteExpense(deleteTarget.id);
+    setDeleteTarget(null);
+    fetchExpenses();
   };
 
-  // Filter items
-  const filteredExpenses = expenses.filter((item) => {
-    const matchesSearch =
-      item.kodeTransaksi.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.keteranganVendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.kategori.toLowerCase().includes(searchTerm.toLowerCase());
+  const goToPage = (targetPage: number) => {
+    if (targetPage < 1 || targetPage > totalPages) return;
+    setPage(targetPage);
+  };
 
-    let matchesTab = true;
-    if (selectedCategoryTab === 'Transportasi & Bensin') {
-      matchesTab = item.kategori === 'Transportasi';
-    } else if (selectedCategoryTab === 'Pembelian Bahan Baku') {
-      matchesTab = item.kategori === 'Bahan Baku';
-    }
+  // ── Rincian barang/jasa dinamis ───────────────────────────────────────────
+  const updateItem = (idx: number, field: 'nama' | 'qty' | 'hargaSatuan', value: string | number) => {
+    setDetailItems((prev) => prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it)));
+  };
+  const addItem = () => {
+    setDetailItems((prev) => [...prev, { nama: '', qty: 1, hargaSatuan: 0 }]);
+  };
+  const removeItem = (idx: number) => {
+    setDetailItems((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev));
+  };
 
-    return matchesSearch && matchesTab;
-  });
+  // ── Summary dari API ─────────────────────────────────────────────────────
+  const formatRupiah = (n: number) =>
+    `Rp ${(n || 0).toLocaleString('id-ID')}`;
+
+  const totalBulanIni = expenses
+    .filter((e) => e.tanggal && new Date(e.tanggal).getMonth() === new Date().getMonth() && new Date(e.tanggal).getFullYear() === new Date().getFullYear())
+    .reduce((s, e) => s + (e.totalBiayaRp || 0), 0);
+  const totalTransportasi = expenses
+    .filter((e) => e.kategori === 'Transportasi' || e.kategori === 'Transportasi & Bensin')
+    .reduce((s, e) => s + (e.totalBiayaRp || 0), 0);
+  const totalBahanOp = expenses
+    .filter((e) => e.kategori === 'Bahan Baku' || e.kategori === 'Operasional')
+    .reduce((s, e) => s + (e.totalBiayaRp || 0), 0);
+
+  // ── Export ──────────────────────────────────────────────────────────
+  const fetchAllExpenses = async () => {
+    const res = await logisticsApi.getFinancialLogs({ page: 1, limit: 1000, search: searchTerm || undefined, kategori: selectedCategoryTab === 'Semua Transaksi' ? undefined : undefined });
+    return res.data || [];
+  };
+
+  const exportRows = (rows: FinancialExpense[]) =>
+    rows.map((r) => ({
+      'Kode Transaksi': r.kodeTransaksi || '-',
+      'Tanggal': r.tanggal || '-',
+      'Kategori': r.kategori || '-',
+      'Keterangan / Vendor': r.keteranganVendor || '-',
+      'Total Biaya (Rp)': (r.totalBiayaRp || 0).toLocaleString('id-ID'),
+      'Status Pembayaran': r.statusPembayaran || '-',
+      'Metode': r.metodePembayaran || '-',
+      'No. Nota': r.nomorNotaReceipt || '-',
+    }));
+
+  const exportCSV = async () => {
+    try {
+      const rows = await fetchAllExpenses();
+      if (rows.length === 0) { alert('Tidak ada data untuk diekspor.'); return; }
+      const data = exportRows(rows);
+      const headers = Object.keys(data[0]);
+      const esc = (v: string | number) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+      const csv = [headers.join(','), ...data.map((r) => headers.map((h) => esc(r[h])).join(','))].join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `laporan-logistik-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { alert('Gagal mengekspor CSV.'); }
+  };
+
+  const exportExcel = async () => {
+    try {
+      const rows = await fetchAllExpenses();
+      if (rows.length === 0) { alert('Tidak ada data untuk diekspor.'); return; }
+      const data = exportRows(rows);
+      const headers = Object.keys(data[0]);
+      const esc = (v: string | number) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const thead = `<tr>${headers.map((h) => `<th style="background:#2C4219;color:#fff;">${esc(h)}</th>`).join('')}</tr>`;
+      const tbody = data.map((r) => `<tr>${headers.map((h) => `<td>${esc(r[h])}</td>`).join('')}</tr>`).join('');
+      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Logistik</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table border="1">${thead}${tbody}</table></body></html>`;
+      const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `laporan-logistik-${new Date().toISOString().slice(0, 10)}.xls`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { alert('Gagal mengekspor Excel.'); }
+  };
+
+  const exportPdf = async () => {
+    try {
+      const rows = await fetchAllExpenses();
+      const data = rows;
+      const win = window.open('', '_blank');
+      if (!win) return;
+      const esc = (s: string | number) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const rowsHtml = data.map((r) => `
+        <tr>
+          <td>${esc(r.kodeTransaksi)}</td>
+          <td>${esc(r.tanggal)}</td>
+          <td>${esc(r.kategori)}</td>
+          <td>${esc(r.keteranganVendor)}</td>
+          <td>${esc((r.totalBiayaRp || 0).toLocaleString('id-ID'))}</td>
+          <td>${esc(r.statusPembayaran)}</td>
+        </tr>`).join('');
+      win.document.write(`
+        <html><head><title>Laporan Logistik</title>
+        <style>
+          body{font-family:Arial,sans-serif;padding:24px;color:#2C4219}
+          h1{font-size:18px;margin:0 0 4px}
+          p.sub{font-size:11px;color:#666;margin:0 0 16px}
+          table{width:100%;border-collapse:collapse;font-size:11px}
+          th{background:#2C4219;color:#fff;padding:7px 8px;text-align:left}
+          td{border:1px solid #cfcfcf;padding:6px 8px}
+          tr:nth-child(even){background:#f6f6f6}
+          .tot{font-weight:bold}
+        </style></head><body>
+        <h1>Laporan Keuangan Logistik</h1>
+        <p class="meta">Sorgum SCM • Dicetak ${new Date().toLocaleDateString('id-ID')} • Jumlah: ${data.length} transaksi</p>
+        <table><thead><tr><th>Kode</th><th>Tanggal</th><th>Kategori</th><th>Vendor</th><th>Biaya (Rp)</th><th>Status</th></tr></thead>
+        <tbody>${rowsHtml}</tbody></table>
+        <p class="meta" style="margin-top:12px">Total Pengeluaran: <b>${formatRupiah(data.reduce((s, r) => s + (r.totalBiayaRp || 0), 0))}</b></p>
+        <script>window.print();</script>
+        </body></html>`);
+      win.document.close();
+    } catch { alert('Gagal membuat laporan PDF.'); }
+  };
 
   return (
     <div className="space-y-5 pb-8">
@@ -123,13 +308,37 @@ export const LogistikPage: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-          <button
-            onClick={handleExportPdf}
-            className="flex items-center justify-center gap-1.5 border border-[#c4c8bb] text-[#44483e] hover:bg-[#F7F7F5] px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export Laporan PDF</span>
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setExportOpen((v) => !v)}
+              className="flex items-center justify-center gap-1.5 border border-[#c4c8bb] text-[#44483e] hover:bg-[#F7F7F5] px-3 py-1.5 rounded-lg font-semibold text-xs transition-all cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export Laporan</span>
+            </button>
+            {exportOpen && (
+              <div className="absolute right-0 top-10 z-30 w-52 bg-white rounded-xl shadow-xl border border-[#c4c8bb]/30 p-1.5 space-y-0.5">
+                <button
+                  onClick={() => { setExportOpen(false); exportCSV(); }}
+                  className="w-full px-3 py-2 rounded-lg text-left text-xs font-bold text-[#2C4219] hover:bg-[#F7F7F5] transition-colors cursor-pointer flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-green-700" /> Export CSV
+                </button>
+                <button
+                  onClick={() => { setExportOpen(false); exportExcel(); }}
+                  className="w-full px-3 py-2 rounded-lg text-left text-xs font-bold text-[#2C4219] hover:bg-[#F7F7F5] transition-colors cursor-pointer flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" /> Export Excel (.xls)
+                </button>
+                <button
+                  onClick={() => { setExportOpen(false); exportPdf(); }}
+                  className="w-full px-3 py-2 rounded-lg text-left text-xs font-bold text-[#2C4219] hover:bg-[#F7F7F5] transition-colors cursor-pointer flex items-center gap-2"
+                >
+                  <Printer className="w-3.5 h-3.5 text-red-700" /> Export PDF
+                </button>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={handleOpenAddExpense}
@@ -148,7 +357,7 @@ export const LogistikPage: React.FC = () => {
             TOTAL PENGELUARAN BULAN INI
           </p>
           <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            Rp 14.500.000
+            {formatRupiah(totalBulanIni)}
           </h3>
           <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
             Akumulasi operasional logistik
@@ -160,7 +369,7 @@ export const LogistikPage: React.FC = () => {
             BIAYA TRANSPORTASI & DISTRIBUSI
           </p>
           <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            Rp 8.200.000
+            {formatRupiah(totalTransportasi)}
           </h3>
           <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
             Pengiriman bahan & produk jadi
@@ -172,7 +381,7 @@ export const LogistikPage: React.FC = () => {
             BIAYA BAHAN & OPERASIONAL
           </p>
           <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            Rp 6.300.000
+            {formatRupiah(totalBahanOp)}
           </h3>
           <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
             Pemeliharaan & perlengkapan gudang
@@ -189,7 +398,15 @@ export const LogistikPage: React.FC = () => {
           </h3>
 
           <div className="flex items-center gap-3 text-xs font-bold overflow-x-auto max-w-full custom-scrollbar pb-1 md:pb-0">
-            {['Semua Transaksi', 'Transportasi & Bensin', 'Pembelian Bahan Baku'].map((tab) => (
+            {[
+              'Semua Transaksi',
+              'Bahan Baku',
+              'Transportasi',
+              'Operasional',
+              'Kemasan',
+              'Perawatan Peralatan',
+              'Sertifikasi',
+            ].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setSelectedCategoryTab(tab)}
@@ -220,7 +437,21 @@ export const LogistikPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 text-[#221A12] font-medium">
-              {filteredExpenses.map((item) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-[#6B7280]">
+                    <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
+                    Memuat data logistik...
+                  </td>
+                </tr>
+              ) : expenses.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-[#6B7280]">
+                    Tidak ada transaksi yang ditemukan.
+                  </td>
+                </tr>
+              ) : (
+              expenses.map((item) => (
                 <tr
                   key={item.id}
                   className="hover:bg-[#F7F7F5] transition-all cursor-default"
@@ -251,43 +482,77 @@ export const LogistikPage: React.FC = () => {
                       {item.statusPembayaran}
                     </span>
                   </td>
-                  <td className="py-2 px-3 pr-4 text-center">
-                    {/* Detail Nota Eye Icon Button */}
-                    <button
-                      onClick={() => handleOpenReceipt(item)}
-                      className="p-1 text-[#44483e] hover:text-[#2C4219] hover:bg-[#efe0d2] rounded transition-colors cursor-pointer"
-                      title="Lihat Detail Nota Receipt"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </button>
+                  <td className="py-2 px-3 pr-4 text-center whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button
+                        onClick={() => handleOpenReceipt(item)}
+                        className="p-1 text-[#44483e] hover:text-[#2C4219] hover:bg-[#efe0d2] rounded transition-colors cursor-pointer"
+                        title="Lihat Detail Nota Receipt"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleOpenEditExpense(item)}
+                        className="p-1 text-amber-700 hover:bg-amber-50 rounded transition-colors cursor-pointer"
+                        title="Edit Transaksi"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(item)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                        title="Hapus Transaksi"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Pagination bar */}
+        {!loading && total > 0 && (
         <div className="px-4 py-3 flex flex-col sm:flex-row items-center justify-between border-t border-[#c4c8bb]/20 gap-3 text-xs">
           <p className="text-[#6B7280] font-medium">
-            Menampilkan 1-{filteredExpenses.length} dari {expenses.length} transaksi
+            Menampilkan {expenses.length === 0 ? 0 : (page - 1) * limit + 1}-
+            {Math.min(page * limit, total)} dari {total} transaksi
           </p>
 
           <div className="flex items-center gap-2">
-            <button className="px-3.5 py-2 rounded-xl border border-[#c4c8bb] hover:bg-[#fff1e5] transition-all font-bold text-[#44483e] cursor-pointer">
+            <button
+              onClick={() => goToPage(page - 1)}
+              disabled={page <= 1}
+              className="px-3.5 py-2 rounded-xl border border-[#c4c8bb] hover:bg-[#fff1e5] transition-all font-bold text-[#44483e] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
               Sebelumnya
             </button>
-            <button className="w-9 h-9 rounded-xl bg-[#2C4219] text-white font-extrabold flex items-center justify-center">
-              1
-            </button>
-            <button className="w-9 h-9 rounded-xl border border-[#c4c8bb] hover:bg-[#fff1e5] font-bold text-[#44483e] flex items-center justify-center cursor-pointer">
-              2
-            </button>
-            <button className="px-3.5 py-2 rounded-xl border border-[#c4c8bb] hover:bg-[#fff1e5] transition-all font-bold text-[#44483e] cursor-pointer">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+              <button
+                key={num}
+                onClick={() => goToPage(num)}
+                className={`w-9 h-9 rounded-xl font-extrabold flex items-center justify-center cursor-pointer ${
+                  num === page
+                    ? 'bg-[#2C4219] text-white'
+                    : 'border border-[#c4c8bb] hover:bg-[#fff1e5] font-bold text-[#44483e]'
+                }`}
+              >
+                {num}
+              </button>
+            ))}
+            <button
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= totalPages}
+              className="px-3.5 py-2 rounded-xl border border-[#c4c8bb] hover:bg-[#fff1e5] transition-all font-bold text-[#44483e] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
               Selanjutnya
             </button>
           </div>
         </div>
+        )}
       </div>
 
       {/* DETAIL NOTA MODAL PREVIEW */}
@@ -299,61 +564,123 @@ export const LogistikPage: React.FC = () => {
         maxWidth="lg"
       >
         {activeReceipt && (
-          <div className="space-y-6 text-sm text-[#221A12]">
-            {/* Receipt Visual Header Card */}
-            <div className="p-6 bg-[#fff8f4] border border-[#c4c8bb]/30 rounded-2xl space-y-4">
+          <div id="print-struk" className="space-y-5 text-sm text-[#221A12]">
+            {/* Kop Struk */}
+            <div className="p-5 bg-[#fff8f4] border border-[#c4c8bb]/30 rounded-2xl space-y-4">
+              {/* Header Kop */}
               <div className="flex items-center justify-between border-b border-[#c4c8bb]/20 pb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center">
+                  <div className="w-11 h-11 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center">
                     <Receipt className="w-6 h-6" />
                   </div>
                   <div>
-                    <h4 className="font-extrabold text-[#2C4219]">{activeReceipt.keteranganVendor}</h4>
-                    <p className="text-xs text-[#74796d]">Nomor Nota: {activeReceipt.nomorNotaReceipt}</p>
+                    <h4 className="font-extrabold text-[#2C4219] leading-tight">KWT Sorgum SCM</h4>
+                    <p className="text-[11px] text-[#74796d]">
+                      Jl. Tani Makmur No. 17, Desa Sukamaju
+                    </p>
+                    <p className="text-[11px] text-[#74796d]">Kab. Bogor, Jawa Barat</p>
                   </div>
                 </div>
-                <Badge variant={activeReceipt.statusPembayaran === 'LUNAS' ? 'success' : 'warning'}>
-                  {activeReceipt.statusPembayaran}
-                </Badge>
-              </div>
-
-              {/* Itemized Breakdown Table */}
-              <div>
-                <p className="text-xs font-bold text-[#74796d] uppercase mb-2">Rincian Barang / Jasa</p>
-                <div className="space-y-2">
-                  {activeReceipt.detailItem?.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between text-xs p-2.5 bg-white rounded-xl border border-[#c4c8bb]/20"
-                    >
-                      <span className="font-semibold text-[#221A12]">
-                        {item.nama} (x{item.qty})
-                      </span>
-                      <span className="font-extrabold text-[#2C4219]">
-                        Rp {(item.qty * item.hargaSatuan).toLocaleString('id-ID')}
-                      </span>
-                    </div>
-                  ))}
+                <div className="text-right">
+                  <p className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider">
+                    Nota Penerimaan
+                  </p>
+                  <p className="text-sm font-extrabold text-[#221A12]">{activeReceipt.nomorNotaReceipt}</p>
+                  <p className="text-[11px] text-[#74796d] font-semibold">
+                    {activeReceipt.tanggal ? new Date(activeReceipt.tanggal).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                  </p>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-[#c4c8bb]/20 flex items-center justify-between text-base font-black">
-                <span className="text-[#2C4219]">TOTAL BAYAR</span>
-                <span className="text-[#2C4219]">
-                  Rp {activeReceipt.totalBiayaRp.toLocaleString('id-ID')}
-                </span>
+              {/* Info Transaksi */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div>
+                  <p className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider">Kode Transaksi</p>
+                  <p className="font-semibold text-[#221A12]">{activeReceipt.kodeTransaksi}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider">Vendor / Penerima</p>
+                  <p className="font-semibold text-[#221A12]">{activeReceipt.keteranganVendor}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider">Kategori</p>
+                  <p className="font-semibold text-[#221A12]">{activeReceipt.kategori}</p>
+                </div>
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider">Status Pembayaran</p>
+                    <Badge variant={activeReceipt.statusPembayaran === 'LUNAS' ? 'success' : 'warning'}>
+                      {activeReceipt.statusPembayaran}
+                    </Badge>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider">Metode</p>
+                    <p className="font-semibold text-[#221A12]">{activeReceipt.metodePembayaran}</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Note & Metadata */}
-            <div className="p-4 bg-[#fff1e5] rounded-xl text-xs space-y-1">
-              <p className="font-bold text-[#2C4219] uppercase">Catatan Verifikasi</p>
-              <p className="text-[#44483e] leading-relaxed">{activeReceipt.catatanNota}</p>
-              <p className="text-[#74796d] pt-1">Metode Pembayaran: {activeReceipt.metodePembayaran}</p>
+            {/* Tabel Rincian Barang */}
+            <div>
+              <p className="text-xs font-bold text-[#74796d] uppercase mb-2">Rincian Barang / Jasa</p>
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="text-[#6B7280] font-bold uppercase text-[10px] tracking-wider border-b border-[#c4c8bb]/30">
+                    <th className="py-2 text-left">Item</th>
+                    <th className="py-2 text-center">Qty</th>
+                    <th className="py-2 text-right">Harga Satuan</th>
+                    <th className="py-2 text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(activeReceipt.detailItem && activeReceipt.detailItem.length > 0) ? (
+                    activeReceipt.detailItem.map((item, idx) => (
+                      <tr key={idx} className="border-b border-[#c4c8bb]/15">
+                        <td className="py-2 font-semibold text-[#221A12]">{item.nama}</td>
+                        <td className="py-2 text-center">{item.qty}</td>
+                        <td className="py-2 text-right">Rp {item.hargaSatuan.toLocaleString('id-ID')}</td>
+                        <td className="py-2 text-right font-bold">Rp {(item.qty * item.hargaSatuan).toLocaleString('id-ID')}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="border-b border-[#c4c8bb]/15">
+                      <td className="py-2 font-semibold text-[#221A12]">
+                        {activeReceipt.keteranganVendor || activeReceipt.kategori}
+                      </td>
+                      <td className="py-2 text-center">1</td>
+                      <td className="py-2 text-right">Rp {activeReceipt.totalBiayaRp.toLocaleString('id-ID')}</td>
+                      <td className="py-2 text-right font-bold">Rp {activeReceipt.totalBiayaRp.toLocaleString('id-ID')}</td>
+                    </tr>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={3} className="py-3 text-right font-black text-base text-[#2C4219]">TOTAL BAYAR</td>
+                    <td className="py-3 text-right font-black text-base text-[#2C4219]">
+                      Rp {activeReceipt.totalBiayaRp.toLocaleString('id-ID')}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
 
-            {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-2">
+            {/* Catatan & Verifikasi */}
+            <div className="p-4 bg-[#fff1e5] rounded-xl text-xs space-y-1">
+              <p className="font-bold text-[#2C4219] uppercase">Catatan Verifikasi</p>
+              {activeReceipt.catatanNota && (
+                <p className="text-[#44483e] leading-relaxed">{activeReceipt.catatanNota}</p>
+              )}
+              <div className="flex items-center justify-between pt-2 mt-1 border-t border-[#c4c8bb]/20">
+                <p className="text-[#74796d]">
+                  Dicetak {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+                <p className="text-[#74796d] italic">Dicetak dari Sorgum SCM</p>
+              </div>
+            </div>
+
+            {/* Modal Actions (tidak ikut tercetak) */}
+            <div className="print:hidden flex items-center justify-between pt-2">
               <button
                 onClick={() => window.print()}
                 className="flex items-center gap-2 text-xs font-bold text-[#2C4219] hover:underline cursor-pointer"
@@ -369,12 +696,12 @@ export const LogistikPage: React.FC = () => {
         )}
       </Modal>
 
-      {/* CATAT PENGELUARAN BARU MODAL */}
+      {/* CATAT / EDIT TRANSAKSI PENGELUARAN MODAL */}
       <Modal
         isOpen={addExpenseModalOpen}
         onClose={() => setAddExpenseModalOpen(false)}
-        title="Catat Transaksi Pengeluaran Baru"
-        subtitle="Input data biaya pupuk, logistik armada, perawatan, atau kemasan"
+        title={editingExpenseId ? 'Edit Transaksi Pengeluaran' : 'Catat Transaksi Pengeluaran Baru'}
+        subtitle={editingExpenseId ? 'Perbarui data biaya dan rincian barang/jasa' : 'Input data biaya pupuk, logistik armada, perawatan, atau kemasan'}
       >
         <form onSubmit={handleSaveExpense} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -385,9 +712,10 @@ export const LogistikPage: React.FC = () => {
               <input
                 type="text"
                 value={formData.kodeTransaksi}
-                onChange={(e) => setFormData({ ...formData, kodeTransaksi: e.target.value })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-bold"
-                required
+                readOnly
+                disabled
+                title="Kode transaksi dibuat otomatis oleh sistem"
+                className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-bold text-[#2C4219] cursor-not-allowed"
               />
             </div>
             <div>
@@ -423,6 +751,61 @@ export const LogistikPage: React.FC = () => {
             />
           </div>
 
+          {/* Rincian Barang / Jasa */}
+          <div>
+            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+              Rincian Barang / Jasa
+            </label>
+            <div className="space-y-2">
+              {detailItems.map((item, idx) => (
+                <div key={idx} className="grid grid-cols-[1fr_70px_1fr_70px_32px] gap-2 items-center">
+                  <input
+                    type="text"
+                    placeholder="Nama barang/jasa"
+                    value={item.nama}
+                    onChange={(e) => updateItem(idx, 'nama', e.target.value)}
+                    className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-sm min-w-0"
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Qty"
+                    value={item.qty}
+                    onChange={(e) => updateItem(idx, 'qty', Number(e.target.value))}
+                    className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-sm text-center"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Harga/unit"
+                    value={item.hargaSatuan}
+                    onChange={(e) => updateItem(idx, 'hargaSatuan', Number(e.target.value))}
+                    className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-sm min-w-0"
+                  />
+                  <span className="text-xs font-extrabold text-[#2C4219] whitespace-nowrap">
+                    Rp {(item.qty * item.hargaSatuan).toLocaleString('id-ID')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(idx)}
+                    disabled={detailItems.length <= 1}
+                    className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-40 flex items-center justify-center"
+                    title="Hapus baris"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addItem}
+              className="mt-2 flex items-center gap-1.5 text-xs font-bold text-[#2C4219] hover:text-[#172C05] transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Tambah Baris Rincian
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
@@ -430,10 +813,9 @@ export const LogistikPage: React.FC = () => {
               </label>
               <input
                 type="number"
-                value={formData.totalBiayaRp}
-                onChange={(e) => setFormData({ ...formData, totalBiayaRp: Number(e.target.value) })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-extrabold"
-                required
+                value={detailItems.reduce((s, it) => s + (it.nama.trim() ? (it.qty || 0) * (it.hargaSatuan || 0) : 0), 0)}
+                readOnly
+                className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-extrabold text-[#2C4219] cursor-not-allowed"
               />
             </div>
             <div>
@@ -474,7 +856,7 @@ export const LogistikPage: React.FC = () => {
                 type="text"
                 value={formData.nomorNotaReceipt}
                 onChange={(e) => setFormData({ ...formData, nomorNotaReceipt: e.target.value })}
-                placeholder="INV-00129"
+                placeholder="Contoh: INV-00129"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
               />
@@ -488,6 +870,7 @@ export const LogistikPage: React.FC = () => {
             <textarea
               value={formData.catatanNota}
               onChange={(e) => setFormData({ ...formData, catatanNota: e.target.value })}
+              placeholder="Contoh: Pembayaran tunai ke pemasok pupuk, nota asli disimpan di arsip KWT"
               className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm h-20"
             />
           </div>
@@ -497,33 +880,49 @@ export const LogistikPage: React.FC = () => {
               Batal
             </Button>
             <Button type="submit" variant="primary">
-              Simpan Transaksi Pengeluaran
+              {editingExpenseId ? 'Simpan Perubahan' : 'Simpan Transaksi Pengeluaran'}
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* EXPORT PDF SUCCESS MODAL */}
-      <Modal
-        isOpen={pdfModalOpen}
-        onClose={() => setPdfModalOpen(false)}
-        title="Laporan Logistik PDF Berhasil Digenerate"
-      >
-        <div className="space-y-4 text-center py-4">
-          <div className="w-16 h-16 rounded-full bg-[#cfecb3] text-[#172C05] flex items-center justify-center mx-auto">
-            <Download className="w-8 h-8" />
+      {/* Modal Konfirmasi Hapus */}
+      {deleteTarget && (
+        <Modal
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          title="Hapus Transaksi Pengeluaran"
+          maxWidth="sm"
+        >
+          <div className="space-y-4 text-sm text-[#221A12]">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-red-700">
+                  Apakah Anda yakin ingin menghapus transaksi ini?
+                </p>
+                <p className="text-[11px] text-[#6B7280] mt-1 leading-relaxed">
+                  <strong>{deleteTarget.kodeTransaksi}</strong> — {deleteTarget.keteranganVendor} (Rp{' '}
+                  {deleteTarget.totalBiayaRp.toLocaleString('id-ID')}).
+                  Tindakan ini tidak dapat dibatalkan.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#c4c8bb]/20">
+              <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+                Batal
+              </Button>
+              <Button type="button" variant="danger" onClick={confirmDelete}>
+                <Trash2 className="w-3.5 h-3.5" />
+                Ya, Hapus
+              </Button>
+            </div>
           </div>
-          <h4 className="text-lg font-bold text-[#2C4219]">Laporan Keuangan & Logistik Sorgum SCM 2026</h4>
-          <p className="text-xs text-[#74796d]">
-            Dokumen siap diunduh dan dicetak untuk keperluan arsip keuangan bulanan.
-          </p>
-          <div className="pt-2">
-            <Button variant="primary" onClick={() => setPdfModalOpen(false)}>
-              Tutup & Unduh PDF
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
     </div>
   );
 };

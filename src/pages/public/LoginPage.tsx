@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Sprout, Lock, Mail, ArrowRight, Tractor, Eye, EyeOff } from 'lucide-react';
 import { authApi } from '../../api/endpoints/authApi';
+import { useCms } from '../../context/CmsContext';
 import { PublicNavbar } from '../../components/layout/PublicNavbar';
 import { PublicFooter } from '../../components/layout/PublicFooter';
 import sorghumGrainImg from '../../assets/sorghum_grain.jpg';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const [usernameOrEmail, setUsernameOrEmail] = useState('kwt.sorgum@gmail.com');
-  const [password, setPassword] = useState('password123');
+  const { cms } = useCms();
+  // Aplikasi single-user: kredensial diisi otomatis, user tinggal klik Masuk
+  const [usernameOrEmail, setUsernameOrEmail] = useState('admin@sorgum.com');
+  const [password, setPassword] = useState('password');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,8 +29,9 @@ export const LoginPage: React.FC = () => {
     try {
       await authApi.login({ usernameOrEmail, password });
       navigate('/dashboard');
-    } catch {
-      setError('Gagal masuk. Periksa kembali kredensial Anda.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Gagal masuk. Periksa kembali kredensial Anda.';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -43,10 +47,18 @@ export const LoginPage: React.FC = () => {
           <div className="w-full md:w-1/2 p-6 sm:p-10 flex flex-col justify-between">
             {/* Top Brand Header */}
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 rounded-lg bg-[#2C4219] text-[#C3E28D] flex items-center justify-center shadow-2xs">
-                <Tractor className="w-4 h-4" />
-              </div>
-              <span className="text-sm font-bold text-[#2C4219]">Sorgum SCM</span>
+              {cms.logo ? (
+                <img
+                  src={cms.logo}
+                  alt={cms.siteName || 'Logo'}
+                  className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#c4c8bb]/30 shadow-2xs"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-[#2C4219] text-[#C3E28D] flex items-center justify-center shadow-2xs">
+                  <Tractor className="w-4 h-4" />
+                </div>
+              )}
+              <span className="text-sm font-bold text-[#2C4219]">{cms.siteName || 'Sorgum SCM'}</span>
             </div>
 
             {/* Form Content */}
@@ -120,18 +132,12 @@ export const LoginPage: React.FC = () => {
                   </a>
                 </div>
 
-                {/* Left/Right Buttons Split */}
-                <div className="flex gap-3 pt-2">
-                  <Link
-                    to="/register"
-                    className="flex-1 py-2 px-4 rounded-full border border-[#2C4219] text-[#2C4219] hover:bg-[#2C4219]/5 font-semibold text-xs tracking-wider uppercase text-center transition-all cursor-pointer flex items-center justify-center"
-                  >
-                    Daftar Akun
-                  </Link>
+                {/* Login Button Full Width */}
+                <div className="pt-2">
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 py-2 px-4 rounded-full bg-[#2C4219] text-white hover:bg-[#213213] font-semibold text-xs tracking-wider uppercase flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full py-2 px-4 rounded-full bg-[#2C4219] text-white hover:bg-[#213213] font-semibold text-xs tracking-wider uppercase flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
                   >
                     {loading ? (
                       'Memproses...'

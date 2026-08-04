@@ -22,6 +22,10 @@ import {
   Link2,
   Database,
   Server,
+  Sprout,
+  Factory,
+  Truck,
+  LayoutDashboard,
 } from 'lucide-react';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -365,7 +369,7 @@ export const IntegrationPage: React.FC = () => {
 
               <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700">
                 <AlertCircle className="w-4 h-4 shrink-0 text-blue-500" />
-                <p className="font-medium">Saat ini menggunakan <strong>data mock lokal</strong>. Hubungkan ke server Laravel untuk data real-time.</p>
+                <p className="font-medium">Sistem terhubung ke <strong>API backend Node.js + MySQL</strong> secara real-time. Semua data (panen, produksi, kemasan, logistik) diambil langsung dari server.</p>
               </div>
             </div>
           </SectionCard>
@@ -394,8 +398,8 @@ export const IntegrationPage: React.FC = () => {
                   <RefreshCw className={`w-3.5 h-3.5 ${regenerating ? 'animate-spin' : ''}`} />
                   Regenerate Key
                 </button>
-                <p className="text-[10px] text-[#9CA3AF] font-medium">
-                  ⚠️ Regenerate akan menonaktifkan semua koneksi yang menggunakan key lama.
+                <p className="text-[10px] text-[#9CA3AF] font-medium flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5" /> Regenerate akan menonaktifkan semua koneksi yang menggunakan key lama.
                 </p>
               </div>
 
@@ -507,7 +511,7 @@ export const IntegrationPage: React.FC = () => {
           <div className="space-y-6">
             {[
               {
-                group: '🌾 Panen & Lahan',
+                group: 'Panen & Lahan',
                 rows: [
                   { method: 'GET', path: '/api/panen', desc: 'Daftar semua data panen' },
                   { method: 'POST', path: '/api/panen', desc: 'Tambah data panen baru' },
@@ -519,7 +523,7 @@ export const IntegrationPage: React.FC = () => {
                 ],
               },
               {
-                group: '🏭 Produksi & Sertifikat',
+                group: 'Produksi & Sertifikat',
                 rows: [
                   { method: 'GET', path: '/api/produksi', desc: 'Daftar batch produksi' },
                   { method: 'POST', path: '/api/produksi', desc: 'Tambah batch baru' },
@@ -529,7 +533,7 @@ export const IntegrationPage: React.FC = () => {
                 ],
               },
               {
-                group: '🚚 Logistik & Kemasan',
+                group: 'Logistik & Kemasan',
                 rows: [
                   { method: 'GET', path: '/api/logistik/expense', desc: 'Daftar pengeluaran logistik' },
                   { method: 'POST', path: '/api/logistik/expense', desc: 'Catat pengeluaran baru' },
@@ -538,7 +542,7 @@ export const IntegrationPage: React.FC = () => {
                 ],
               },
               {
-                group: '📊 Dashboard & Auth',
+                group: 'Dashboard & Auth',
                 rows: [
                   { method: 'GET', path: '/api/dashboard/summary', desc: 'Ringkasan metrik utama' },
                   { method: 'POST', path: '/api/auth/login', desc: 'Login & terima token', auth: false },

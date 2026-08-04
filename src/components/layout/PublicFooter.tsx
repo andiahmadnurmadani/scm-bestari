@@ -12,9 +12,17 @@ export const PublicFooter: React.FC = () => {
           {/* Col 1 */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#2C4219] flex items-center justify-center text-white">
-                <Sprout className="w-6 h-6 text-[#C3E28D]" />
-              </div>
+              {cms.logo ? (
+                <img
+                  src={cms.logo}
+                  alt={cms.siteName}
+                  className="w-10 h-10 rounded-xl object-cover ring-1 ring-[#C3E28D]/30 shadow-lg"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-[#2C4219] flex items-center justify-center text-white">
+                  <Sprout className="w-6 h-6 text-[#C3E28D]" />
+                </div>
+              )}
               <span className="text-xl font-extrabold text-white tracking-tight">
                 {cms.siteName}
               </span>

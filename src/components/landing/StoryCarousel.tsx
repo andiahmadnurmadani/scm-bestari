@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Play, Quote, Star, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Quote, Star, CheckCircle2, UserRound } from 'lucide-react';
 
 interface StoryCarouselProps {
   onOpenVideoModal: () => void;
@@ -14,7 +14,6 @@ export const StoryCarousel: React.FC<StoryCarouselProps> = ({ onOpenVideoModal }
       quote:
         'Sorgum SCM memudahkan kami mencatat hasil panen 45 Ton musim ini tanpa perlu buku manual yang mudah hilang. Sertifikat Halal BPJPH kami pun langsung terpantau digital dan teratur!',
       harvestInfo: 'Hasil Panen: 45 Ton Bioguma',
-      image: 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80',
     },
     {
       id: 2,
@@ -23,7 +22,6 @@ export const StoryCarousel: React.FC<StoryCarouselProps> = ({ onOpenVideoModal }
       quote:
         'Pemasaran beras dan tepung sorgum kami makin dipercaya pembeli Toko Pangan Organik karena ada kode tracking varietas dari lahan ke kemasan. Pembeli tahu persis bahan baku kami aman.',
       harvestInfo: 'Produksi: 1.200 Pouch Tepung/Bulan',
-      image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=800&q=80',
     },
     {
       id: 3,
@@ -32,7 +30,6 @@ export const StoryCarousel: React.FC<StoryCarouselProps> = ({ onOpenVideoModal }
       quote:
         'Catatan logistik pupuk, sewa alat, dan ongkos angkut armada truk jadi sangat rapi. Transparansi keuangan kelompok kami meningkat pesat dan laporan bulanan langsung siap cetak.',
       harvestInfo: 'Luas Lahan: 8.5 Hektar',
-      image: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=800&q=80',
     },
   ];
 
@@ -67,11 +64,11 @@ export const StoryCarousel: React.FC<StoryCarouselProps> = ({ onOpenVideoModal }
         <div className="bg-white rounded-3xl border border-[#c4c8bb]/30 shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative">
           {/* Left Column: Photo & Video Modal Trigger */}
           <div className="lg:col-span-5 relative h-72 lg:h-auto min-h-[300px]">
-            <img
-              src={current.image}
-              alt={current.name}
-              className="w-full h-full object-cover"
-            />
+            <div className="w-full h-full bg-gradient-to-br from-[#2C4219] to-[#172C05] flex items-center justify-center">
+              <div className="w-24 h-24 rounded-full bg-[#C3E28D]/20 border-2 border-[#C3E28D]/40 flex items-center justify-center">
+                <UserRound className="w-12 h-12 text-[#C3E28D]" />
+              </div>
+            </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-between p-6">
               <span className="self-start px-3 py-1 rounded-full bg-[#2C4219]/80 backdrop-blur-xs text-[#C3E28D] text-xs font-extrabold flex items-center gap-1.5 border border-white/20">
                 <CheckCircle2 className="w-3.5 h-3.5" />

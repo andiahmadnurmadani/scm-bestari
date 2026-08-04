@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { CmsProvider } from './context/CmsContext';
+import { ApiOfflineBanner } from './components/common/ApiOfflineBanner';
 
 // Public Pages
 import { LandingPage } from './pages/public/LandingPage';
 import { LoginPage } from './pages/public/LoginPage';
-import { RegisterPage } from './pages/public/RegisterPage';
 
 // Admin Layout & Pages
 import { AdminLayout } from './components/layout/AdminLayout';
@@ -19,6 +19,7 @@ import { KemasanPage } from './pages/admin/KemasanPage';
 import { LogistikPage } from './pages/admin/LogistikPage';
 import { ProfilePage } from './pages/admin/ProfilePage';
 import { CmsPage } from './pages/admin/CmsPage';
+import { MasterVarietasPage } from './pages/admin/MasterVarietasPage';
 
 export default function App() {
   return (
@@ -28,7 +29,6 @@ export default function App() {
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
 
           {/* Protected / Admin Dashboard Routes */}
           <Route path="/dashboard" element={<AdminLayout />}>
@@ -42,6 +42,7 @@ export default function App() {
             <Route path="logistik" element={<LogistikPage />} />
             <Route path="profil" element={<ProfilePage />} />
             <Route path="cms" element={<CmsPage />} />
+            <Route path="master/varietas" element={<MasterVarietasPage />} />
             {/* Backward compat: keep old integrasi route */}
             <Route path="integrasi" element={<Navigate to="/dashboard/cms" replace />} />
           </Route>
@@ -49,6 +50,9 @@ export default function App() {
           {/* Fallback redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+
+        {/* Popup saat backend tidak terhubung */}
+        <ApiOfflineBanner />
       </BrowserRouter>
     </CmsProvider>
   );

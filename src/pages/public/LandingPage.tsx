@@ -41,7 +41,7 @@ export const LandingPage: React.FC = () => {
   // Spotlight Carousel State
   const [productIndex, setProductIndex] = useState(0);
 
-  const products = [
+  const fallbackProducts = [
     {
       name: 'Tepung Sorgum Bioguma',
       img: tepungSorgumImg,
@@ -76,6 +76,8 @@ export const LandingPage: React.FC = () => {
     },
   ];
 
+  const products = cms.products && cms.products.length > 0 ? cms.products : fallbackProducts;
+
   const handlePrevProduct = () => {
     setProductIndex((prev) => (prev === 0 ? products.length - 1 : prev - 1));
   };
@@ -86,12 +88,16 @@ export const LandingPage: React.FC = () => {
 
   // Hero Slideshow State
   const [heroImageIndex, setHeroImageIndex] = useState(0);
-  const heroImages = [
+  const fallbackHeroImages = [
     { src: sorghumFieldImg, title: 'Lahan Sorgum KWT Subang' },
     { src: berasSorgumImg, title: 'Beras Sorgum Kemasan Vacuum' },
     { src: tepungSorgumImg, title: 'Tepung Sorgum Bebas Gluten' },
     { src: rengginangSorgumImg, title: 'Camilan Rengginang Sorgum Gurih' },
   ];
+  const heroImages =
+    cms.heroImages && cms.heroImages.length > 0 && cms.heroImages.some((h) => h.src)
+      ? cms.heroImages
+      : fallbackHeroImages;
 
   // Auto-play slideshow every 4 seconds
   React.useEffect(() => {
@@ -152,7 +158,7 @@ export const LandingPage: React.FC = () => {
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                     </Link>
                     <Link
-                      to="/register"
+                      to="/login"
                       className="px-5 py-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/25 text-white hover:bg-white/20 hover:border-white/40 font-semibold text-sm transition-all duration-200 cursor-pointer"
                     >
                       {cms.heroCta2}
@@ -396,46 +402,26 @@ export const LandingPage: React.FC = () => {
             {/* Visual Workflow Map (Alur Rantai Pasok Sorgum) */}
             <div className="mt-8 bg-white/60 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-[#c4c8bb]/30 shadow-3xs">
               <h3 className="text-[10px] font-bold text-[#2C4219] uppercase tracking-wider mb-4 text-center">
-                Alur Digital Rantai Pasok Sorgum KWT
+                {cms.workflowTitle}
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center text-center">
-                {/* Step 1 */}
-                <div className="bg-white p-3 rounded-xl border border-[#c4c8bb]/20 shadow-3xs flex flex-col items-center">
-                  <div className="w-7 h-7 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center font-bold text-xs mb-1.5">
-                    01
-                  </div>
-                  <h4 className="text-xs font-bold text-[#172C05]">Panen & Lahan</h4>
-                  <p className="text-[10px] text-[#6B7280] mt-0.5 font-normal">Pendataan varietas & tonase hasil panen kelompok tani.</p>
-                </div>
-
-                {/* Arrow 1 */}
-                <div className="hidden md:flex justify-center text-[#A8B774]">
-                  <ArrowRight className="w-4 h-4 animate-pulse" />
-                </div>
-
-                {/* Step 2 */}
-                <div className="bg-white p-3 rounded-xl border border-[#c4c8bb]/20 shadow-3xs flex flex-col items-center">
-                  <div className="w-7 h-7 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center font-bold text-xs mb-1.5">
-                    02
-                  </div>
-                  <h4 className="text-xs font-bold text-[#172C05]">Sertifikasi & Batch</h4>
-                  <p className="text-[10px] text-[#6B7280] mt-0.5 font-normal">Pencatatan batch olahan & tracking sertifikat Halal/P-IRT.</p>
-                </div>
-
-                {/* Arrow 2 */}
-                <div className="hidden md:flex justify-center text-[#A8B774]">
-                  <ArrowRight className="w-4 h-4 animate-pulse" />
-                </div>
-
-                {/* Step 3 */}
-                <div className="bg-white p-3 rounded-xl border border-[#c4c8bb]/20 shadow-3xs flex flex-col items-center">
-                  <div className="w-7 h-7 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center font-bold text-xs mb-1.5">
-                    03
-                  </div>
-                  <h4 className="text-xs font-bold text-[#172C05]">Distribusi & Logistik</h4>
-                  <p className="text-[10px] text-[#6B7280] mt-0.5 font-normal">Pencatatan nota, stok pengemasan, & arus kas KWT.</p>
-                </div>
+                {cms.workflowSteps.map((step, i) => (
+                  <React.Fragment key={step.number}>
+                    <div className="bg-white p-3 rounded-xl border border-[#c4c8bb]/20 shadow-3xs flex flex-col items-center">
+                      <div className="w-7 h-7 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center font-bold text-xs mb-1.5">
+                        {step.number}
+                      </div>
+                      <h4 className="text-xs font-bold text-[#172C05]">{step.title}</h4>
+                      <p className="text-[10px] text-[#6B7280] mt-0.5 font-normal">{step.desc}</p>
+                    </div>
+                    {i < cms.workflowSteps.length - 1 && (
+                      <div className="hidden md:flex justify-center text-[#A8B774]">
+                        <ArrowRight className="w-4 h-4 animate-pulse" />
+                      </div>
+                    )}
+                  </React.Fragment>
+                ))}
               </div>
             </div>
           </div>
@@ -446,13 +432,13 @@ export const LandingPage: React.FC = () => {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col justify-center flex-1">
             <div className="text-center max-w-xl mx-auto mb-6">
               <span className="px-2.5 py-0.5 rounded-full bg-[#C3E28D]/40 text-[#172C05] text-[10px] font-bold uppercase tracking-wider">
-                Diversifikasi Olahan Pangan
+                {cms.productsBadge}
               </span>
               <h2 className="text-lg sm:text-xl font-semibold text-[#2C4219] mt-1">
-                Produk Turunan Sorgum KWT Berstandar Mutu
+                {cms.productsTitle}
               </h2>
               <p className="text-[11px] text-[#6B7280] mt-0.5 font-medium">
-                Geser untuk menjelajahi berbagai macam olahan sorgum sehat hasil produksi kami.
+                {cms.productsSubtitle}
               </p>
             </div>
 
@@ -560,7 +546,7 @@ export const LandingPage: React.FC = () => {
                 </p>
                 <div className="flex flex-wrap justify-center gap-2.5 pt-1">
                   <Link
-                    to="/register"
+                    to="/login"
                     className="px-3.5 py-1.5 rounded-lg bg-[#C3E28D] text-[#172C05] font-semibold text-xs hover:bg-[#b5d87b] transition-all cursor-pointer shadow-2xs"
                   >
                     {cms.ctaBtn1}

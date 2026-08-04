@@ -122,6 +122,22 @@ export interface PackagingMaterial {
   pemasok: string;
   hargaPerUnitRp: number;
   statusStok: 'Stok Cukup' | 'Stok Menipis' | 'Habis';
+  extraData?: {
+    komposisi?: string;
+    nilaiGizi?: {
+      energiKkal?: number;
+      lemakTotalG?: number;
+      lemakJenuhG?: number;
+      karbohidratG?: number;
+      seratG?: number;
+      proteinG?: number;
+      natriumMg?: number;
+      gulaTotalG?: number;
+    };
+    akg?: Array<{ nutrisi: string; perSajian: string; akgPersen: number }>;
+    riwayat?: Array<{ tanggal: string; aksi: string; keterangan: string; oleh: string }>;
+    imageDataUrl?: string;
+  } | null;
 }
 
 export interface FinancialExpense {

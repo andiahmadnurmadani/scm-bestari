@@ -47,3 +47,23 @@ html {
   background: #C4C8BB;
   border-radius: 10px;
 }
+
+/* ── Print: hanya struk nota yang dicetak ─────────────────────────────── */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-struk,
+  #print-struk * {
+    visibility: visible;
+  }
+  #print-struk {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+    background: #ffffff !important;
+  }
+}

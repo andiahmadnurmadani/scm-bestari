@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Package, Plus, Edit3, Trash2, ChevronDown, ChevronUp,
-  ImagePlus, Clock, Beaker, List, X, Upload,
+  ImagePlus, Clock, Beaker, List, X, Upload, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { packagingApi } from '../../api/endpoints/packagingApi';
 import { PackagingMaterial } from '../../types';
@@ -9,6 +9,7 @@ import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
+import { nextCode } from '../../utils/kodeGenerator';
 
 // ── Extended types ─────────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ interface ProductExtra {
   imageDataUrl?: string;      // base64 preview
 }
 
-// ── Mock extra data per product ───────────────────────────────────────────────
+// ── Default values ────────────────────────────────────────────────────────────
 
 const defaultNilaiGizi: NilaiGizi = {
   energiKkal: 0, lemakTotalG: 0, lemakJenuhG: 0,
@@ -60,33 +61,27 @@ const defaultAkg: AkgRow[] = [
   { nutrisi: 'Natrium', perSajian: '0 mg', akgPersen: 0 },
 ];
 
-const mockExtras: Record<string, ProductExtra> = {
-  'KMG-POUCH-500': {
-    komposisi: 'Tepung Sorgum (Sorghum bicolor L.) varietas Bioguma, tanpa bahan pengawet, tanpa pewarna buatan, bebas gluten.',
-    nilaiGizi: { energiKkal: 345, lemakTotalG: 3.5, lemakJenuhG: 0.8, karbohidratG: 72, seratG: 6.4, proteinG: 10.5, natriumMg: 15, gulaTotalG: 1.2 },
-    akg: [
-      { nutrisi: 'Energi', perSajian: '345 kkal', akgPersen: 17 },
-      { nutrisi: 'Protein', perSajian: '10,5 g', akgPersen: 18 },
-      { nutrisi: 'Lemak Total', perSajian: '3,5 g', akgPersen: 5 },
-      { nutrisi: 'Karbohidrat Total', perSajian: '72 g', akgPersen: 24 },
-      { nutrisi: 'Serat Pangan', perSajian: '6,4 g', akgPersen: 26 },
-      { nutrisi: 'Natrium', perSajian: '15 mg', akgPersen: 1 },
-    ],
-    riwayat: [
-      { tanggal: '2026-07-28', aksi: 'Restock', keterangan: 'Penambahan 2.000 pcs dari PT Kemasan Mulia', oleh: 'Ibu KWT' },
-      { tanggal: '2026-06-15', aksi: 'Update Gizi', keterangan: 'Perbarui data komposisi & AKG', oleh: 'Admin' },
-      { tanggal: '2026-05-01', aksi: 'Dibuat', keterangan: 'Item pertama kali didaftarkan', oleh: 'Admin' },
-    ],
-  },
-};
+// ── Helper: ambil data tambahan (komposisi/gizi/AKG/riwayat) dari API ─────────
 
-const getExtra = (kode: string): ProductExtra =>
-  mockExtras[kode] ?? {
-    komposisi: '',
-    nilaiGizi: { ...defaultNilaiGizi },
-    akg: defaultAkg.map((r) => ({ ...r })),
-    riwayat: [],
+const getExtra = (item?: { extraData?: PackagingMaterial['extraData'] } | null): ProductExtra => {
+  const e = item?.extraData;
+  if (!e) {
+    return {
+      komposisi: '',
+      nilaiGizi: { ...defaultNilaiGizi },
+      akg: defaultAkg.map((r) => ({ ...r })),
+      riwayat: [],
+      imageDataUrl: undefined,
+    };
+  }
+  return {
+    komposisi: e.komposisi || '',
+    nilaiGizi: { ...defaultNilaiGizi, ...(e.nilaiGizi || {}) },
+    akg: e.akg && e.akg.length > 0 ? e.akg.map((r) => ({ ...r })) : defaultAkg.map((r) => ({ ...r })),
+    riwayat: e.riwayat || [],
+    imageDataUrl: e.imageDataUrl,
   };
+};
 
 // ── Helper components ─────────────────────────────────────────────────────────
 
@@ -112,18 +107,22 @@ export const KemasanPage: React.FC = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedTab, setExpandedTab] = useState<'komposisi' | 'gizi' | 'akg' | 'riwayat'>('gizi');
 
-  // Extras stored locally (in real app would be persisted to API)
-  const [extras, setExtras] = useState<Record<string, ProductExtra>>({ ...mockExtras });
-
   // Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PackagingMaterial | null>(null);
   const [modalTab, setModalTab] = useState<'dasar' | 'komposisi' | 'gizi' | 'akg'>('dasar');
+
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [formData, setFormData] = useState<Partial<PackagingMaterial>>({
     kodeKemasan: '', namaKemasan: '', kategori: 'Standing Pouch',
-    kapasitas: '500g', stokTersedia: 2000, satuan: 'Pcs',
-    stokMinimal: 500, pemasok: 'PT Kemasan Mulia Jaya Yogyakarta', hargaPerUnitRp: 1850,
+    kapasitas: '', stokTersedia: 0, satuan: 'Pcs',
+    stokMinimal: 0, pemasok: '', hargaPerUnitRp: 0,
   });
   const [formExtra, setFormExtra] = useState<ProductExtra>({
     komposisi: '', nilaiGizi: { ...defaultNilaiGizi },
@@ -132,23 +131,44 @@ export const KemasanPage: React.FC = () => {
 
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const fetchPackaging = async () => {
+  const fetchPackaging = async (targetPage = page, search = searchTerm, cat = activeCategoryTab) => {
     setLoading(true);
-    const data = await packagingApi.getAll();
-    setPackagingList(data);
-    setLoading(false);
+    try {
+      const res = await packagingApi.getAll({
+        page: targetPage,
+        limit,
+        search: search || undefined,
+        kategori: cat === 'Semua' ? undefined : cat,
+      });
+      setPackagingList(res.data || []);
+      setTotal(res.pagination?.total || 0);
+      setTotalPages(res.pagination?.totalPages || 1);
+    } catch {
+      setPackagingList([]);
+      setTotal(0);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchPackaging(); }, []);
+  useEffect(() => {
+    setPage(1); // Reset ke halaman 1 saat search/tab berubah
+  }, [searchTerm, activeCategoryTab]);
+
+  useEffect(() => {
+    fetchPackaging(page, searchTerm, activeCategoryTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, searchTerm, activeCategoryTab]);
 
   const handleOpenAdd = () => {
     setEditId(null);
     setModalTab('dasar');
     setFormData({
-      kodeKemasan: `KMG-POUCH-00${packagingList.length + 1}`,
-      namaKemasan: '', kategori: 'Standing Pouch', kapasitas: '500 gram',
-      stokTersedia: 2000, satuan: 'Pcs', stokMinimal: 500,
-      pemasok: 'PT Kemasan Mulia Jaya Yogyakarta', hargaPerUnitRp: 1850,
+      kodeKemasan: nextCode('KMG-', packagingList, 3),
+      namaKemasan: '', kategori: 'Standing Pouch', kapasitas: '',
+      stokTersedia: 0, satuan: 'Pcs', stokMinimal: 0,
+      pemasok: '', hargaPerUnitRp: 0,
     });
     setFormExtra({ komposisi: '', nilaiGizi: { ...defaultNilaiGizi }, akg: defaultAkg.map((r) => ({ ...r })), riwayat: [] });
     setIsModalOpen(true);
@@ -158,36 +178,48 @@ export const KemasanPage: React.FC = () => {
     setEditId(item.id);
     setModalTab('dasar');
     setFormData({ ...item });
-    setFormExtra(getExtra(item.kodeKemasan));
+    setFormExtra(getExtra(item));
     setIsModalOpen(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editId) {
-      await packagingApi.update(editId, formData);
-    } else {
-      await packagingApi.create(formData);
-    }
-    // Save extras
-    const kode = (formData.kodeKemasan ?? '');
+    const kode = formData.kodeKemasan ?? '';
     const newRiwayat: RiwayatItem = {
       tanggal: new Date().toISOString().slice(0, 10),
       aksi: editId ? 'Diperbarui' : 'Dibuat',
       keterangan: editId ? `Update data kemasan ${kode}` : `Item baru ${kode} didaftarkan`,
       oleh: 'Ibu KWT',
     };
-    setExtras((prev) => ({
-      ...prev,
-      [kode]: { ...formExtra, riwayat: [newRiwayat, ...(formExtra.riwayat ?? [])] },
-    }));
+    const payload: Partial<PackagingMaterial> = {
+      ...formData,
+      extraData: {
+        komposisi: formExtra.komposisi,
+        nilaiGizi: formExtra.nilaiGizi,
+        akg: formExtra.akg,
+        riwayat: [newRiwayat, ...(formExtra.riwayat ?? [])],
+        imageDataUrl: formExtra.imageDataUrl,
+      },
+    };
+    if (editId) {
+      await packagingApi.update(editId, payload);
+    } else {
+      await packagingApi.create(payload);
+    }
     setIsModalOpen(false);
     fetchPackaging();
   };
 
-  const handleDelete = async (id: string) => {
-    await packagingApi.delete(id);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await packagingApi.delete(deleteTarget.id);
+    setDeleteTarget(null);
     fetchPackaging();
+  };
+
+  const goToPage = (targetPage: number) => {
+    if (targetPage < 1 || targetPage > totalPages) return;
+    setPage(targetPage);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -213,15 +245,6 @@ export const KemasanPage: React.FC = () => {
   };
 
   const categoriesList = ['Semua', 'Standing Pouch', 'Box Custom', 'Karung Bulk', 'Botol Kaca', 'Aksesoris'];
-
-  const filteredList = packagingList.filter((item) => {
-    const matchesSearch =
-      item.kodeKemasan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.namaKemasan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.pemasok.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = activeCategoryTab === 'Semua' || item.kategori === activeCategoryTab;
-    return matchesSearch && matchesCategory;
-  });
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -289,8 +312,22 @@ export const KemasanPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="text-[#221A12] font-medium">
-              {filteredList.map((item) => {
-                const extra = extras[item.kodeKemasan] ?? getExtra(item.kodeKemasan);
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-[#6B7280]">
+                    <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
+                    Memuat data kemasan...
+                  </td>
+                </tr>
+              ) : packagingList.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-[#6B7280]">
+                    Tidak ada data kemasan yang ditemukan.
+                  </td>
+                </tr>
+              ) : (
+              packagingList.map((item) => {
+                const extra = getExtra(item);
                 const isOpen = expandedId === item.id;
                 return (
                   <React.Fragment key={item.id}>
@@ -321,7 +358,7 @@ export const KemasanPage: React.FC = () => {
                           <button onClick={() => handleOpenEdit(item)} className="p-1 text-[#2C4219] hover:bg-[#efe0d2] rounded transition-colors cursor-pointer" title="Edit">
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={() => handleDelete(item.id)} className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer" title="Hapus">
+                          <button onClick={() => setDeleteTarget(item)} className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer" title="Hapus">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -479,10 +516,48 @@ export const KemasanPage: React.FC = () => {
                     )}
                   </React.Fragment>
                 );
-              })}
+              })
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Table Footer: Pagination */}
+        {!loading && total > 0 && (
+          <div className="p-3 sm:p-4 border-t border-[#c4c8bb]/20 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#6B7280]">
+            <span className="font-medium">
+              Menampilkan {packagingList.length === 0 ? 0 : (page - 1) * limit + 1}-
+              {Math.min(page * limit, total)} dari {total} item
+            </span>
+            <div className="flex items-center gap-1 font-bold">
+              <button
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1}
+                className="p-1 rounded-md border border-[#c4c8bb]/30 text-[#44483e] hover:bg-[#F7F7F5] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                <button
+                  key={num}
+                  onClick={() => goToPage(num)}
+                  className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs transition-colors cursor-pointer ${
+                    num === page ? 'bg-[#2C4219] text-white' : 'hover:bg-[#F7F7F5] text-[#44483e]'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                onClick={() => goToPage(page + 1)}
+                disabled={page >= totalPages}
+                className="p-1 rounded-md border border-[#c4c8bb]/30 text-[#44483e] hover:bg-[#F7F7F5] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Add/Edit Modal ── */}
@@ -552,7 +627,14 @@ export const KemasanPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>Kode Kemasan</label>
-                  <input type="text" value={formData.kodeKemasan} onChange={(e) => setFormData({ ...formData, kodeKemasan: e.target.value })} className={inputCls} required />
+                  <input
+                    type="text"
+                    value={formData.kodeKemasan}
+                    readOnly
+                    disabled
+                    title="Kode dibuat otomatis oleh sistem (auto-increment)"
+                    className={`${inputCls} bg-[#F7F7F5] text-[#2C4219] cursor-not-allowed`}
+                  />
                 </div>
                 <div>
                   <label className={labelCls}>Kategori</label>
@@ -574,21 +656,21 @@ export const KemasanPage: React.FC = () => {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className={labelCls}>Stok Tersedia</label>
-                  <input type="number" value={formData.stokTersedia} onChange={(e) => setFormData({ ...formData, stokTersedia: Number(e.target.value) })} className={inputCls} required />
+                  <input type="number" value={formData.stokTersedia} onChange={(e) => setFormData({ ...formData, stokTersedia: Number(e.target.value) })} placeholder="Contoh: 2000" className={inputCls} required />
                 </div>
                 <div>
                   <label className={labelCls}>Stok Minimal</label>
-                  <input type="number" value={formData.stokMinimal} onChange={(e) => setFormData({ ...formData, stokMinimal: Number(e.target.value) })} className={inputCls} required />
+                  <input type="number" value={formData.stokMinimal} onChange={(e) => setFormData({ ...formData, stokMinimal: Number(e.target.value) })} placeholder="Contoh: 500" className={inputCls} required />
                 </div>
                 <div>
                   <label className={labelCls}>Harga / Unit (Rp)</label>
-                  <input type="number" value={formData.hargaPerUnitRp} onChange={(e) => setFormData({ ...formData, hargaPerUnitRp: Number(e.target.value) })} className={inputCls} required />
+                  <input type="number" value={formData.hargaPerUnitRp} onChange={(e) => setFormData({ ...formData, hargaPerUnitRp: Number(e.target.value) })} placeholder="Contoh: 1850" className={inputCls} required />
                 </div>
               </div>
 
               <div>
                 <label className={labelCls}>Pemasok / Vendor</label>
-                <input type="text" value={formData.pemasok} onChange={(e) => setFormData({ ...formData, pemasok: e.target.value })} className={inputCls} required />
+                <input type="text" value={formData.pemasok} onChange={(e) => setFormData({ ...formData, pemasok: e.target.value })} placeholder="Contoh: PT Kemasan Mulia Jaya" className={inputCls} required />
               </div>
             </div>
           )}
@@ -697,6 +779,43 @@ export const KemasanPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Modal Konfirmasi Hapus */}
+      {deleteTarget && (
+        <Modal
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          title="Hapus Data Kemasan"
+          maxWidth="sm"
+        >
+          <div className="space-y-4 text-sm text-[#221A12]">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-red-700">
+                  Apakah Anda yakin ingin menghapus data kemasan ini?
+                </p>
+                <p className="text-[11px] text-[#6B7280] mt-1 leading-relaxed">
+                  <strong>{deleteTarget.kodeKemasan}</strong> — {deleteTarget.namaKemasan}.
+                  Tindakan ini tidak dapat dibatalkan.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#c4c8bb]/20">
+              <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+                Batal
+              </Button>
+              <Button type="button" variant="danger" onClick={confirmDelete}>
+                <Trash2 className="w-3.5 h-3.5" />
+                Ya, Hapus
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

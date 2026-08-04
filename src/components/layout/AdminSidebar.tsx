@@ -9,12 +9,21 @@ import {
   Award,
   Package,
   Truck,
+  Database,
   HelpCircle,
   LogOut,
   X,
+  BookOpen,
+  Eye,
+  Pencil,
+  ChevronDown,
+  Settings,
+  AlertCircle,
+  Headphones,
 } from 'lucide-react';
 import { authApi } from '../../api/endpoints/authApi';
 import { Modal } from '../common/Modal';
+import { useCms } from '../../context/CmsContext';
 
 interface AdminSidebarProps {
   isMobileOpen?: boolean;
@@ -25,6 +34,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   isMobileOpen = false,
   onMobileClose,
 }) => {
+  const { cms } = useCms();
   const navigate = useNavigate();
   const [helpModalOpen, setHelpModalOpen] = useState(false);
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
@@ -49,6 +59,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { label: 'Kelola Sertifikat', path: '/dashboard/sertifikat', icon: Award },
     { label: 'Kelola Data Kemasan', path: '/dashboard/kemasan', icon: Package },
     { label: 'Logistik', path: '/dashboard/logistik', icon: Truck },
+    { label: 'Varietas Sorgum', path: '/dashboard/master/varietas', icon: Database },
   ];
 
   const sidebarContent = (
@@ -57,15 +68,23 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         {/* Logo Banner */}
         <div className="flex items-center justify-between mb-4 px-1 pt-0.5">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#2C4219] flex items-center justify-center shrink-0 shadow-2xs">
-              <Sprout className="w-3.5 h-3.5 text-[#C3E28D]" />
-            </div>
+            {cms.logo ? (
+              <img
+                src={cms.logo}
+                alt={cms.siteName || 'Logo'}
+                className="w-7 h-7 rounded-lg object-cover ring-1 ring-[#c4c8bb]/30 shrink-0 shadow-2xs"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-lg bg-[#2C4219] flex items-center justify-center shrink-0 shadow-2xs">
+                <Sprout className="w-3.5 h-3.5 text-[#C3E28D]" />
+              </div>
+            )}
             <div className="flex flex-col">
               <h1 className="text-sm font-extrabold text-[#172C05] leading-none whitespace-nowrap">
-                Sorgum SCM
+                {cms.siteName || 'Sorgum SCM'}
               </h1>
               <p className="text-[9px] font-bold text-[#44483e] tracking-wider uppercase mt-0.5">
-                Sistem Manajemen
+                {cms.siteTagline || 'Sistem Manajemen'}
               </p>
             </div>
           </div>
@@ -130,19 +149,165 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         onClose={() => setHelpModalOpen(false)}
         title="Pusat Bantuan Sorgum SCM"
         subtitle="Panduan Penggunaan Sistem Manajemen Rantai Pasok"
+        maxWidth="lg"
       >
-        <div className="space-y-4 text-sm text-[#44483e]">
+        <div className="space-y-4 text-sm text-[#44483e] max-h-[70vh] overflow-y-auto custom-scrollbar pr-1">
+          {/* Intro */}
           <div className="p-4 bg-[#fff1e5] rounded-xl border border-[#c4c8bb]/30">
-            <h4 className="font-bold text-[#2C4219] mb-1">Butuh bantuan operasional?</h4>
-            <p className="text-xs text-[#74796d]">
-              Tim pendamping teknis KWT Sorgum SCM siap membantu Anda terkait pencatatan panen, pemutakhiran sertifikat, atau penginputan nota logistik.
+            <h4 className="font-bold text-[#2C4219] mb-1">👋 Selamat datang di Sorgum SCM</h4>
+            <p className="text-xs text-[#74796d] leading-relaxed">
+              Sistem ini membantu Anda mencatat dan memantau seluruh rantai pasok sorgum:
+              mulai dari <b>lahan</b>, <b>panen</b>, <b>produksi olahan</b>, <b>kemasan</b>,
+              hingga <b>keuangan logistik</b>. Pilih panduan sesuai kebutuhan Anda di bawah.
             </p>
           </div>
-          <div className="space-y-2">
-            <p className="font-bold text-[#172C05]">Kontak Layanan Dukungan:</p>
-            <ul className="list-disc pl-5 space-y-1 text-xs">
-              <li>WhatsApp Hotline: 0812-3456-7890 (Ibu Tani / Helpdesk)</li>
-              <li>Email Operasional: support@sorgumscm.id</li>
+
+          {/* Panduan per fitur */}
+          <div className="space-y-3">
+            <p className="font-bold text-[#172C05]"><BookOpen className="w-4 h-4 inline-block mr-1 text-[#2C4219]" /> Panduan Langkah demi Langkah:</p>
+
+            {/* Dashboard */}
+            <div className="bg-white rounded-xl border border-[#c4c8bb]/20 overflow-hidden">
+              <div className="px-4 py-2.5 bg-[#F7F7F5] border-b border-[#c4c8bb]/15 flex items-center gap-2">
+                <LayoutDashboard className="w-4 h-4 text-[#2C4219]" />
+                <span className="text-xs font-bold text-[#2C4219]">Dashboard</span>
+              </div>
+              <ol className="px-4 py-3 space-y-1.5 text-xs list-decimal pl-8">
+                <li>Buka menu <b>Dashboard</b> (halaman pertama setelah login).</li>
+                <li>Lihat ringkasan: lahan panen tertinggi/terendah, rata-rata panen, dan total volume.</li>
+                <li>Gunakan dropdown <b>Bulanan / Triwulan / Tahunan</b> untuk mengubah grafik hasil panen.</li>
+                <li>Gulir ke bawah untuk melihat <b>Catatan Panen Terbaru</b> & <b>Status QC produksi</b>.</li>
+              </ol>
+            </div>
+
+            {/* Kelola Data Panen */}
+            <div className="bg-white rounded-xl border border-[#c4c8bb]/20 overflow-hidden">
+              <div className="px-4 py-2.5 bg-[#F7F7F5] border-b border-[#c4c8bb]/15 flex items-center gap-2">
+                <Sprout className="w-4 h-4 text-[#2C4219]" />
+                <span className="text-xs font-bold text-[#2C4219]">Kelola Data Panen</span>
+              </div>
+              <ol className="px-4 py-3 space-y-1.5 text-xs list-decimal pl-8">
+                <li>Klik <b>Input Data Panen</b> (tombol hijau kanan atas).</li>
+                <li>Isi form: lokasi lahan, varietas, tanggal panen, tonase, penanggung jawab, foto (opsional).</li>
+                <li>Klik <b>Simpan</b> — data langsung masuk tabel & kalender.</li>
+                <li><b>Filter</b>: gunakan dropdown lahan / varietas / tanggal / status di atas tabel.</li>
+                <li><b>Export</b>: klik tombol Export → pilih CSV atau Excel untuk mengunduh laporan.</li>
+                <li><b>Kalender</b> (kolom kanan): klik tanggal untuk melihat detail panen hari itu.</li>
+              </ol>
+            </div>
+
+            {/* Kelola Lahan */}
+            <div className="bg-white rounded-xl border border-[#c4c8bb]/20 overflow-hidden">
+              <div className="px-4 py-2.5 bg-[#F7F7F5] border-b border-[#c4c8bb]/15 flex items-center gap-2">
+                <Tractor className="w-4 h-4 text-[#2C4219]" />
+                <span className="text-xs font-bold text-[#2C4219]">Kelola Lahan</span>
+              </div>
+              <ol className="px-4 py-3 space-y-1.5 text-xs list-decimal pl-8">
+                <li>Klik <b>Tambah Lahan Baru</b> untuk mendaftarkan blok lahan baru.</li>
+                <li>Isi nama lahan, desa, luas (hektar), varietas, jenis tanah, dan status kesiapan.</li>
+                <li>Klik peta untuk menandai <b>lokasi GPS</b> lahan (opsional).</li>
+                <li>Gunakan ikon <b><Eye className="w-3 h-3 inline" /> Lihat</b> untuk detail, <b><Pencil className="w-3 h-3 inline" /> Edit</b> untuk ubah data.</li>
+              </ol>
+            </div>
+
+            {/* Produksi */}
+            <div className="bg-white rounded-xl border border-[#c4c8bb]/20 overflow-hidden">
+              <div className="px-4 py-2.5 bg-[#F7F7F5] border-b border-[#c4c8bb]/15 flex items-center gap-2">
+                <Factory className="w-4 h-4 text-[#2C4219]" />
+                <span className="text-xs font-bold text-[#2C4219]">Produksi Olahan</span>
+              </div>
+              <ol className="px-4 py-3 space-y-1.5 text-xs list-decimal pl-8">
+                <li>Klik <b>Tambah Batch Produksi</b>.</li>
+                <li>Isi nama produk, kategori, jumlah hasil, satuan, dan status QC.</li>
+                <li>Filter berdasarkan kategori tab (Raw / Ready to Eat) di atas tabel.</li>
+              </ol>
+            </div>
+
+            {/* Kemasan */}
+            <div className="bg-white rounded-xl border border-[#c4c8bb]/20 overflow-hidden">
+              <div className="px-4 py-2.5 bg-[#F7F7F5] border-b border-[#c4c8bb]/15 flex items-center gap-2">
+                <Package className="w-4 h-4 text-[#2C4219]" />
+                <span className="text-xs font-bold text-[#2C4219]">Bahan Kemasan</span>
+              </div>
+              <ol className="px-4 py-3 space-y-1.5 text-xs list-decimal pl-8">
+                <li>Klik <b>Tambah Stok Kemasan</b> untuk mencatat material baru.</li>
+                <li>Isi kode, nama, kategori, stok, harga per unit, dan pemasok.</li>
+                <li>Klik panah <ChevronDown className="w-3 h-3 inline" /> di baris untuk membuka detail: <b>Nilai Gizi</b>, <b>Komposisi</b>, <b>AKG</b>, <b>Riwayat</b>.</li>
+                <li>Status stok (Cukup / Menipis / Habis) dihitung otomatis dari stok minimal.</li>
+              </ol>
+            </div>
+
+            {/* Logistik */}
+            <div className="bg-white rounded-xl border border-[#c4c8bb]/20 overflow-hidden">
+              <div className="px-4 py-2.5 bg-[#F7F7F5] border-b border-[#c4c8bb]/15 flex items-center gap-2">
+                <Truck className="w-4 h-4 text-[#2C4219]" />
+                <span className="text-xs font-bold text-[#2C4219]">Logistik & Keuangan</span>
+              </div>
+              <ol className="px-4 py-3 space-y-1.5 text-xs list-decimal pl-8">
+                <li>Klik <b>Catat Pengeluaran Baru</b> untuk menambahkan transaksi.</li>
+                <li>Isi kode transaksi, tanggal, kategori, vendor, total biaya, dan status pembayaran.</li>
+                <li>Filter kategori: Semua / Transportasi / Bahan Baku (tab di atas tabel).</li>
+                <li><b>Export Laporan</b>: pilih CSV, Excel, atau PDF (buka jendela cetak → simpan sebagai PDF).</li>
+              </ol>
+            </div>
+
+            {/* Sertifikat */}
+            <div className="bg-white rounded-xl border border-[#c4c8bb]/20 overflow-hidden">
+              <div className="px-4 py-2.5 bg-[#F7F7F5] border-b border-[#c4c8bb]/15 flex items-center gap-2">
+                <Award className="w-4 h-4 text-[#2C4219]" />
+                <span className="text-xs font-bold text-[#2C4219]">Sertifikat</span>
+              </div>
+              <ol className="px-4 py-3 space-y-1.5 text-xs list-decimal pl-8">
+                <li>Klik <b>Tambah Sertifikat</b> untuk mendaftarkan dokumen (Halal, P-IRT, dll).</li>
+                <li>Isi nama, penerbit, nomor, tanggal terbit/kadaluarsa, dan unggah file dokumen.</li>
+                <li>Klik ikon <b><Eye className="w-3 h-3 inline" /></b> untuk pratinjau dokumen di modal.</li>
+              </ol>
+            </div>
+
+            {/* CMS */}
+            <div className="bg-white rounded-xl border border-[#c4c8bb]/20 overflow-hidden">
+              <div className="px-4 py-2.5 bg-[#F7F7F5] border-b border-[#c4c8bb]/15 flex items-center gap-2">
+                <Settings className="w-4 h-4 text-[#2C4219]" />
+                <span className="text-xs font-bold text-[#2C4219]">Konten Website (CMS)</span>
+              </div>
+              <ol className="px-4 py-3 space-y-1.5 text-xs list-decimal pl-8">
+                <li>Buka menu <b>Konten Website</b> (ikon roda gigi di header, atau menu sidebar).</li>
+                <li>Ubah <b>logo aplikasi</b>, nama situs, hero, dan statistik di tab <b>Umum</b>.</li>
+                <li>Kelola galeri & produk di tab <b>Konten</b>, FAQ di tab <b>FAQ</b>.</li>
+                <li>Klik <b>Simpan Perubahan</b> — tampilan publik langsung diperbarui.</li>
+              </ol>
+            </div>
+          </div>
+
+          {/* FAQ ringkas */}
+          <div className="bg-[#F7F7F5] rounded-xl border border-[#c4c8bb]/20 p-4 space-y-2">
+            <p className="font-bold text-[#172C05]">❓ Pertanyaan Umum:</p>
+            <div className="space-y-2 text-xs">
+              <div className="p-2.5 bg-white rounded-lg border border-[#c4c8bb]/15">
+                <p className="font-bold text-[#221A12]">Q: Data tidak muncul / popup "Koneksi Terputus"?</p>
+                <p className="text-[#74796d] mt-0.5">Pastikan server backend berjalan, lalu klik <b>Coba Hubungkan Sekarang</b> pada popup.</p>
+              </div>
+              <div className="p-2.5 bg-white rounded-lg border border-[#c4c8bb]/15">
+                <p className="font-bold text-[#221A12]">Q: Bagaimana cara mengunduh laporan panen?</p>
+                <p className="text-[#74796d] mt-0.5">Buka <b>Kelola Data Panen</b> → klik tombol <b>Export</b> → pilih CSV atau Excel.</p>
+              </div>
+              <div className="p-2.5 bg-white rounded-lg border border-[#c4c8bb]/15">
+                <p className="font-bold text-[#221A12]">Q: Status stok kemasan tidak sesuai?</p>
+                <p className="text-[#74796d] mt-0.5">Status dihitung otomatis: stok ≤ minimal = <b>Menipis</b>, stok 0 = <b>Habis</b>. Perbarui stok di form edit.</p>
+              </div>
+              <div className="p-2.5 bg-white rounded-lg border border-[#c4c8bb]/15">
+                <p className="font-bold text-[#221A12]">Q: Lupa password?</p>
+                <p className="text-[#74796d] mt-0.5">Hubungi admin KWT atau helpdesk di kontak di bawah untuk reset akun.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Kontak */}
+          <div className="p-4 bg-[#2C4219] text-white rounded-xl space-y-2">
+            <p className="font-bold text-[#C3E28D]"><Headphones className="w-4 h-4 inline-block mr-1.5" /> Kontak Layanan Dukungan:</p>
+            <ul className="list-disc pl-5 space-y-1 text-xs text-[#efe0d2]">
+              <li>WhatsApp Hotline: <b>0812-3456-7890</b> (Ibu Tani / Helpdesk)</li>
+              <li>Email Operasional: <b>support@sorgumscm.id</b></li>
               <li>Jam Layanan: Senin - Sabtu, 08.00 - 17.00 WIB</li>
             </ul>
           </div>

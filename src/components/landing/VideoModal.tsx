@@ -32,11 +32,11 @@ export const VideoModal: React.FC<VideoModalProps> = ({ isOpen, onClose }) => {
 
         {/* Simulated Video Player */}
         <div className="relative bg-black h-72 sm:h-96 flex items-center justify-center overflow-hidden">
-          <img
-            src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=1200&q=80"
-            alt="Video Preview Ibu KWT"
-            className="w-full h-full object-cover opacity-80"
-          />
+          <div className="w-full h-full bg-gradient-to-br from-[#2C4219] via-[#172C05] to-black flex items-center justify-center">
+            <div className="w-28 h-28 rounded-full bg-[#C3E28D]/15 border-2 border-[#C3E28D]/40 flex items-center justify-center">
+              <Play className="w-12 h-12 text-[#C3E28D] ml-1" />
+            </div>
+          </div>
 
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 flex flex-col justify-between p-6">
             <div className="flex items-center gap-2 text-xs font-bold text-white bg-black/40 px-3 py-1 rounded-full self-start backdrop-blur-xs">

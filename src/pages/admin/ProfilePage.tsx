@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   User,
   Mail,
@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Leaf,
 } from 'lucide-react';
+import { authApi } from '../../api/endpoints/authApi';
 
 // ---------- Types ----------
 interface ProfileData {
@@ -64,25 +65,60 @@ export const ProfilePage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saveError, setSaveError] = useState('');
   const [activeTab, setActiveTab] = useState<'profil' | 'keamanan'>('profil');
 
   const [profile, setProfile] = useState<ProfileData>({
-    name: 'Ibu KWT Mawar',
-    email: 'kwt.sorgum@gmail.com',
-    phone: '0812-3456-7890',
-    jabatan: 'Manajer SCM',
-    namaKWT: 'KWT Subang Mandiri',
-    alamat: 'Jl. Sorgum No. 12, Desa Cijambe',
-    kecamatan: 'Cijambe',
-    kabupaten: 'Subang, Jawa Barat',
-    bio: 'Pengelola rantai pasok sorgum KWT Subang Mandiri sejak 2021.',
-    avatar:
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuCaXEzYVwh8rBuM7PtbQrpP39W0HmakJ4kHsPwX7_vIZgRvfmqm9pRP7szJLdko2G45UQYO6M8aY_i21j9x3xP65UULd5xpGsQFN_UJLI_uhaMGDzoeASs_69MYwt__JwI7APZiqq772N9JKeOU5BvNgzdWn6GnagOmEqSIELGYuWu1lmmQwuMjv7jMWicYeALwoLwWCWLovQjtbqzrS6MtD5xNOIkU9WUx6BIywUugUVIF0XwaXwzJ',
+    name: '',
+    email: '',
+    phone: '',
+    jabatan: '',
+    namaKWT: '',
+    alamat: '',
+    kecamatan: '',
+    kabupaten: '',
+    bio: '',
+    avatar: '',
   });
 
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
   const [showPw, setShowPw] = useState({ current: false, new: false, confirm: false });
   const [pwError, setPwError] = useState('');
+
+  // Muat profil dari backend saat halaman dibuka
+  useEffect(() => {
+    let cancelled = false;
+    const loadProfile = async () => {
+      setLoading(true);
+      try {
+        const user = await authApi.getProfile();
+        if (!cancelled && user) {
+          setProfile((p) => ({
+            ...p,
+            name: user.name || '',
+            email: user.email || '',
+            phone: user.phone || '',
+            jabatan: user.jabatan || '',
+            namaKWT: user.namaKWT || '',
+            alamat: user.alamat || '',
+            kecamatan: user.kecamatan || '',
+            kabupaten: user.kabupaten || '',
+            bio: user.bio || '',
+            avatar: user.avatar || '',
+          }));
+        }
+      } catch {
+        // Biarkan state default kosong
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,20 +128,44 @@ export const ProfilePage: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3500);
+    setSaveError('');
+    try {
+      await authApi.updateProfile({
+        name: profile.name,
+        phone: profile.phone,
+        jabatan: profile.jabatan,
+        namaKWT: profile.namaKWT,
+        alamat: profile.alamat,
+        kecamatan: profile.kecamatan,
+        kabupaten: profile.kabupaten,
+        bio: profile.bio,
+        avatar: profile.avatar || undefined,
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3500);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Gagal menyimpan profil.');
+    }
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPwError('');
     if (passwords.new.length < 8) { setPwError('Kata sandi baru minimal 8 karakter.'); return; }
     if (passwords.new !== passwords.confirm) { setPwError('Konfirmasi kata sandi tidak cocok.'); return; }
-    setPasswords({ current: '', new: '', confirm: '' });
-    setPasswordSuccess(true);
-    setTimeout(() => setPasswordSuccess(false), 3500);
+    try {
+      await authApi.changePassword({
+        currentPassword: passwords.current,
+        newPassword: passwords.new,
+      });
+      setPasswords({ current: '', new: '', confirm: '' });
+      setPasswordSuccess(true);
+      setTimeout(() => setPasswordSuccess(false), 3500);
+    } catch (err) {
+      setPwError(err instanceof Error ? err.message : 'Gagal mengganti kata sandi.');
+    }
   };
 
   const tabs = [
@@ -200,6 +260,12 @@ export const ProfilePage: React.FC = () => {
       {/* ===== TAB PROFIL ===== */}
       {activeTab === 'profil' && (
         <form onSubmit={handleSaveProfile} className="space-y-4">
+          {saveError && (
+            <div className="flex items-center gap-2.5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm font-semibold text-red-700">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              {saveError}
+            </div>
+          )}
           {saveSuccess && (
             <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm font-semibold text-emerald-700">
               <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -207,6 +273,17 @@ export const ProfilePage: React.FC = () => {
             </div>
           )}
 
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <div className="h-3 w-24 bg-[#F7F7F5] animate-pulse rounded" />
+                  <div className="h-9 bg-[#F7F7F5] animate-pulse rounded-xl" />
+                </div>
+              ))}
+            </div>
+          ) : (
+          <>
           <SectionCard title="Informasi Pribadi" icon={<User className="w-4 h-4" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Nama Lengkap" id="name">
@@ -298,12 +375,15 @@ export const ProfilePage: React.FC = () => {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#2C4219] text-white font-bold text-sm hover:bg-[#213213] shadow-md hover:shadow-lg transition-all cursor-pointer"
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#2C4219] text-white font-bold text-sm hover:bg-[#213213] shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="w-4 h-4" />
-              Simpan Perubahan
+              {loading ? 'Memuat...' : 'Simpan Perubahan'}
             </button>
           </div>
+          </>
+          )}
         </form>
       )}
 

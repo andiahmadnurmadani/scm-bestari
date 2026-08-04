@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, CheckCircle2, ArrowRight } from 'lucide-react';
+import { X, CheckCircle2, ArrowRight, Sprout, Award, Truck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface FeatureDemoModalProps {
@@ -29,7 +29,7 @@ export const FeatureDemoModal: React.FC<FeatureDemoModalProps> = ({
         'Ekspor laporan panen ke format PDF/Cetak',
       ],
       route: '/dashboard/panen',
-      mockImage: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=1000&q=80',
+      mockIcon: 'Sprout',
     },
     produksi: {
       title: 'Demo Modul: Produksi & Sertifikasi Legal',
@@ -42,7 +42,7 @@ export const FeatureDemoModal: React.FC<FeatureDemoModalProps> = ({
         'Cetak QR-Code Traceability produk',
       ],
       route: '/dashboard/sertifikat',
-      mockImage: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1000&q=80',
+      mockIcon: 'Award',
     },
     logistik: {
       title: 'Demo Modul: Logistik & Transaksi Keuangan',
@@ -55,7 +55,7 @@ export const FeatureDemoModal: React.FC<FeatureDemoModalProps> = ({
         'Laporan neraca keuangan ramah audit',
       ],
       route: '/dashboard/logistik',
-      mockImage: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=1000&q=80',
+      mockIcon: 'Truck',
     },
   };
 
@@ -84,12 +84,16 @@ export const FeatureDemoModal: React.FC<FeatureDemoModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-6 space-y-5 overflow-y-auto">
-          <div className="relative rounded-2xl overflow-hidden border border-[#c4c8bb]/30 h-48 sm:h-56">
-            <img
-              src={current.mockImage}
-              alt={current.title}
-              className="w-full h-full object-cover"
-            />
+          <div className="relative rounded-2xl overflow-hidden border border-[#c4c8bb]/30 h-48 sm:h-56 bg-gradient-to-br from-[#2C4219] to-[#172C05] flex items-center justify-center">
+            <div className="w-20 h-20 rounded-2xl bg-[#C3E28D]/15 border border-[#C3E28D]/30 flex items-center justify-center">
+              {current.mockIcon === 'Sprout' ? (
+                <Sprout className="w-10 h-10 text-[#C3E28D]" />
+              ) : current.mockIcon === 'Award' ? (
+                <Award className="w-10 h-10 text-[#C3E28D]" />
+              ) : (
+                <Truck className="w-10 h-10 text-[#C3E28D]" />
+              )}
+            </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-4">
               <span className="text-white text-xs font-bold bg-black/50 px-3 py-1 rounded-lg backdrop-blur-xs">
                 Tampilan Layar Dashboard Interaktif

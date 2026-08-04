@@ -15,6 +15,8 @@ import {
   Download,
   ExternalLink,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { certificatesApi } from '../../api/endpoints/certificatesApi';
 import { Certificate } from '../../types';
@@ -22,6 +24,7 @@ import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
+import { nextCode } from '../../utils/kodeGenerator';
 
 export const SertifikatPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
@@ -35,17 +38,25 @@ export const SertifikatPage: React.FC = () => {
   // Modal States
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [activeCert, setActiveCert] = useState<Certificate | null>(null);
+  const [iframeError, setIframeError] = useState(false);
 
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Certificate | null>(null); // Data yang akan dihapus
+
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [formData, setFormData] = useState<Partial<Certificate>>({
     kodeDokumen: '',
     namaSertifikat: '',
-    penerbitSertifikat: 'BPJPH Kementerian Agama RI',
+    penerbitSertifikat: '',
     nomorSertifikat: '',
     tanggalTerbit: new Date().toLocaleDateString('id-ID'),
-    tanggalKadaluarsa: '2028-12-31',
+    tanggalKadaluarsa: '',
     status: 'AKTIF',
     jenisDokumen: 'Sertifikat Halal',
     fileUrl: '',
@@ -54,37 +65,56 @@ export const SertifikatPage: React.FC = () => {
     keterangan: '',
   });
 
-  const fetchCertificates = async () => {
+  const fetchCertificates = async (targetPage = page, search = searchTerm) => {
     setLoading(true);
-    const data = await certificatesApi.getAll();
-    setCertificates(data);
-    setLoading(false);
+    try {
+      const res = await certificatesApi.getAll({
+        page: targetPage,
+        limit,
+        search: search || undefined,
+      });
+      setCertificates(res.data || []);
+      setTotal(res.pagination?.total || 0);
+      setTotalPages(res.pagination?.totalPages || 1);
+    } catch {
+      setCertificates([]);
+      setTotal(0);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetchCertificates();
-  }, []);
+    setPage(1); // Reset ke halaman 1 saat search berubah
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchCertificates(page, searchTerm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, searchTerm]);
 
   const handleOpenDetail = (cert: Certificate) => {
     setActiveCert(cert);
+    setIframeError(false);
     setDetailModalOpen(true);
   };
 
   const handleOpenAdd = () => {
     setEditId(null);
     setFormData({
-      kodeDokumen: `CERT-DOC-00${certificates.length + 1}`,
+      kodeDokumen: nextCode('CERT-', certificates, 3),
       namaSertifikat: '',
-      penerbitSertifikat: 'BPJPH Kementerian Agama RI',
-      nomorSertifikat: 'ID3111000' + Math.floor(100000 + Math.random() * 900000),
+      penerbitSertifikat: '',
+      nomorSertifikat: '',
       tanggalTerbit: new Date().toLocaleDateString('id-ID'),
-      tanggalKadaluarsa: '2028-12-31',
+      tanggalKadaluarsa: '',
       status: 'AKTIF',
       jenisDokumen: 'Sertifikat Halal',
       fileUrl: '',
       fileName: '',
       fileType: 'pdf',
-      keterangan: 'Dokumen legalitas kualifikasi pangan sorgum.',
+      keterangan: '',
     });
     setFormModalOpen(true);
   };
@@ -106,11 +136,11 @@ export const SertifikatPage: React.FC = () => {
     fetchCertificates();
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus dokumen sertifikat ini?')) {
-      await certificatesApi.delete(id);
-      fetchCertificates();
-    }
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await certificatesApi.delete(deleteTarget.id);
+    setDeleteTarget(null);
+    fetchCertificates();
   };
 
   // Process File Selection (PDF, JPG, PNG)
@@ -173,15 +203,10 @@ export const SertifikatPage: React.FC = () => {
     }
   };
 
-  const filteredList = certificates.filter((item) => {
-    return (
-      item.kodeDokumen.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.namaSertifikat.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.nomorSertifikat.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.penerbitSertifikat.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.fileName && item.fileName.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  });
+  const goToPage = (targetPage: number) => {
+    if (targetPage < 1 || targetPage > totalPages) return;
+    setPage(targetPage);
+  };
 
   return (
     <div className="space-y-5 pb-8">
@@ -232,7 +257,7 @@ export const SertifikatPage: React.FC = () => {
             Arsip Sertifikasi & Legalitas Produk Sorgum
           </h3>
           <span className="text-xs text-[#6B7280] font-medium">
-            Total {filteredList.length} berkas tersimpan
+            Total {loading ? '...' : certificates.length} dari {total} berkas tersimpan
           </span>
         </div>
 
@@ -250,7 +275,21 @@ export const SertifikatPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 text-[#221A12] font-medium">
-              {filteredList.map((item) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-[#6B7280]">
+                    <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
+                    Memuat data sertifikat...
+                  </td>
+                </tr>
+              ) : certificates.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-[#6B7280]">
+                    Tidak ada dokumen sertifikat yang ditemukan.
+                  </td>
+                </tr>
+              ) : (
+              certificates.map((item) => (
                 <tr key={item.id} className="hover:bg-[#F7F7F5] transition-colors">
                   <td className="py-2.5 px-3 pl-4 font-bold text-[#2C4219]">{item.kodeDokumen}</td>
                   <td className="py-2.5 px-3 font-semibold">{item.namaSertifikat}</td>
@@ -310,7 +349,7 @@ export const SertifikatPage: React.FC = () => {
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => setDeleteTarget(item)}
                         className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                         title="Hapus Sertifikat"
                       >
@@ -319,10 +358,48 @@ export const SertifikatPage: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Table Footer: Pagination */}
+        {!loading && total > 0 && (
+          <div className="p-3 sm:p-4 border-t border-[#c4c8bb]/20 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#6B7280]">
+            <span className="font-medium">
+              Menampilkan {certificates.length === 0 ? 0 : (page - 1) * limit + 1}-
+              {Math.min(page * limit, total)} dari {total} berkas
+            </span>
+            <div className="flex items-center gap-1 font-bold">
+              <button
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1}
+                className="p-1 rounded-md border border-[#c4c8bb]/30 text-[#44483e] hover:bg-[#F7F7F5] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                <button
+                  key={num}
+                  onClick={() => goToPage(num)}
+                  className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs transition-colors cursor-pointer ${
+                    num === page ? 'bg-[#2C4219] text-white' : 'hover:bg-[#F7F7F5] text-[#44483e]'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                onClick={() => goToPage(page + 1)}
+                disabled={page >= totalPages}
+                className="p-1 rounded-md border border-[#c4c8bb]/30 text-[#44483e] hover:bg-[#F7F7F5] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Detail & Document Preview Modal */}
@@ -347,6 +424,9 @@ export const SertifikatPage: React.FC = () => {
                       {activeCert.namaSertifikat}
                     </h4>
                     <p className="text-xs text-[#6B7280]">Penerbit: {activeCert.penerbitSertifikat}</p>
+                    <span className="inline-block mt-1.5 px-2 py-0.5 rounded-md bg-[#D1E6A5] text-[#2C4219] text-[10px] font-bold">
+                      {activeCert.jenisDokumen || 'Sertifikat Halal'}
+                    </span>
                   </div>
                 </div>
 
@@ -368,7 +448,7 @@ export const SertifikatPage: React.FC = () => {
                 <div className="space-y-3">
                   {activeCert.fileType === 'image' ||
                   activeCert.fileUrl.startsWith('data:image') ||
-                  /\.(jpg|jpeg|png)$/i.test(activeCert.fileName || activeCert.fileUrl) ? (
+                  /\\.(jpg|jpeg|png|svg)$/i.test(activeCert.fileName || activeCert.fileUrl) ? (
                     <div className="relative group rounded-xl overflow-hidden border border-[#c4c8bb]/40 bg-white max-h-[400px] flex items-center justify-center p-2">
                       <img
                         src={activeCert.fileUrl}
@@ -378,12 +458,25 @@ export const SertifikatPage: React.FC = () => {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <div className="w-full h-[320px] rounded-xl overflow-hidden border border-[#c4c8bb]/40 bg-white">
+                      <div className="w-full h-[320px] rounded-xl overflow-hidden border border-[#c4c8bb]/40 bg-white relative">
                         <iframe
                           src={activeCert.fileUrl}
                           title={activeCert.namaSertifikat}
                           className="w-full h-full border-none"
+                          onError={() => setIframeError(true)}
                         />
+                        {iframeError && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#fff8f4] text-center p-4">
+                            <FileText className="w-10 h-10 text-[#2C4219]/40 mb-2" />
+                            <p className="text-xs font-bold text-[#44483e]">
+                              Preview tidak dapat dimuat (file eksternal tidak terjangkau).
+                            </p>
+                            <p className="text-[10px] text-[#6B7280] mt-1">
+                              Gunakan tombol <b>Unduh Dokumen</b> untuk membuka file asli, atau unggah ulang file
+                              melalui menu edit.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -482,9 +575,10 @@ export const SertifikatPage: React.FC = () => {
               <input
                 type="text"
                 value={formData.kodeDokumen}
-                onChange={(e) => setFormData({ ...formData, kodeDokumen: e.target.value })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
-                required
+                readOnly
+                disabled
+                title="Kode dibuat otomatis oleh sistem (auto-increment)"
+                className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold text-[#2C4219] cursor-not-allowed"
               />
             </div>
             <div>
@@ -528,6 +622,7 @@ export const SertifikatPage: React.FC = () => {
                 type="text"
                 value={formData.penerbitSertifikat}
                 onChange={(e) => setFormData({ ...formData, penerbitSertifikat: e.target.value })}
+                placeholder="Contoh: BPJPH Kemenag RI"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
               />
@@ -540,6 +635,7 @@ export const SertifikatPage: React.FC = () => {
                 type="text"
                 value={formData.nomorSertifikat}
                 onChange={(e) => setFormData({ ...formData, nomorSertifikat: e.target.value })}
+                placeholder="Contoh: ID311100012345"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-mono"
                 required
               />
@@ -632,6 +728,7 @@ export const SertifikatPage: React.FC = () => {
                 type="text"
                 value={formData.tanggalTerbit}
                 onChange={(e) => setFormData({ ...formData, tanggalTerbit: e.target.value })}
+                placeholder="Contoh: 12 Maret 2026"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
               />
@@ -644,6 +741,7 @@ export const SertifikatPage: React.FC = () => {
                 type="text"
                 value={formData.tanggalKadaluarsa}
                 onChange={(e) => setFormData({ ...formData, tanggalKadaluarsa: e.target.value })}
+                placeholder="Contoh: 12 Maret 2028"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
               />
@@ -686,6 +784,43 @@ export const SertifikatPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Modal Konfirmasi Hapus */}
+      {deleteTarget && (
+        <Modal
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          title="Hapus Dokumen Sertifikat"
+          maxWidth="sm"
+        >
+          <div className="space-y-4 text-sm text-[#221A12]">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-red-700">
+                  Apakah Anda yakin ingin menghapus dokumen sertifikat ini?
+                </p>
+                <p className="text-[11px] text-[#6B7280] mt-1 leading-relaxed">
+                  <strong>{deleteTarget.kodeDokumen}</strong> — {deleteTarget.namaSertifikat}.
+                  Tindakan ini tidak dapat dibatalkan.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#c4c8bb]/20">
+              <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+                Batal
+              </Button>
+              <Button type="button" variant="danger" onClick={confirmDelete}>
+                <Trash2 className="w-3.5 h-3.5" />
+                Ya, Hapus
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

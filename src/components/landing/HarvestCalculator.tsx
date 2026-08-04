@@ -195,7 +195,7 @@ export const HarvestCalculator: React.FC = () => {
               {/* Friendly CTA */}
               <div className="pt-2">
                 <Link
-                  to="/register"
+                  to="/login"
                   className="w-full py-3.5 px-6 rounded-2xl bg-[#C3E28D] hover:bg-[#b5d87b] text-[#172C05] font-black text-sm flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
                 >
                   <span>Mulai Catat Hasil Panen Anda Sekarang</span>

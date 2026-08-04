@@ -12,8 +12,20 @@ import {
   CheckCircle2,
   ExternalLink,
   PenLine,
+  Image as ImageIcon,
+  Package,
+  GitBranch,
+  HelpCircle,
+  Camera,
+  Trash2,
+  Link2,
+  Lightbulb,
+  KeyRound,
+  MapPin,
+  Phone,
+  Mail,
 } from 'lucide-react';
-import { useCms } from '../../context/CmsContext';
+import { useCms, CmsHeroImage, CmsProduct, CmsWorkflowStep, CmsFaq } from '../../context/CmsContext';
 
 // ── Reusable sub-components ───────────────────────────────────────────────────
 
@@ -53,6 +65,119 @@ const inputCls =
 const textareaCls =
   'w-full px-3 py-2 bg-[#F7F7F5] border border-[#c4c8bb]/40 rounded-xl text-xs font-medium text-[#221A12] placeholder-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#2C4219]/30 focus:border-[#2C4219] focus:bg-white transition-all resize-none';
 
+// ── Image uploader: upload lokal (base64) ATAU tempel link URL ───────────────
+
+let imageInputSeq = 0;
+const ImageUploader: React.FC<{
+  value: string;
+  onChange: (src: string) => void;
+  label?: string;
+  className?: string;
+}> = ({ value, onChange, label, className }) => {
+  const inputId = React.useMemo(() => `cms-image-${++imageInputSeq}`, []);
+  const [urlDraft, setUrlDraft] = React.useState('');
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      onChange(reader.result as string);
+      setUrlDraft('');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const applyUrl = () => {
+    const url = urlDraft.trim();
+    if (!url) return;
+    onChange(url);
+    setUrlDraft('');
+  };
+
+  const isUrlValue = value.startsWith('http://') || value.startsWith('https://') || value.startsWith('/');
+
+  return (
+    <div className={`space-y-1.5 ${className || ''}`}>
+      {label && <label className="block text-[10px] font-bold text-[#172C05] uppercase tracking-wider">{label}</label>}
+
+      {/* Preview + tombol upload */}
+      <div className="flex items-center gap-2.5">
+        <label
+          htmlFor={inputId}
+          className="w-14 h-14 rounded-xl border border-[#c4c8bb]/30 bg-[#F7F7F5] overflow-hidden flex items-center justify-center shrink-0 cursor-pointer hover:border-[#2C4219] transition-colors"
+          title="Klik untuk pilih gambar dari perangkat"
+        >
+          {value ? <img src={value} alt="" className="w-full h-full object-cover" /> : <ImageIcon className="w-5 h-5 text-[#A8B774]" />}
+        </label>
+        <label
+          htmlFor={inputId}
+          className="px-3 py-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-xs font-semibold text-[#2C4219] hover:bg-[#efe0d2] transition-colors cursor-pointer inline-flex items-center gap-1"
+        >
+          <Camera className="w-3.5 h-3.5" />
+          Upload File
+        </label>
+        <input id={inputId} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+            title="Hapus gambar"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Pemisah */}
+      <div className="flex items-center gap-2 text-[9px] text-[#9CA3AF] font-semibold uppercase tracking-wider">
+        <span className="h-px flex-1 bg-[#c4c8bb]/25" />
+        atau via link URL
+        <span className="h-px flex-1 bg-[#c4c8bb]/25" />
+      </div>
+
+      {/* Input URL */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <ImageIcon className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
+          <input
+            type="url"
+            value={urlDraft}
+            onChange={(e) => setUrlDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                applyUrl();
+              }
+            }}
+            placeholder="https://contoh.com/gambar.jpg"
+            className={`${inputCls} pl-8`}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={applyUrl}
+          className="px-3 py-2 rounded-lg bg-[#2C4219] text-white text-xs font-bold hover:bg-[#213213] transition-colors cursor-pointer shrink-0"
+        >
+          Pakai Link
+        </button>
+      </div>
+
+      {/* Info sumber aktif */}
+      {value && (
+        <p className="text-[9px] text-[#6B7280] font-medium truncate">
+          {isUrlValue ? (
+            <span className="flex items-center gap-1"><Link2 className="w-3 h-3" /> Sumber: link URL</span>
+          ) : (
+            <span className="flex items-center gap-1"><ImageIcon className="w-3 h-3" /> Sumber: upload file (tersimpan di database)</span>
+          )}
+        </p>
+      )}
+    </div>
+  );
+};
+
 // ── Inline live preview mini-card ─────────────────────────────────────────────
 
 const HeroPreview: React.FC<{
@@ -82,8 +207,8 @@ const HeroPreview: React.FC<{
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export const CmsPage: React.FC = () => {
-  const { cms, update, updateStat, updateFeatureCard, reset } = useCms();
-  const [activeTab, setActiveTab] = useState<'umum' | 'hero' | 'stats' | 'fitur' | 'cta'>('hero');
+  const { cms, update, updateStat, updateFeatureCard, updateHeroImage, updateProduct, updateWorkflowStep, updateFaq, reset } = useCms();
+  const [activeTab, setActiveTab] = useState<'umum' | 'hero' | 'stats' | 'fitur' | 'cta' | 'galeri' | 'produk' | 'alur' | 'faq'>('hero');
   const [saved, setSaved] = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
 
@@ -106,9 +231,14 @@ export const CmsPage: React.FC = () => {
     { id: 'hero' as const, label: 'Hero', icon: <Heading1 className="w-3.5 h-3.5" /> },
     { id: 'stats' as const, label: 'Statistik', icon: <BarChart3 className="w-3.5 h-3.5" /> },
     { id: 'fitur' as const, label: 'Fitur', icon: <Star className="w-3.5 h-3.5" /> },
+    { id: 'galeri' as const, label: 'Galeri', icon: <ImageIcon className="w-3.5 h-3.5" /> },
+    { id: 'produk' as const, label: 'Produk', icon: <Package className="w-3.5 h-3.5" /> },
+    { id: 'alur' as const, label: 'Alur Proses', icon: <GitBranch className="w-3.5 h-3.5" /> },
+    { id: 'faq' as const, label: 'FAQ', icon: <HelpCircle className="w-3.5 h-3.5" /> },
     { id: 'cta' as const, label: 'Banner CTA', icon: <Megaphone className="w-3.5 h-3.5" /> },
     { id: 'umum' as const, label: 'Umum', icon: <Settings2 className="w-3.5 h-3.5" /> },
   ];
+
 
   return (
     <div className="space-y-5">
@@ -342,6 +472,157 @@ export const CmsPage: React.FC = () => {
         </div>
       )}
 
+      {/* ═══ TAB: GALERI (gambar hero slideshow) ═══ */}
+      {activeTab === 'galeri' && (
+        <div className="space-y-4">
+          <SectionCard title="Galeri Gambar Hero" subtitle="Gambar slideshow di sisi kanan hero — unggah dari perangkat Anda" icon={<ImageIcon className="w-4 h-4" />}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {cms.heroImages.map((img, i) => (
+                <div key={i} className="p-4 bg-[#F7F7F5] rounded-xl border border-[#c4c8bb]/20 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#2C4219] text-white text-[9px] font-extrabold flex items-center justify-center shrink-0">
+                      {i + 1}
+                    </div>
+                    <span className="text-[10px] font-bold text-[#172C05] uppercase tracking-wider">Gambar {i + 1}</span>
+                  </div>
+                  <ImageUploader
+                    value={img.src}
+                    onChange={(src) => updateHeroImage(i, { src })}
+                    label="Gambar Slideshow"
+                  />
+                  <Field label="Judul Gambar">
+                    <input
+                      value={img.title}
+                      onChange={(e) => updateHeroImage(i, { title: e.target.value })}
+                      className={inputCls}
+                      placeholder="Judul tampil di bawah gambar"
+                    />
+                  </Field>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-[#9CA3AF] font-medium">
+              <Lightbulb className="w-3.5 h-3.5 inline-block mr-1 text-amber-600" /> Kosongkan gambar untuk memakai gambar bawaan. Gambar tersimpan sebagai base64 di database.
+            </p>
+          </SectionCard>
+        </div>
+      )}
+
+      {/* ═══ TAB: PRODUK ═══ */}
+      {activeTab === 'produk' && (
+        <div className="space-y-4">
+          <SectionCard title="Header Seksi Produk" subtitle="Teks judul bagian Produk Turunan" icon={<Package className="w-4 h-4" />}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Field label="Badge Seksi">
+                <input value={cms.productsBadge} onChange={(e) => update({ productsBadge: e.target.value })} className={inputCls} />
+              </Field>
+              <Field label="Judul Seksi (H2)">
+                <input value={cms.productsTitle} onChange={(e) => update({ productsTitle: e.target.value })} className={inputCls} />
+              </Field>
+              <Field label="Deskripsi Seksi">
+                <input value={cms.productsSubtitle} onChange={(e) => update({ productsSubtitle: e.target.value })} className={inputCls} />
+              </Field>
+            </div>
+          </SectionCard>
+
+          {cms.products.map((p, i) => (
+            <SectionCard
+              key={i}
+              title={`Produk ${i + 1}`}
+              subtitle={p.name}
+              icon={<Package className="w-4 h-4" />}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Nama Produk">
+                  <input value={p.name} onChange={(e) => updateProduct(i, { name: e.target.value })} className={inputCls} />
+                </Field>
+                <Field label="Badge (mis. Gluten-Free)">
+                  <input value={p.badge} onChange={(e) => updateProduct(i, { badge: e.target.value })} className={inputCls} />
+                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Deskripsi Produk">
+                    <textarea rows={2} value={p.desc} onChange={(e) => updateProduct(i, { desc: e.target.value })} className={textareaCls} />
+                  </Field>
+                </div>
+                <Field label="Tipe Kemasan">
+                  <input value={p.pack} onChange={(e) => updateProduct(i, { pack: e.target.value })} className={inputCls} />
+                </Field>
+                <Field label="Tag Legalitas">
+                  <input value={p.tag} onChange={(e) => updateProduct(i, { tag: e.target.value })} className={inputCls} />
+                </Field>
+                <div className="sm:col-span-2">
+                  <ImageUploader value={p.img} onChange={(src) => updateProduct(i, { img: src })} label="Gambar Produk" />
+                </div>
+              </div>
+            </SectionCard>
+          ))}
+        </div>
+      )}
+
+      {/* ═══ TAB: ALUR PROSES ═══ */}
+      {activeTab === 'alur' && (
+        <div className="space-y-4">
+          <SectionCard title="Alur Rantai Pasok" subtitle="Diagram langkah di bawah kartu fitur" icon={<GitBranch className="w-4 h-4" />}>
+            <Field label="Judul Alur">
+              <input value={cms.workflowTitle} onChange={(e) => update({ workflowTitle: e.target.value })} className={inputCls} />
+            </Field>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {cms.workflowSteps.map((step, i) => (
+                <div key={i} className="p-4 bg-[#F7F7F5] rounded-xl border border-[#c4c8bb]/20 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#2C4219] text-white text-[9px] font-extrabold flex items-center justify-center shrink-0">
+                      {i + 1}
+                    </div>
+                    <span className="text-[10px] font-bold text-[#172C05] uppercase tracking-wider">Langkah {i + 1}</span>
+                  </div>
+                  <Field label="Nomor">
+                    <input value={step.number} onChange={(e) => updateWorkflowStep(i, { number: e.target.value })} className={inputCls} />
+                  </Field>
+                  <Field label="Judul Langkah">
+                    <input value={step.title} onChange={(e) => updateWorkflowStep(i, { title: e.target.value })} className={inputCls} />
+                  </Field>
+                  <Field label="Deskripsi Langkah">
+                    <textarea rows={2} value={step.desc} onChange={(e) => updateWorkflowStep(i, { desc: e.target.value })} className={textareaCls} />
+                  </Field>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+      )}
+
+      {/* ═══ TAB: FAQ ═══ */}
+      {activeTab === 'faq' && (
+        <div className="space-y-4">
+          <SectionCard title="Header Seksi FAQ" subtitle="Judul bagian Tanya Jawab" icon={<HelpCircle className="w-4 h-4" />}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Field label="Badge Seksi">
+                <input value={cms.faqBadge} onChange={(e) => update({ faqBadge: e.target.value })} className={inputCls} />
+              </Field>
+              <Field label="Judul Seksi (H2)">
+                <input value={cms.faqTitle} onChange={(e) => update({ faqTitle: e.target.value })} className={inputCls} />
+              </Field>
+              <Field label="Deskripsi Seksi">
+                <input value={cms.faqSubtitle} onChange={(e) => update({ faqSubtitle: e.target.value })} className={inputCls} />
+              </Field>
+            </div>
+          </SectionCard>
+
+          {cms.faqs.map((faq, i) => (
+            <SectionCard key={i} title={`FAQ ${i + 1}`} subtitle={faq.question} icon={<HelpCircle className="w-4 h-4" />}>
+              <div className="space-y-3">
+                <Field label="Pertanyaan">
+                  <input value={faq.question} onChange={(e) => updateFaq(i, { question: e.target.value })} className={inputCls} />
+                </Field>
+                <Field label="Jawaban">
+                  <textarea rows={3} value={faq.answer} onChange={(e) => updateFaq(i, { answer: e.target.value })} className={textareaCls} />
+                </Field>
+              </div>
+            </SectionCard>
+          ))}
+        </div>
+      )}
+
       {/* ═══ TAB: BANNER CTA ═══ */}
       {activeTab === 'cta' && (
         <div className="space-y-4">
@@ -390,8 +671,18 @@ export const CmsPage: React.FC = () => {
       {activeTab === 'umum' && (
         <div className="space-y-5">
           {/* General */}
-          <SectionCard title="Pengaturan Umum Situs" subtitle="Nama, tagline, dan teks navigasi" icon={<Settings2 className="w-4 h-4" />}>
+          <SectionCard title="Pengaturan Umum Situs" subtitle="Nama, tagline, logo, dan teks navigasi" icon={<Settings2 className="w-4 h-4" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <ImageUploader
+                  value={cms.logo}
+                  onChange={(src) => update({ logo: src })}
+                  label="Logo Aplikasi / Brand"
+                />
+                <p className="text-[9px] text-[#9CA3AF] font-medium mt-1">
+                  <Lightbulb className="w-3.5 h-3.5 inline-block mr-1 text-amber-600" /> Tampil di navbar &amp; footer landing page dan sidebar admin. Kosongkan untuk memakai ikon bawaan (<KeyRound className="w-3 h-3 inline" />).
+                </p>
+              </div>
               <Field label="Nama Situs" hint="Tampil di navbar, footer, dan title browser">
                 <input value={cms.siteName} onChange={(e) => update({ siteName: e.target.value })} className={inputCls} placeholder="Sorgum SCM" />
               </Field>
@@ -418,13 +709,13 @@ export const CmsPage: React.FC = () => {
               </Field>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Field label="Alamat / Lokasi" hint="Ditampilkan dengan ikon 📍">
+                <Field label="Alamat / Lokasi" hint="Ditampilkan dengan ikon lokasi">
                   <input value={cms.footerAlamat} onChange={(e) => update({ footerAlamat: e.target.value })} className={inputCls} placeholder="Bandung, Jawa Barat" />
                 </Field>
-                <Field label="No. Telepon / WA" hint="Ditampilkan dengan ikon 📞">
+                <Field label="No. Telepon / WA" hint="Ditampilkan dengan ikon telepon">
                   <input value={cms.footerTelepon} onChange={(e) => update({ footerTelepon: e.target.value })} className={inputCls} placeholder="+62 812-xxxx-xxxx" />
                 </Field>
-                <Field label="Email Kontak" hint="Ditampilkan dengan ikon ✉️">
+                <Field label="Email Kontak" hint="Ditampilkan dengan ikon email">
                   <input value={cms.footerEmail} onChange={(e) => update({ footerEmail: e.target.value })} className={inputCls} placeholder="info@sorgumscm.id" />
                 </Field>
               </div>
@@ -444,9 +735,9 @@ export const CmsPage: React.FC = () => {
                 <p className="text-sm font-extrabold text-white">{cms.siteName || '…'}</p>
                 <p className="text-[11px] text-[#c4c8bb] leading-relaxed">{cms.footerTagline || '…'}</p>
                 <div className="flex flex-wrap gap-3 pt-1 text-[10px] text-[#c4c8bb]">
-                  <span>📍 {cms.footerAlamat || '…'}</span>
-                  <span>📞 {cms.footerTelepon || '…'}</span>
-                  <span>✉️ {cms.footerEmail || '…'}</span>
+                  <span><MapPin className="w-3.5 h-3.5 inline-block mr-1 text-[#2C4219]" /> {cms.footerAlamat || '.'}</span>
+                  <span><Phone className="w-3.5 h-3.5 inline-block mr-1 text-[#2C4219]" /> {cms.footerTelepon || '…'}</span>
+                  <span><Mail className="w-3.5 h-3.5 inline-block mr-1 text-[#2C4219]" /> {cms.footerEmail || '…'}</span>
                 </div>
                 <div className="border-t border-[#2C4219] pt-2 mt-1 flex justify-between text-[10px]">
                   <span className="text-[#c4c8bb]">{cms.footerCopyright || '…'}</span>

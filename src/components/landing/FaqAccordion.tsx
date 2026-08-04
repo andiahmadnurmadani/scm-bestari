@@ -1,32 +1,13 @@
 import React, { useState } from 'react';
 import { ChevronDown, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useCms } from '../../context/CmsContext';
 
 export const FaqAccordion: React.FC = () => {
+  const { cms } = useCms();
   const [openIndex, setOpenIndex] = useState<number | null>(0); // First item open by default
 
-  const faqs = [
-    {
-      question: 'Apakah aplikasi Sorgum SCM ini sulit digunakan untuk pemula?',
-      answer:
-        'Sangat mudah! Aplikasi ini dirancang khusus dengan tombol besar, petunjuk langkah demi langkah, dan bahasa Indonesia yang ramah. Ibu-ibu KWT hanya perlu memasukkan angka tonase panen atau mengunggah foto nota, sisanya sistem yang menghitung otomatis.',
-    },
-    {
-      question: 'Bagaimana cara mendaftarkan Kelompok Wanita Tani (KWT) kami?',
-      answer:
-        'Sangat cepat! Klik tombol "Daftar Akun KWT Baru", isi nama kelompok, lokasi lahan, dan kontak ketua. Tim pendamping KWT kami akan menghubungi Anda melalui WhatsApp untuk membantu proses aktivasi gratis.',
-    },
-    {
-      question: 'Apakah data keuangan dan transaksi kami aman?',
-      answer:
-        'Ya, 100% aman dan terlindungi digital! Seluruh data panen, stok kemasan, dan pengeluaran KWT tersimpan rapi dan hanya dapat diakses oleh pengurus berwenang yang diberi password.',
-    },
-    {
-      question: 'Apakah catatan panen & produksi bisa dicetak untuk laporan bulanan?',
-      answer:
-        'Tentu bisa! Setiap modul (Panen, Sertifikasi, Logistik) menyediakan tombol "Export / Cetak". Anda dapat mengunduh laporan rapi dalam bentuk PDF yang siap dibagikan dalam rapat bulanan KWT.',
-    },
-  ];
+  const faqs = cms.faqs && cms.faqs.length > 0 ? cms.faqs : [];
 
   const toggleItem = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -38,13 +19,13 @@ export const FaqAccordion: React.FC = () => {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#C3E28D]/40 text-[#172C05] text-[10px] font-bold uppercase tracking-wider mb-1.5">
             <HelpCircle className="w-3.5 h-3.5 text-[#2C4219]" />
-            <span>Tanya Jawab Ramah KWT</span>
+            <span>{cms.faqBadge}</span>
           </div>
           <h2 className="text-lg sm:text-xl font-semibold text-[#2C4219]">
-            Pertanyaan Ringkas Ibu KWT
+            {cms.faqTitle}
           </h2>
           <p className="text-[11px] text-[#44483e] font-medium mt-1">
-            Jawaban lengkap untuk pertanyaan yang sering ditanyakan pengurus dan anggota kelompok tani.
+            {cms.faqSubtitle}
           </p>
         </div>
 

@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Factory, Plus, Filter, Search, Edit3, Trash2, CheckCircle, Package } from 'lucide-react';
+import { Factory, Plus, Filter, Search, Edit3, Trash2, CheckCircle, Package, ChevronLeft, ChevronRight } from 'lucide-react';
 import { productionApi } from '../../api/endpoints/productionApi';
 import { ProductionBatch } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
+import { nextCode } from '../../utils/kodeGenerator';
+import { harvestApi } from '../../api/endpoints/harvestApi';
+import { HarvestRecord } from '../../types';
 
 export const ProduksiPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
@@ -16,45 +19,90 @@ export const ProduksiPage: React.FC = () => {
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProductionBatch | null>(null);
+
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Bahan baku dropdown: hasil panen + raw bahan mentah
+  const [harvestList, setHarvestList] = useState<HarvestRecord[]>([]);
+  const [bahanBakuType, setBahanBakuType] = useState<'panen' | 'raw'>('panen');
+
   const [formData, setFormData] = useState<Partial<ProductionBatch>>({
     kodeBatch: '',
-    namaProduk: 'Tepung Sorgum Bioguma White Premium 500g',
+    namaProduk: '',
     kategori: 'Ready to Eat (Siap Konsumsi)',
     tanggalProduksi: new Date().toLocaleDateString('id-ID'),
-    tanggalKadaluarsa: '1 Tahun',
-    jumlahHasil: 1000,
+    tanggalKadaluarsa: '',
+    jumlahHasil: 0,
     satuan: 'Pouch',
-    nomorBatchBahanBaku: 'HARVEST-S-015',
-    operatorProduksi: 'Ibu KWT Tani Rahayu',
+    nomorBatchBahanBaku: '',
+    operatorProduksi: '',
     statusQC: 'Lolos QC',
-    lokasiGudang: 'Gudang Utama A',
+    lokasiGudang: '',
   });
 
-  const fetchProduction = async () => {
+  const fetchProduction = async (targetPage = page, search = searchTerm, cat = activeCategoryTab) => {
     setLoading(true);
-    const data = await productionApi.getAll();
-    setBatches(data);
-    setLoading(false);
+    try {
+      const res = await productionApi.getAll({
+        page: targetPage,
+        limit,
+        search: search || undefined,
+        kategori: cat === 'Semua' ? undefined : cat,
+      });
+      setBatches(res.data || []);
+      setTotal(res.pagination?.total || 0);
+      setTotalPages(res.pagination?.totalPages || 1);
+    } catch {
+      setBatches([]);
+      setTotal(0);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetchProduction();
+    setPage(1); // Reset ke halaman 1 saat search/tab berubah
+  }, [searchTerm, activeCategoryTab]);
+
+  useEffect(() => {
+    fetchProduction(page, searchTerm, activeCategoryTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, searchTerm, activeCategoryTab]);
+
+  // Muat daftar hasil panen untuk dropdown bahan baku
+  useEffect(() => {
+    const fetchHarvests = async () => {
+      try {
+        const res = await harvestApi.getAll({ limit: 100 });
+        setHarvestList(res.data || []);
+      } catch {
+        setHarvestList([]);
+      }
+    };
+    fetchHarvests();
   }, []);
 
   const handleOpenAdd = () => {
     setEditId(null);
+    setBahanBakuType('panen');
     setFormData({
-      kodeBatch: `PRD-2026-00${batches.length + 1}`,
+      kodeBatch: nextCode('PRD-', batches, 3),
       namaProduk: '',
       kategori: 'Ready to Eat (Siap Konsumsi)',
       tanggalProduksi: new Date().toLocaleDateString('id-ID'),
-      tanggalKadaluarsa: '1 Tahun',
-      jumlahHasil: 1000,
+      tanggalKadaluarsa: '',
+      jumlahHasil: 0,
       satuan: 'Pouch',
-      nomorBatchBahanBaku: 'HARVEST-S-010',
-      operatorProduksi: 'Tim KWT Sorgum',
+      nomorBatchBahanBaku: '',
+      operatorProduksi: '',
       statusQC: 'Lolos QC',
-      lokasiGudang: 'Gudang Utama A',
+      lokasiGudang: '',
     });
     setIsModalOpen(true);
   };
@@ -62,6 +110,8 @@ export const ProduksiPage: React.FC = () => {
   const handleOpenEdit = (item: ProductionBatch) => {
     setEditId(item.id);
     setFormData({ ...item });
+    // Deteksi jenis bahan baku dari kode: PN-* = hasil panen, PRD-* = raw mentah
+    setBahanBakuType(item.nomorBatchBahanBaku?.startsWith('PN-') ? 'panen' : 'raw');
     setIsModalOpen(true);
   };
 
@@ -76,23 +126,17 @@ export const ProduksiPage: React.FC = () => {
     fetchProduction();
   };
 
-  const handleDelete = async (id: string) => {
-    await productionApi.delete(id);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await productionApi.delete(deleteTarget.id);
+    setDeleteTarget(null);
     fetchProduction();
   };
 
-  const filteredBatches = batches.filter((item) => {
-    const matchesSearch =
-      item.kodeBatch.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.namaProduk.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.operatorProduksi.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.nomorBatchBahanBaku.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesCategory =
-      activeCategoryTab === 'Semua' || item.kategori === activeCategoryTab;
-
-    return matchesSearch && matchesCategory;
-  });
+  const goToPage = (targetPage: number) => {
+    if (targetPage < 1 || targetPage > totalPages) return;
+    setPage(targetPage);
+  };
 
   // Top 3 Stat Cards Calculations
   const totalProdukOlahan = batches.length;
@@ -182,7 +226,21 @@ export const ProduksiPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 text-[#221A12] font-medium">
-              {filteredBatches.map((item) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-[#6B7280]">
+                    <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
+                    Memuat data produksi...
+                  </td>
+                </tr>
+              ) : batches.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-[#6B7280]">
+                    Tidak ada batch produksi yang ditemukan.
+                  </td>
+                </tr>
+              ) : (
+              batches.map((item) => (
                 <tr key={item.id} className="hover:bg-[#F7F7F5] transition-colors">
                   <td className="py-2 px-3 pl-4 font-bold text-[#2C4219]">{item.kodeBatch}</td>
                   <td className="py-2 px-3 font-semibold">{item.namaProduk}</td>
@@ -225,7 +283,7 @@ export const ProduksiPage: React.FC = () => {
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => setDeleteTarget(item)}
                         className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
                         title="Hapus Batch"
                       >
@@ -234,10 +292,48 @@ export const ProduksiPage: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Table Footer: Pagination */}
+        {!loading && total > 0 && (
+          <div className="p-3 sm:p-4 border-t border-[#c4c8bb]/20 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#6B7280]">
+            <span className="font-medium">
+              Menampilkan {batches.length === 0 ? 0 : (page - 1) * limit + 1}-
+              {Math.min(page * limit, total)} dari {total} batch
+            </span>
+            <div className="flex items-center gap-1 font-bold">
+              <button
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1}
+                className="p-1 rounded-md border border-[#c4c8bb]/30 text-[#44483e] hover:bg-[#F7F7F5] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                <button
+                  key={num}
+                  onClick={() => goToPage(num)}
+                  className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs transition-colors cursor-pointer ${
+                    num === page ? 'bg-[#2C4219] text-white' : 'hover:bg-[#F7F7F5] text-[#44483e]'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                onClick={() => goToPage(page + 1)}
+                disabled={page >= totalPages}
+                className="p-1 rounded-md border border-[#c4c8bb]/30 text-[#44483e] hover:bg-[#F7F7F5] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal Form Batch Produksi */}
@@ -256,9 +352,10 @@ export const ProduksiPage: React.FC = () => {
               <input
                 type="text"
                 value={formData.kodeBatch}
-                onChange={(e) => setFormData({ ...formData, kodeBatch: e.target.value })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
+                readOnly
+                disabled
+                title="Kode dibuat otomatis oleh sistem (auto-increment)"
+                className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm text-[#2C4219] font-bold cursor-not-allowed"
               />
             </div>
             <div>
@@ -299,6 +396,7 @@ export const ProduksiPage: React.FC = () => {
                 type="number"
                 value={formData.jumlahHasil}
                 onChange={(e) => setFormData({ ...formData, jumlahHasil: Number(e.target.value) })}
+                placeholder="Contoh: 1000"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
               />
@@ -335,16 +433,56 @@ export const ProduksiPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Batch Bahan Baku Raw
+                Jenis Bahan Baku
               </label>
-              <input
-                type="text"
+              <select
+                value={bahanBakuType}
+                onChange={(e) => {
+                  const t = e.target.value as 'panen' | 'raw';
+                  setBahanBakuType(t);
+                  setFormData({ ...formData, nomorBatchBahanBaku: '' });
+                }}
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+              >
+                <option value="panen">Hasil Panen (Sorgum Segar)</option>
+                <option value="raw">Raw Bahan Mentah (Batch Produksi)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+                {bahanBakuType === 'panen' ? 'Pilih Hasil Panen' : 'Pilih Raw Bahan Mentah'}
+              </label>
+              <select
                 value={formData.nomorBatchBahanBaku}
                 onChange={(e) => setFormData({ ...formData, nomorBatchBahanBaku: e.target.value })}
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
-              />
+              >
+                <option value="" disabled>
+                  {bahanBakuType === 'panen'
+                    ? harvestList.length === 0
+                      ? 'Belum ada hasil panen'
+                      : 'Pilih kode panen...'
+                    : batches.filter((b) => b.kategori === 'Raw (Bahan Mentah)').length === 0
+                    ? 'Belum ada raw bahan mentah'
+                    : 'Pilih batch raw...'}
+                </option>
+                {bahanBakuType === 'panen'
+                  ? harvestList.map((h) => (
+                      <option key={h.id} value={h.kodePanen}>
+                        {h.kodePanen} — {h.namaLahan} ({h.varietas})
+                      </option>
+                    ))
+                  : batches
+                      .filter((b) => b.kategori === 'Raw (Bahan Mentah)')
+                      .map((b) => (
+                        <option key={b.id} value={b.kodeBatch}>
+                          {b.kodeBatch} — {b.namaProduk}
+                        </option>
+                      ))}
+              </select>
             </div>
+
             <div>
               <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
                 Operator / Tim Produksi KWT
@@ -353,6 +491,7 @@ export const ProduksiPage: React.FC = () => {
                 type="text"
                 value={formData.operatorProduksi}
                 onChange={(e) => setFormData({ ...formData, operatorProduksi: e.target.value })}
+                placeholder="Contoh: Tim KWT Asri"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
               />
@@ -369,6 +508,43 @@ export const ProduksiPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Modal Konfirmasi Hapus */}
+      {deleteTarget && (
+        <Modal
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          title="Hapus Batch Produksi"
+          maxWidth="sm"
+        >
+          <div className="space-y-4 text-sm text-[#221A12]">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-red-700">
+                  Apakah Anda yakin ingin menghapus batch produksi ini?
+                </p>
+                <p className="text-[11px] text-[#6B7280] mt-1 leading-relaxed">
+                  <strong>{deleteTarget.kodeBatch}</strong> — {deleteTarget.namaProduk}.
+                  Tindakan ini tidak dapat dibatalkan.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#c4c8bb]/20">
+              <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+                Batal
+              </Button>
+              <Button type="button" variant="danger" onClick={confirmDelete}>
+                <Trash2 className="w-3.5 h-3.5" />
+                Ya, Hapus
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Wrench, Plus, Eye, Edit3, Trash2, CheckCircle2, AlertTriangle, ShieldCheck, Upload, X } from 'lucide-react';
+import { Wrench, Plus, Eye, Edit3, Trash2, CheckCircle2, AlertTriangle, ShieldCheck, Upload, X, ChevronLeft, ChevronRight, Sprout, MapPin } from 'lucide-react';
 import { equipmentApi } from '../../api/endpoints/equipmentApi';
 import { Equipment } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
+import { nextCode } from '../../utils/kodeGenerator';
 
 export const PeralatanPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
@@ -17,6 +18,13 @@ export const PeralatanPage: React.FC = () => {
   const [activeItem, setActiveItem] = useState<Equipment | null>(null);
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Equipment | null>(null); // Data yang akan dihapus
+
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10); // 10 baris per halaman
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Image Upload States
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -30,23 +38,41 @@ export const PeralatanPage: React.FC = () => {
     jumlahStok: 1,
     kondisi: 'Sangat Baik',
     status: 'Tersedia',
-    lokasiPenyimpanan: 'Gudang Utama KWT Sorgum',
+    lokasiPenyimpanan: '',
     tanggalPengadaan: new Date().toLocaleDateString('id-ID'),
     spesifikasi: '',
-    fotoUrl: 'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=800&q=80',
+    fotoUrl: '',
     terakhirServis: new Date().toLocaleDateString('id-ID'),
   });
 
-  const fetchEquipment = async () => {
+  const fetchEquipment = async (targetPage = page, search = searchTerm) => {
     setLoading(true);
-    const data = await equipmentApi.getAll();
-    setEquipmentList(data);
-    setLoading(false);
+    try {
+      const res = await equipmentApi.getAll({
+        page: targetPage,
+        limit,
+        search: search || undefined,
+      });
+      setEquipmentList(res.data || []);
+      setTotal(res.pagination?.total || 0);
+      setTotalPages(res.pagination?.totalPages || 1);
+    } catch {
+      setEquipmentList([]);
+      setTotal(0);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetchEquipment();
-  }, []);
+    setPage(1); // Reset ke halaman 1 saat search berubah
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchEquipment(page, searchTerm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, searchTerm]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -89,21 +115,20 @@ export const PeralatanPage: React.FC = () => {
   const handleOpenAdd = () => {
     setEditId(null);
     handleRemoveImage();
-    const defaultPhoto = 'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=800&q=80';
     setFormData({
-      kodeAlat: `S-00${equipmentList.length + 1}`,
+      kodeAlat: nextCode('ALAT-', equipmentList, 3),
       namaPeralatan: '',
       kategori: 'Pascapanen',
       jumlahStok: 1,
       kondisi: 'Baik',
       status: 'Tersedia',
-      lokasiPenyimpanan: 'Gudang Alat KWT',
+      lokasiPenyimpanan: '',
       tanggalPengadaan: new Date().toLocaleDateString('id-ID'),
-      spesifikasi: 'Spesifikasi mesin olah sorgum.',
-      fotoUrl: defaultPhoto,
+      spesifikasi: '',
+      fotoUrl: '',
       terakhirServis: new Date().toLocaleDateString('id-ID'),
     });
-    setImagePreview(defaultPhoto);
+    setImagePreview('');
     setFormModalOpen(true);
   };
 
@@ -118,7 +143,7 @@ export const PeralatanPage: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalFotoUrl = formData.fotoUrl || imagePreview || 'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=800&q=80';
+    const finalFotoUrl = formData.fotoUrl || imagePreview || '';
     const payload = { ...formData, fotoUrl: finalFotoUrl };
 
     if (editId) {
@@ -131,19 +156,17 @@ export const PeralatanPage: React.FC = () => {
     fetchEquipment();
   };
 
-  const handleDelete = async (id: string) => {
-    await equipmentApi.delete(id);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await equipmentApi.delete(deleteTarget.id);
+    setDeleteTarget(null);
     fetchEquipment();
   };
 
-  const filteredList = equipmentList.filter((item) => {
-    return (
-      item.kodeAlat.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.namaPeralatan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.kategori.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.lokasiPenyimpanan.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  });
+  const goToPage = (targetPage: number) => {
+    if (targetPage < 1 || targetPage > totalPages) return;
+    setPage(targetPage);
+  };
 
   return (
     <div className="space-y-5 pb-8">
@@ -194,7 +217,7 @@ export const PeralatanPage: React.FC = () => {
             Daftar Inventaris Sarana Peralatan
           </h3>
           <span className="text-xs text-[#6B7280] font-medium">
-            Menampilkan {filteredList.length} unit peralatan
+            Menampilkan {loading ? '...' : equipmentList.length} dari {total} unit peralatan
           </span>
         </div>
 
@@ -212,7 +235,21 @@ export const PeralatanPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 text-[#221A12] font-medium">
-              {filteredList.map((item) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-[#6B7280]">
+                    <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
+                    Memuat data peralatan...
+                  </td>
+                </tr>
+              ) : equipmentList.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-[#6B7280]">
+                    Tidak ada data peralatan yang ditemukan.
+                  </td>
+                </tr>
+              ) : (
+              equipmentList.map((item) => (
                 <tr key={item.id} className="hover:bg-[#F7F7F5] transition-colors">
                   <td className="py-2 px-3 pl-4 font-bold text-[#2C4219]">{item.kodeAlat}</td>
                   <td className="py-2 px-3 font-semibold">{item.namaPeralatan}</td>
@@ -262,7 +299,7 @@ export const PeralatanPage: React.FC = () => {
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => setDeleteTarget(item)}
                         className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                         title="Hapus Peralatan"
                       >
@@ -271,10 +308,51 @@ export const PeralatanPage: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>
+
+        {/* Table Footer: Pagination */}
+        {!loading && total > 0 && (
+          <div className="p-3 sm:p-4 border-t border-[#c4c8bb]/20 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#6B7280]">
+            <span className="font-medium">
+              Menampilkan {equipmentList.length === 0 ? 0 : (page - 1) * limit + 1}-
+              {Math.min(page * limit, total)} dari {total} unit
+            </span>
+
+            <div className="flex items-center gap-1 font-bold">
+              <button
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1}
+                className="p-1 rounded-md border border-[#c4c8bb]/30 text-[#44483e] hover:bg-[#F7F7F5] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                <button
+                  key={num}
+                  onClick={() => goToPage(num)}
+                  className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs transition-colors cursor-pointer ${
+                    num === page
+                      ? 'bg-[#2C4219] text-white'
+                      : 'hover:bg-[#F7F7F5] text-[#44483e]'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                onClick={() => goToPage(page + 1)}
+                disabled={page >= totalPages}
+                className="p-1 rounded-md border border-[#c4c8bb]/30 text-[#44483e] hover:bg-[#F7F7F5] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ACTIVE DETAIL MODAL: "Detail Data Alat" */}
@@ -289,11 +367,18 @@ export const PeralatanPage: React.FC = () => {
           <div className="space-y-6 text-sm text-[#221A12]">
             {/* Real farm machinery / Hand tractor photo */}
             <div className="relative rounded-2xl overflow-hidden border border-[#c4c8bb]/30 shadow-md h-56 bg-[#fff8f4]">
-              <img
-                src={activeItem.fotoUrl}
-                alt={activeItem.namaPeralatan}
-                className="w-full h-full object-cover"
-              />
+              {activeItem.fotoUrl ? (
+                <img
+                  src={activeItem.fotoUrl}
+                  alt={activeItem.namaPeralatan}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[#9CA3AF]">
+                  <Wrench className="w-12 h-12" />
+                  <span className="text-xs font-semibold">Belum ada foto alat</span>
+                </div>
+              )}
               <div className="absolute top-3 right-3">
                 <Badge variant="success">{activeItem.kondisi}</Badge>
               </div>
@@ -355,9 +440,10 @@ export const PeralatanPage: React.FC = () => {
               <input
                 type="text"
                 value={formData.kodeAlat}
-                onChange={(e) => setFormData({ ...formData, kodeAlat: e.target.value })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
+                readOnly
+                disabled
+                title="Kode dibuat otomatis oleh sistem (auto-increment)"
+                className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm text-[#2C4219] font-bold cursor-not-allowed"
               />
             </div>
             <div>
@@ -401,6 +487,7 @@ export const PeralatanPage: React.FC = () => {
                 type="number"
                 value={formData.jumlahStok}
                 onChange={(e) => setFormData({ ...formData, jumlahStok: Number(e.target.value) })}
+                placeholder="Contoh: 3"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
               />
@@ -443,6 +530,7 @@ export const PeralatanPage: React.FC = () => {
             <textarea
               value={formData.spesifikasi}
               onChange={(e) => setFormData({ ...formData, spesifikasi: e.target.value })}
+              placeholder="Contoh: Diesel 7.5 HP, kapasitas olah 2 Ha/jam"
               className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm h-20"
             />
           </div>
@@ -502,7 +590,7 @@ export const PeralatanPage: React.FC = () => {
 
             {imageError && (
               <p className="text-xs font-bold text-red-600 mt-1.5 flex items-center gap-1">
-                ⚠️ {imageError}
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {imageError}
               </p>
             )}
           </div>
@@ -517,6 +605,43 @@ export const PeralatanPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Modal Konfirmasi Hapus */}
+      {deleteTarget && (
+        <Modal
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          title="Hapus Data Peralatan"
+          maxWidth="sm"
+        >
+          <div className="space-y-4 text-sm text-[#221A12]">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-red-700">
+                  Apakah Anda yakin ingin menghapus data peralatan ini?
+                </p>
+                <p className="text-[11px] text-[#6B7280] mt-1 leading-relaxed">
+                  <strong>{deleteTarget.kodeAlat}</strong> — {deleteTarget.namaPeralatan}.
+                  Tindakan ini tidak dapat dibatalkan.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#c4c8bb]/20">
+              <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
+                Batal
+              </Button>
+              <Button type="button" variant="danger" onClick={confirmDelete}>
+                <Trash2 className="w-3.5 h-3.5" />
+                Ya, Hapus
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

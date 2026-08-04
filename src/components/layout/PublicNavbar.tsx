@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sprout, LogIn, UserPlus, Menu, X } from 'lucide-react';
+import { Sprout, LogIn, Menu, X } from 'lucide-react';
+import { useCms } from '../../context/CmsContext';
 
 interface PublicNavbarProps {
   isLargeText?: boolean;
@@ -8,16 +9,11 @@ interface PublicNavbarProps {
 }
 
 export const PublicNavbar: React.FC = () => {
+  const { cms } = useCms();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const location = useLocation();
 
-  const navLinks = [
-    { label: 'Beranda', id: 'beranda', path: '/#beranda' },
-    { label: 'Fitur Utama', id: 'fitur', path: '/#fitur' },
-    { label: 'Produk Olahan', id: 'produk', path: '/#produk' },
-    { label: 'FAQ', id: 'faq', path: '/#faq' },
-  ];
-
+  const navLinks = cms.navLinks && cms.navLinks.length > 0 ? cms.navLinks : [];
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     if (location.pathname === '/' || location.pathname === '') {
       e.preventDefault();
@@ -43,15 +39,23 @@ export const PublicNavbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-[#2C4219] flex items-center justify-center text-white transition-transform group-hover:scale-105 shadow-2xs">
-            <Sprout className="w-4 h-4 text-[#C3E28D]" />
-          </div>
+          {cms.logo ? (
+            <img
+              src={cms.logo}
+              alt={cms.siteName}
+              className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#c4c8bb]/30 transition-transform group-hover:scale-105 shadow-2xs"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-[#2C4219] flex items-center justify-center text-white transition-transform group-hover:scale-105 shadow-2xs">
+              <Sprout className="w-4 h-4 text-[#C3E28D]" />
+            </div>
+          )}
           <div>
             <span className="text-base font-extrabold text-[#2C4219] tracking-tight block leading-none">
-              Sorgum SCM
+              {cms.siteName}
             </span>
             <span className="text-[9px] font-bold text-[#44483e] uppercase tracking-wider block mt-0.5">
-              Rantai Pasok Terintegrasi
+              {cms.siteTagline}
             </span>
           </div>
         </Link>
@@ -61,8 +65,8 @@ export const PublicNavbar: React.FC = () => {
           {navLinks.map((link) => (
             <a
               key={link.label}
-              href={link.path}
-              onClick={(e) => handleNavClick(e, link.id)}
+              href={`/#${link.section}`}
+              onClick={(e) => handleNavClick(e, link.section)}
               className="text-xs xl:text-sm font-semibold text-[#44483e] hover:text-[#2C4219] transition-colors cursor-pointer"
             >
               {link.label}
@@ -77,14 +81,7 @@ export const PublicNavbar: React.FC = () => {
             className="px-3 py-1.5 text-xs font-bold text-[#2C4219] hover:text-[#172C05] flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <LogIn className="w-3.5 h-3.5" />
-            Masuk
-          </Link>
-          <Link
-            to="/register"
-            className="px-4 py-2 text-xs font-bold bg-[#2C4219] text-white hover:bg-[#213213] rounded-lg shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <UserPlus className="w-3.5 h-3.5 text-[#C3E28D]" />
-            Daftar Sekarang
+            {cms.navbarLogin}
           </Link>
         </div>
 
@@ -104,10 +101,10 @@ export const PublicNavbar: React.FC = () => {
             {navLinks.map((link) => (
               <a
                 key={link.label}
-                href={link.path}
+                href={`/#${link.section}`}
                 onClick={(e) => {
                   setMobileMenuOpen(false);
-                  handleNavClick(e, link.id);
+                  handleNavClick(e, link.section);
                 }}
                 className="text-base font-semibold text-[#44483e] hover:text-[#2C4219]"
               >
@@ -122,13 +119,6 @@ export const PublicNavbar: React.FC = () => {
               className="w-full py-2.5 text-center font-bold text-[#2C4219] border border-[#2C4219] rounded-xl"
             >
               Masuk
-            </Link>
-            <Link
-              to="/register"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full py-2.5 text-center font-bold bg-[#2C4219] text-white rounded-xl"
-            >
-              Daftar Sekarang
             </Link>
           </div>
         </div>
