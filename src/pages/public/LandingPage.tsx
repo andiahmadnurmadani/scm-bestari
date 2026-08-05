@@ -9,7 +9,6 @@ import {
   ChevronLeft,
   CheckCircle2,
   ArrowRight,
-  Eye,
   HeartHandshake,
   TrendingUp,
   Users,
@@ -18,7 +17,6 @@ import {
 } from 'lucide-react';
 import { PublicNavbar } from '../../components/layout/PublicNavbar';
 import { PublicFooter } from '../../components/layout/PublicFooter';
-import { FeatureDemoModal } from '../../components/landing/FeatureDemoModal';
 import { FaqAccordion } from '../../components/landing/FaqAccordion';
 import { useCms } from '../../context/CmsContext';
 import sorghumFieldImg from '../../assets/sorghum_field.png';
@@ -29,14 +27,6 @@ import rengginangSorgumImg from '../../assets/rengginang_sorgum.png';
 
 export const LandingPage: React.FC = () => {
   const { cms } = useCms();
-  // Demo Modal State
-  const [demoModalOpen, setDemoModalOpen] = useState(false);
-  const [activeDemoCategory, setActiveDemoCategory] = useState<'panen' | 'produksi' | 'logistik'>('panen');
-
-  const openDemoModal = (category: 'panen' | 'produksi' | 'logistik') => {
-    setActiveDemoCategory(category);
-    setDemoModalOpen(true);
-  };
 
   // Spotlight Carousel State
   const [productIndex, setProductIndex] = useState(0);
@@ -315,7 +305,7 @@ export const LandingPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {/* Feature Card 1 */}
-              <div className="bg-white p-4.5 rounded-2xl border border-[#c4c8bb]/30 shadow-2xs hover:shadow-md hover:border-[#C3E28D] transition-all group flex flex-col justify-between">
+              <div className="bg-white p-4.5 rounded-2xl border border-[#c4c8bb]/30 shadow-2xs hover:shadow-md hover:border-[#C3E28D] transition-all group flex flex-col">
                 <div>
                   <div className="w-8 h-8 rounded-lg bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center mb-3 group-hover:bg-[#2C4219] group-hover:text-[#C3E28D] transition-colors">
                     <Sprout className="w-4 h-4" />
@@ -325,25 +315,10 @@ export const LandingPage: React.FC = () => {
                     {cms.featureCards[0].desc}
                   </p>
                 </div>
-                <div className="pt-3 mt-3 border-t border-[#c4c8bb]/20 flex items-center justify-between">
-                  <button
-                    onClick={() => openDemoModal('panen')}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#2C4219] hover:text-[#172C05] hover:underline cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-[#A8B774]" />
-                    <span>Lihat Demo Fitur</span>
-                  </button>
-                  <Link
-                    to="/dashboard/panen"
-                    className="text-[11px] font-semibold text-[#2C4219] hover:underline flex items-center gap-1"
-                  >
-                    Buka Modul <ChevronRight className="w-3 h-3" />
-                  </Link>
-                </div>
               </div>
 
               {/* Feature Card 2 */}
-              <div className="bg-white p-4.5 rounded-2xl border border-[#c4c8bb]/30 shadow-2xs hover:shadow-md hover:border-[#C3E28D] transition-all group flex flex-col justify-between">
+              <div className="bg-white p-4.5 rounded-2xl border border-[#c4c8bb]/30 shadow-2xs hover:shadow-md hover:border-[#C3E28D] transition-all group flex flex-col">
                 <div>
                   <div className="w-8 h-8 rounded-lg bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center mb-3 group-hover:bg-[#2C4219] group-hover:text-[#C3E28D] transition-colors">
                     <Award className="w-4 h-4" />
@@ -353,25 +328,10 @@ export const LandingPage: React.FC = () => {
                     {cms.featureCards[1].desc}
                   </p>
                 </div>
-                <div className="pt-3 mt-3 border-t border-[#c4c8bb]/20 flex items-center justify-between">
-                  <button
-                    onClick={() => openDemoModal('produksi')}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#2C4219] hover:text-[#172C05] hover:underline cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-[#A8B774]" />
-                    <span>Lihat Demo Fitur</span>
-                  </button>
-                  <Link
-                    to="/dashboard/sertifikat"
-                    className="text-[11px] font-semibold text-[#2C4219] hover:underline flex items-center gap-1"
-                  >
-                    Buka Sertifikasi <ChevronRight className="w-3 h-3" />
-                  </Link>
-                </div>
               </div>
 
               {/* Feature Card 3 */}
-              <div className="bg-white p-4.5 rounded-2xl border border-[#c4c8bb]/30 shadow-2xs hover:shadow-md hover:border-[#C3E28D] transition-all group flex flex-col justify-between">
+              <div className="bg-white p-4.5 rounded-2xl border border-[#c4c8bb]/30 shadow-2xs hover:shadow-md hover:border-[#C3E28D] transition-all group flex flex-col">
                 <div>
                   <div className="w-8 h-8 rounded-lg bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center mb-3 group-hover:bg-[#2C4219] group-hover:text-[#C3E28D] transition-colors">
                     <Truck className="w-4 h-4" />
@@ -380,21 +340,6 @@ export const LandingPage: React.FC = () => {
                   <p className="text-xs text-[#6B7280] leading-relaxed font-normal">
                     {cms.featureCards[2].desc}
                   </p>
-                </div>
-                <div className="pt-3 mt-3 border-t border-[#c4c8bb]/20 flex items-center justify-between">
-                  <button
-                    onClick={() => openDemoModal('logistik')}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#2C4219] hover:text-[#172C05] hover:underline cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-[#A8B774]" />
-                    <span>Lihat Demo Fitur</span>
-                  </button>
-                  <Link
-                    to="/dashboard/logistik"
-                    className="text-[11px] font-semibold text-[#2C4219] hover:underline flex items-center gap-1"
-                  >
-                    Lihat Logistik <ChevronRight className="w-3 h-3" />
-                  </Link>
                 </div>
               </div>
             </div>
@@ -458,7 +403,7 @@ export const LandingPage: React.FC = () => {
               </div>
 
               {/* Text Info Container */}
-              <div className="flex-grow flex flex-col justify-between space-y-4 w-full text-left">
+              <div className="flex-grow flex flex-col space-y-4 w-full text-left">
                 <div className="space-y-1.5">
                   <span className="text-[9px] text-[#A8B774] font-bold uppercase tracking-wider">
                     Produk Unggulan KWT
@@ -565,20 +510,6 @@ export const LandingPage: React.FC = () => {
       </main>
 
       <PublicFooter />
-
-      {/* Feature Demo Modal */}
-      <FeatureDemoModal
-        isOpen={demoModalOpen}
-        onClose={() => setDemoModalOpen(false)}
-        featureTitle={
-          activeDemoCategory === 'panen'
-            ? 'Monitoring Panen & Lahan'
-            : activeDemoCategory === 'produksi'
-            ? 'Produksi & Sertifikasi Legal'
-            : 'Logistik & Transaksi Keuangan'
-        }
-        featureCategory={activeDemoCategory}
-      />
     </div>
   );
 };

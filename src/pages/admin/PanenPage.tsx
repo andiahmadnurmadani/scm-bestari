@@ -29,6 +29,7 @@ import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { ActionButtons } from '../../components/common/ActionButtons';
+import { Toast } from '../../components/common/Toast';
 import { timestampCode } from '../../utils/kodeGenerator';
 
 const filterInputCls =
@@ -38,6 +39,7 @@ export const PanenPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
   const [harvestList, setHarvestList] = useState<HarvestRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<HarvestRecord | null>(null);
 
   // Pagination State
@@ -352,7 +354,7 @@ export const PanenPage: React.FC = () => {
     try {
       const rows = await fetchAllForExport();
       if (rows.length === 0) {
-        alert('Tidak ada data panen yang bisa diekspor.');
+        setToast({ msg: 'Tidak ada data panen yang bisa diekspor.', type: 'error' });
         return;
       }
       const data = exportRows(rows);
@@ -371,7 +373,7 @@ export const PanenPage: React.FC = () => {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      alert('Gagal mengekspor data CSV.');
+      setToast({ msg: 'Gagal mengekspor data CSV.', type: 'error' });
     }
   };
 
@@ -379,7 +381,7 @@ export const PanenPage: React.FC = () => {
     try {
       const rows = await fetchAllForExport();
       if (rows.length === 0) {
-        alert('Tidak ada data panen yang bisa diekspor.');
+        setToast({ msg: 'Tidak ada data panen yang bisa diekspor.', type: 'error' });
         return;
       }
       const data = exportRows(rows);
@@ -405,7 +407,7 @@ export const PanenPage: React.FC = () => {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      alert('Gagal mengekspor data Excel.');
+      setToast({ msg: 'Gagal mengekspor data Excel.', type: 'error' });
     }
   };
 
@@ -1320,6 +1322,11 @@ export const PanenPage: React.FC = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Toast Floating Notifikasi */}
+      {toast && (
+        <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   );

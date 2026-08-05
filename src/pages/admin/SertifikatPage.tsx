@@ -23,6 +23,7 @@ import { Certificate } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
+import { Toast } from '../../components/common/Toast';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { nextCode } from '../../utils/kodeGenerator';
 
@@ -30,6 +31,7 @@ export const SertifikatPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   // File Input Ref
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -149,7 +151,7 @@ export const SertifikatPage: React.FC = () => {
     const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png)$/i.test(file.name);
 
     if (!isPdf && !isImage) {
-      alert('Format file tidak didukung. Mohon unggah dokumen berformat PDF, JPG, atau PNG.');
+      setToast({ msg: 'Format file tidak didukung. Mohon unggah dokumen berformat PDF, JPG, atau PNG.', type: 'error' });
       return;
     }
 
@@ -823,6 +825,11 @@ export const SertifikatPage: React.FC = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Toast Floating Notifikasi */}
+      {toast && (
+        <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   );

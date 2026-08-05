@@ -3,6 +3,7 @@ import { Plus, Trash2, Search, Sprout, CheckCircle2, XCircle, Pencil, Upload, Im
 import { varietyApi, Variety } from '../../api/endpoints/varietyApi';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
+import { Toast } from '../../components/common/Toast';
 
 export const MasterVarietasPage: React.FC = () => {
   const [varieties, setVarieties] = useState<Variety[]>([]);
@@ -14,6 +15,7 @@ export const MasterVarietasPage: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [formError, setFormError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Image state
@@ -131,7 +133,7 @@ export const MasterVarietasPage: React.FC = () => {
       setDeleteTarget(null);
       fetchVarieties();
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Gagal menghapus varietas.');
+      setToast({ msg: err?.response?.data?.message || err?.message || 'Gagal menghapus varietas.', type: 'error' });
       setDeleteTarget(null);
     } finally {
       setDeleting(false);
@@ -448,6 +450,11 @@ export const MasterVarietasPage: React.FC = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Toast Floating Notifikasi */}
+      {toast && (
+        <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   );

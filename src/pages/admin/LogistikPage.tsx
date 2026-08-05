@@ -21,6 +21,7 @@ import { FinancialExpense } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
+import { Toast } from '../../components/common/Toast';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 
 export const LogistikPage: React.FC = () => {
@@ -47,6 +48,7 @@ export const LogistikPage: React.FC = () => {
   const [limit] = useState(10);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   const [formData, setFormData] = useState<Partial<FinancialExpense>>({
     kodeTransaksi: '',
@@ -282,7 +284,7 @@ export const LogistikPage: React.FC = () => {
   const exportCSV = async () => {
     try {
       const rows = await fetchAllExpenses();
-      if (rows.length === 0) { alert('Tidak ada data untuk diekspor.'); return; }
+      if (rows.length === 0) { setToast({ msg: 'Tidak ada data untuk diekspor.', type: 'error' }); return; }
       const data = exportRows(rows);
       const headers = Object.keys(data[0]);
       const esc = (v: string | number) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
@@ -294,13 +296,13 @@ export const LogistikPage: React.FC = () => {
       a.download = `laporan-logistik-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch { alert('Gagal mengekspor CSV.'); }
+    } catch { setToast({ msg: 'Gagal mengekspor CSV.', type: 'error' }); }
   };
 
   const exportExcel = async () => {
     try {
       const rows = await fetchAllExpenses();
-      if (rows.length === 0) { alert('Tidak ada data untuk diekspor.'); return; }
+      if (rows.length === 0) { setToast({ msg: 'Tidak ada data untuk diekspor.', type: 'error' }); return; }
       const data = exportRows(rows);
       const headers = Object.keys(data[0]);
       const esc = (v: string | number) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -314,7 +316,7 @@ export const LogistikPage: React.FC = () => {
       a.download = `laporan-logistik-${new Date().toISOString().slice(0, 10)}.xls`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch { alert('Gagal mengekspor Excel.'); }
+    } catch { setToast({ msg: 'Gagal mengekspor Excel.', type: 'error' }); }
   };
 
   const exportPdf = async () => {
@@ -353,7 +355,7 @@ export const LogistikPage: React.FC = () => {
         <script>window.print();</script>
         </body></html>`);
       win.document.close();
-    } catch { alert('Gagal membuat laporan PDF.'); }
+    } catch { setToast({ msg: 'Gagal membuat laporan PDF.', type: 'error' }); }
   };
 
   return (
@@ -1006,6 +1008,11 @@ export const LogistikPage: React.FC = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Toast Floating Notifikasi */}
+      {toast && (
+        <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   );

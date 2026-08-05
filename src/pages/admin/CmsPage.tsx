@@ -26,6 +26,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { useCms, CmsHeroImage, CmsProduct, CmsWorkflowStep, CmsFaq } from '../../context/CmsContext';
+import { Toast } from '../../components/common/Toast';
 
 // ── Reusable sub-components ───────────────────────────────────────────────────
 
@@ -209,12 +210,12 @@ const HeroPreview: React.FC<{
 export const CmsPage: React.FC = () => {
   const { cms, update, updateStat, updateFeatureCard, updateHeroImage, updateProduct, updateWorkflowStep, updateFaq, reset } = useCms();
   const [activeTab, setActiveTab] = useState<'umum' | 'hero' | 'stats' | 'fitur' | 'cta' | 'galeri' | 'produk' | 'alur' | 'faq'>('hero');
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState('');
   const [resetConfirm, setResetConfirm] = useState(false);
 
   const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setSaved('Konten berhasil disimpan! Buka landing page untuk melihat hasilnya.');
+    setTimeout(() => setSaved(''), 3000);
   };
 
   const handleReset = () => {
@@ -266,13 +267,8 @@ export const CmsPage: React.FC = () => {
       </div>
 
 
-      {/* Saved toast */}
-      {saved && (
-        <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm font-semibold text-emerald-700">
-          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-          Konten berhasil disimpan! Buka landing page untuk melihat hasilnya.
-        </div>
-      )}
+      {/* Toast Floating Notifikasi */}
+      <Toast message={saved} type="success" onClose={() => setSaved('')} />
 
       {/* Tabs */}
       <div className="flex gap-1 bg-white border border-[#c4c8bb]/30 rounded-xl p-1 w-fit shadow-sm flex-wrap">

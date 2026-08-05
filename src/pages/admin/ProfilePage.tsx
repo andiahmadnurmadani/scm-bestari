@@ -9,7 +9,6 @@ import {
   Save,
   Eye,
   EyeOff,
-  CheckCircle2,
   Edit3,
   Sprout,
   Lock,
@@ -17,6 +16,7 @@ import {
   Leaf,
 } from 'lucide-react';
 import { authApi } from '../../api/endpoints/authApi';
+import { Toast } from '../../components/common/Toast';
 
 // ---------- Types ----------
 interface ProfileData {
@@ -63,8 +63,8 @@ const inputCls =
 // ---------- Main component ----------
 export const ProfilePage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState('');
   const [activeTab, setActiveTab] = useState<'profil' | 'keamanan'>('profil');
@@ -162,8 +162,8 @@ export const ProfilePage: React.FC = () => {
         bio: profile.bio,
         avatar: profile.avatar || undefined,
       });
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3500);
+      setSaveSuccess('Profil berhasil disimpan!');
+      setTimeout(() => setSaveSuccess(''), 3500);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Gagal menyimpan profil.';
       setSaveError(msg);
@@ -185,8 +185,8 @@ export const ProfilePage: React.FC = () => {
         newPassword: passwords.new,
       });
       setPasswords({ current: '', new: '', confirm: '' });
-      setPasswordSuccess(true);
-      setTimeout(() => setPasswordSuccess(false), 3500);
+      setPasswordSuccess('Kata sandi berhasil diperbarui!');
+      setTimeout(() => setPasswordSuccess(''), 3500);
     } catch (err) {
       setPwError(err instanceof Error ? err.message : 'Gagal mengganti kata sandi.');
     }
@@ -298,19 +298,6 @@ export const ProfilePage: React.FC = () => {
       {/* ===== TAB PROFIL ===== */}
       {activeTab === 'profil' && (
         <form onSubmit={handleSaveProfile} className="space-y-4">
-          {saveError && (
-            <div className="flex items-center gap-2.5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm font-semibold text-red-700">
-              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-              {saveError}
-            </div>
-          )}
-          {saveSuccess && (
-            <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm font-semibold text-emerald-700">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-              Profil berhasil disimpan!
-            </div>
-          )}
-
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -428,22 +415,9 @@ export const ProfilePage: React.FC = () => {
       {/* ===== TAB KEAMANAN ===== */}
       {activeTab === 'keamanan' && (
         <div className="space-y-4">
-          {passwordSuccess && (
-            <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm font-semibold text-emerald-700">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-              Kata sandi berhasil diperbarui!
-            </div>
-          )}
-
           <form onSubmit={handleChangePassword}>
             <SectionCard title="Ubah Kata Sandi" icon={<Lock className="w-4 h-4" />}>
               <div className="space-y-4 max-w-md">
-                {pwError && (
-                  <div className="flex items-center gap-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-600">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    {pwError}
-                  </div>
-                )}
                 {pwFieldConfig.map(({ key, label }) => (
                   <Field label={label} id={`pw-${key}`} key={key}>
                     <div className="relative">
@@ -506,6 +480,12 @@ export const ProfilePage: React.FC = () => {
           </SectionCard>
         </div>
       )}
+
+      {/* Toast Floating Notifikasi */}
+      <Toast message={saveError} type="error" onClose={() => setSaveError('')} />
+      <Toast message={saveSuccess} type="success" onClose={() => setSaveSuccess('')} />
+      <Toast message={pwError} type="error" onClose={() => setPwError('')} />
+      <Toast message={passwordSuccess} type="success" onClose={() => setPasswordSuccess('')} />
     </div>
   );
 };

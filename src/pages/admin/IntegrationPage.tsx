@@ -9,24 +9,20 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
-  Plus,
   Trash2,
   ExternalLink,
   AlertCircle,
-  CheckCircle2,
-  Plug,
   FileCode2,
   ShieldCheck,
   Activity,
-  ArrowRight,
   Link2,
-  Database,
   Server,
   Sprout,
   Factory,
   Truck,
   LayoutDashboard,
 } from 'lucide-react';
+import { Toast } from '../../components/common/Toast';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -151,50 +147,6 @@ const EndpointRow: React.FC<{
   );
 };
 
-// Connected App card
-const AppCard: React.FC<{
-  name: string;
-  desc: string;
-  status: 'connected' | 'disconnected' | 'pending';
-  logo: React.ReactNode;
-  lastSync?: string;
-  onRevoke: () => void;
-}> = ({ name, desc, status, logo, lastSync, onRevoke }) => {
-  const statusStyles = {
-    connected: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    disconnected: 'bg-[#F7F7F5] text-[#6B7280] border-[#c4c8bb]/40',
-    pending: 'bg-amber-50 text-amber-700 border-amber-200',
-  };
-  const statusLabel = { connected: 'Terhubung', disconnected: 'Tidak Aktif', pending: 'Menunggu' };
-
-  return (
-    <div className="flex items-start gap-3 p-3.5 bg-[#F7F7F5] rounded-xl border border-[#c4c8bb]/20 hover:border-[#C3E28D]/50 transition-all group">
-      <div className="w-9 h-9 rounded-xl bg-white border border-[#c4c8bb]/30 flex items-center justify-center shrink-0 shadow-sm">
-        {logo}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-xs font-bold text-[#172C05]">{name}</p>
-          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${statusStyles[status]}`}>
-            {statusLabel[status]}
-          </span>
-        </div>
-        <p className="text-[10px] text-[#6B7280] mt-0.5 font-medium">{desc}</p>
-        {lastSync && (
-          <p className="text-[9px] text-[#9CA3AF] mt-1">Sinkronisasi terakhir: {lastSync}</p>
-        )}
-      </div>
-      <button
-        onClick={onRevoke}
-        className="p-1.5 rounded-lg text-[#6B7280] hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer shrink-0 opacity-0 group-hover:opacity-100"
-        title="Cabut Akses"
-      >
-        <Trash2 className="w-3.5 h-3.5" />
-      </button>
-    </div>
-  );
-};
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export const IntegrationPage: React.FC = () => {
@@ -208,17 +160,9 @@ export const IntegrationPage: React.FC = () => {
   const [webhookEvents, setWebhookEvents] = useState<string[]>([
     'panen.created', 'sertifikat.updated', 'logistik.expense.created',
   ]);
-  const [savedSuccess, setSavedSuccess] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState('');
   const [regenerating, setRegenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'config' | 'endpoints' | 'apps' | 'logs'>('config');
-
-  // Connected apps state
-  const [apps, setApps] = useState([
-    { id: '1', name: 'Tokopedia Mitra', desc: 'Sinkronisasi stok produk sorgum ke toko online.', status: 'connected' as const, lastSync: '3 menit lalu', logo: <Globe className="w-4 h-4 text-[#2C4219]" /> },
-    { id: '2', name: 'WhatsApp Business API', desc: 'Notifikasi otomatis laporan panen ke anggota KWT.', status: 'connected' as const, lastSync: '1 jam lalu', logo: <Activity className="w-4 h-4 text-emerald-600" /> },
-    { id: '3', name: 'Google Sheets', desc: 'Ekspor data logistik ke spreadsheet bulanan.', status: 'pending' as const, logo: <FileCode2 className="w-4 h-4 text-amber-600" /> },
-    { id: '4', name: 'Sistem ERP Desa', desc: 'Integrasi data keuangan dengan sistem desa.', status: 'disconnected' as const, logo: <Database className="w-4 h-4 text-[#6B7280]" /> },
-  ]);
+  const [activeTab, setActiveTab] = useState<'config' | 'endpoints' | 'logs'>('config');
 
   const allEvents = [
     'panen.created', 'panen.updated', 'sertifikat.created', 'sertifikat.updated',
@@ -243,30 +187,23 @@ export const IntegrationPage: React.FC = () => {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3500);
-  };
-
-  const revokeApp = (id: string) => {
-    setApps((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: 'disconnected' as const } : a))
-    );
+    setSavedSuccess('Konfigurasi berhasil disimpan & diterapkan!');
+    setTimeout(() => setSavedSuccess(''), 3500);
   };
 
   const tabs = [
     { id: 'config' as const, label: 'Konfigurasi API', icon: <Key className="w-3.5 h-3.5" /> },
     { id: 'endpoints' as const, label: 'REST Endpoints', icon: <FileCode2 className="w-3.5 h-3.5" /> },
-    { id: 'apps' as const, label: 'Aplikasi Terhubung', icon: <Plug className="w-3.5 h-3.5" /> },
     { id: 'logs' as const, label: 'Log Aktivitas', icon: <Activity className="w-3.5 h-3.5" /> },
   ];
 
   const sampleLogs = [
-    { time: '09:21:04', status: 200, method: 'POST', path: '/api/panen', app: 'Google Sheets' },
-    { time: '09:18:47', status: 200, method: 'GET', path: '/api/sertifikat', app: 'ERP Desa' },
+    { time: '09:21:04', status: 200, method: 'POST', path: '/api/panen', app: 'Sistem Internal' },
+    { time: '09:18:47', status: 200, method: 'GET', path: '/api/sertifikat', app: 'Sistem Internal' },
     { time: '09:15:12', status: 401, method: 'POST', path: '/api/logistik/expense', app: 'Unknown' },
-    { time: '09:10:55', status: 200, method: 'GET', path: '/api/dashboard/summary', app: 'WhatsApp API' },
-    { time: '09:05:30', status: 422, method: 'POST', path: '/api/lahan', app: 'Tokopedia' },
-    { time: '09:01:11', status: 200, method: 'GET', path: '/api/kemasan', app: 'Google Sheets' },
+    { time: '09:10:55', status: 200, method: 'GET', path: '/api/dashboard/summary', app: 'Sistem Internal' },
+    { time: '09:05:30', status: 422, method: 'POST', path: '/api/lahan', app: 'Unknown' },
+    { time: '09:01:11', status: 200, method: 'GET', path: '/api/kemasan', app: 'Sistem Internal' },
   ];
 
   return (
@@ -287,7 +224,6 @@ export const IntegrationPage: React.FC = () => {
       {/* Stats banner */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { icon: <Plug className="w-4 h-4" />, value: '2', label: 'App Terhubung', color: 'bg-emerald-50 text-emerald-700' },
           { icon: <Activity className="w-4 h-4" />, value: '1,247', label: 'Request Hari Ini', color: 'bg-blue-50 text-blue-700' },
           { icon: <Webhook className="w-4 h-4" />, value: '3', label: 'Event Aktif', color: 'bg-amber-50 text-amber-700' },
           { icon: <ShieldCheck className="w-4 h-4" />, value: '99.8%', label: 'Uptime API', color: 'bg-[#C3E28D]/30 text-[#2C4219]' },
@@ -325,13 +261,6 @@ export const IntegrationPage: React.FC = () => {
       {/* ═══ TAB: KONFIGURASI API ═══ */}
       {activeTab === 'config' && (
         <form onSubmit={handleSave} className="space-y-4">
-          {savedSuccess && (
-            <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm font-semibold text-emerald-700">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-              Konfigurasi berhasil disimpan & diterapkan!
-            </div>
-          )}
-
           {/* API Server Config */}
           <SectionCard
             title="Konfigurasi Server API"
@@ -564,50 +493,6 @@ export const IntegrationPage: React.FC = () => {
         </SectionCard>
       )}
 
-      {/* ═══ TAB: APLIKASI TERHUBUNG ═══ */}
-      {activeTab === 'apps' && (
-        <div className="space-y-4">
-          <SectionCard
-            title="Aplikasi Eksternal Terhubung"
-            subtitle="Kelola aplikasi yang memiliki akses ke data Sorgum SCM"
-            icon={<Plug className="w-4 h-4" />}
-            badge={
-              <button className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2C4219] text-white text-[10px] font-bold hover:bg-[#213213] transition-colors cursor-pointer">
-                <Plus className="w-3 h-3" /> Tambah Koneksi
-              </button>
-            }
-          >
-            <div className="space-y-2.5">
-              {apps.map((app) => (
-                <AppCard key={app.id} {...app} onRevoke={() => revokeApp(app.id)} />
-              ))}
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title="Panduan Koneksi Aplikasi Baru"
-            subtitle="Cara menghubungkan sistem eksternal ke Sorgum SCM API"
-            icon={<ArrowRight className="w-4 h-4" />}
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { step: '01', title: 'Salin API Key', desc: 'Salin API Key dari tab Konfigurasi API dan simpan di lingkungan aplikasi tujuan.' },
-                { step: '02', title: 'Autentikasi Bearer', desc: 'Sertakan header Authorization: Bearer <API_KEY> di setiap permintaan HTTP.' },
-                { step: '03', title: 'Daftarkan Webhook', desc: 'Masukkan URL endpoint aplikasi Anda agar menerima notifikasi event real-time.' },
-              ].map((s) => (
-                <div key={s.step} className="p-3.5 bg-[#F7F7F5] rounded-xl border border-[#c4c8bb]/20">
-                  <div className="w-7 h-7 rounded-full bg-[#2C4219] text-white text-xs font-extrabold flex items-center justify-center mb-2">
-                    {s.step}
-                  </div>
-                  <p className="text-xs font-bold text-[#172C05] mb-1">{s.title}</p>
-                  <p className="text-[10px] text-[#6B7280] leading-relaxed">{s.desc}</p>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
-        </div>
-      )}
-
       {/* ═══ TAB: LOG AKTIVITAS ═══ */}
       {activeTab === 'logs' && (
         <SectionCard
@@ -656,6 +541,9 @@ export const IntegrationPage: React.FC = () => {
           </div>
         </SectionCard>
       )}
+
+      {/* Toast Floating Notifikasi */}
+      <Toast message={savedSuccess} type="success" onClose={() => setSavedSuccess('')} />
     </div>
   );
 };
