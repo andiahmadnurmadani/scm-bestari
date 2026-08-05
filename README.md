@@ -1,27 +1,16 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+
+# 🌾 Sorgum SCM
+
+**Sistem Manajemen Rantai Pasok Sorgum** — untuk Kelompok Wanita Tani (KWT)
+
+Transparansi rantai pasok sorgum dari lahan hingga produk olahan: panen, lahan, peralatan, produksi, sertifikat, kemasan, logistik keuangan, dan konten website.
+
 </div>
-
-# Run and deploy your AI Studio app
-
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/8a80e089-38bc-4eae-9110-9971470de8a1
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
 
 ---
 
-## 🚀 Menjalankan Frontend + Backend (Sorgum SCM)
+## 🚀 Menjalankan Frontend + Backend
 
 Project ini memiliki **dua bagian** yang dijalankan terpisah:
 
@@ -44,7 +33,7 @@ npm run dev
 
 Backend berjalan di: `http://localhost:8000`
 
-> Backend otomatis membuat database `sorgum_scm` dan tabel `users` di MySQL
+> Backend otomatis membuat database `sorgum_scm` dan semua tabel di MySQL
 > saat pertama kali dijalankan. Konfigurasi koneksi DB ada di `backend-api/.env`.
 
 ### Koneksi FE → BE
