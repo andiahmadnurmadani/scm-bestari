@@ -23,14 +23,12 @@ import { HarvestRecord, LandPlot, ProductionBatch } from '../../types';
 
 type TimeFilterType = 'Bulanan' | 'Triwulan' | 'Tahunan';
 
-// ── Helper: kategorikan produk olahan berdasarkan nama ─────────────────────────
-function categorizeProduct(namaProduk: string): string {
-  const name = namaProduk.toLowerCase();
-  if (name.includes('tepung')) return 'Tepung Sorgum';
-  if (name.includes('rengginang') || name.includes('snack')) return 'Snack / Makanan Ringan';
-  if (name.includes('gula') || name.includes('nira')) return 'Gula Cair Nira';
-  if (name.includes('biji') || name.includes('sosoh') || name.includes('grains')) return 'Biji Sorgum';
-  return 'Lainnya';
+// ── Helper: tampilkan produk terbesar, sisanya digabung ke Lainnya ───────────────
+function compactDonutItems(items: { label: string; total: number }[]) {
+  const sorted = [...items].sort((a, b) => b.total - a.total);
+  const top = sorted.slice(0, 4);
+  const othersTotal = sorted.slice(4).reduce((acc, item) => acc + item.total, 0);
+  return othersTotal > 0 ? [...top, { label: 'Lainnya', total: othersTotal }] : top;
 }
 
 // ── Helper: format tanggal & ekstrak periode ───────────────────────────────────
@@ -115,6 +113,7 @@ export const DashboardPage: React.FC = () => {
   const [lands, setLands] = useState<LandPlot[]>([]);
   const [batches, setBatches] = useState<ProductionBatch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -130,12 +129,14 @@ export const DashboardPage: React.FC = () => {
           setHarvests(hRes.data || []);
           setLands(lRes.data || []);
           setBatches(pRes.data || []);
+          setLoadError('');
         }
       } catch {
         if (!cancelled) {
           setHarvests([]);
           setLands([]);
           setBatches([]);
+          setLoadError('Gagal memuat data dari API. Periksa koneksi backend dan database.');
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -221,13 +222,12 @@ export const DashboardPage: React.FC = () => {
   const donutData = useMemo(() => {
     const map = new Map<string, number>();
     for (const b of batches) {
-      const cat = categorizeProduct(b.namaProduk);
-      map.set(cat, (map.get(cat) || 0) + Number(b.jumlahHasil || 0));
+      const label = b.namaProduk?.trim() || 'Produk Tanpa Nama';
+      map.set(label, (map.get(label) || 0) + Number(b.jumlahHasil || 0));
     }
-    const items = [...map.entries()]
-      .map(([label, total]) => ({ label, total }))
-      .sort((a, b) => b.total - a.total);
-    const grandTotal = items.reduce((acc, i) => acc + i.total, 0);
+    const rawItems = [...map.entries()].map(([label, total]) => ({ label, total }));
+    const items = compactDonutItems(rawItems);
+    const grandTotal = rawItems.reduce((acc, i) => acc + i.total, 0);
     return { items, grandTotal };
   }, [batches]);
 
@@ -235,16 +235,23 @@ export const DashboardPage: React.FC = () => {
 
   // ── Status QC produksi (progress bars) ───────────────────────────────────────
   const qcStats = useMemo(() => {
-    const total = batches.length || 1;
-    const lolos = batches.filter((b) => b.statusQC === 'Lolos QC').length;
-    const pending = batches.filter((b) => b.statusQC === 'Pending QC').length;
-    const revisi = batches.filter((b) => b.statusQC === 'Revisi Batch').length;
+    const total = batches.length;
+    const makeRow = (
+      label: ProductionBatch['statusQC'],
+      color: string,
+      badgeCls: string
+    ) => {
+      const count = batches.filter((b) => b.statusQC === label).length;
+      const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+      return { label, count, percent, color, badge: `${percent}%`, badgeCls };
+    };
+
     return {
       total,
       rows: [
-        { label: 'Lolos QC', count: lolos, percent: Math.round((lolos / total) * 100), color: '#2C4219', badge: 'Hasil Tinggi', badgeCls: 'bg-[#2C4219] text-white' },
-        { label: 'Pending QC', count: pending, percent: Math.round((pending / total) * 100), color: '#DEB938', badge: 'Menunggu', badgeCls: 'bg-[#DEB938] text-[#172C05]' },
-        { label: 'Revisi Batch', count: revisi, percent: Math.round((revisi / total) * 100), color: '#D9534F', badge: 'Perlu Tindakan', badgeCls: 'bg-red-600 text-white' },
+        makeRow('Lolos QC', '#2C4219', 'bg-[#2C4219] text-white'),
+        makeRow('Pending QC', '#DEB938', 'bg-[#DEB938] text-[#172C05]'),
+        makeRow('Revisi Batch', '#D9534F', 'bg-red-600 text-white'),
       ],
     };
   }, [batches]);
@@ -495,6 +502,8 @@ export const DashboardPage: React.FC = () => {
               <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
               Memuat...
             </div>
+          ) : loadError ? (
+            <p className="text-xs text-red-600 text-center py-8 font-semibold">{loadError}</p>
           ) : donutData.items.length === 0 ? (
             <p className="text-xs text-[#9CA3AF] text-center py-8">Belum ada batch produksi tercatat.</p>
           ) : (
@@ -635,6 +644,8 @@ export const DashboardPage: React.FC = () => {
                     <div key={i} className="h-12 bg-[#F7F7F5] animate-pulse rounded-xl" />
                   ))}
                 </div>
+              ) : loadError ? (
+                <p className="text-xs text-red-600 text-center py-6 font-semibold">{loadError}</p>
               ) : batches.length === 0 ? (
                 <p className="text-xs text-[#9CA3AF] text-center py-6">Belum ada batch produksi tercatat.</p>
               ) : (
@@ -652,9 +663,12 @@ export const DashboardPage: React.FC = () => {
                     <div className="w-full h-2 bg-[#efe0d2] rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${Math.max(4, row.percent)}%`, backgroundColor: row.color }}
+                        style={{ width: `${row.percent}%`, backgroundColor: row.color }}
                       />
                     </div>
+                    <p className="text-[10px] text-[#6B7280] font-medium">
+                      {row.count} dari {qcStats.total} batch produksi
+                    </p>
                   </div>
                 ))
               )}

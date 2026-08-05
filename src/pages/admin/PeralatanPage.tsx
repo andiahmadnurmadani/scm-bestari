@@ -283,27 +283,30 @@ export const PeralatanPage: React.FC = () => {
                   </td>
                   <td className="py-2 px-3 pr-4 text-center">
                     <div className="flex items-center justify-center gap-1.5">
-                      {/* 3 Action Icons: Eye (Detail), Pencil (Edit), Trash (Delete) */}
+                      {/* Tombol aksi dengan teks agar mudah dipahami pengguna */}
                       <button
                         onClick={() => handleOpenDetail(item)}
-                        className="p-1 text-[#2C4219] hover:bg-[#efe0d2] rounded transition-colors cursor-pointer"
+                        className="min-h-8 px-2.5 py-1.5 text-[#2C4219] hover:bg-[#efe0d2] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Detail Data Alat"
                       >
                         <Eye className="w-4 h-4" />
+                        <span>Detail</span>
                       </button>
                       <button
                         onClick={() => handleOpenEdit(item)}
-                        className="p-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                        className="min-h-8 px-2.5 py-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Edit Data Alat"
                       >
                         <Edit3 className="w-4 h-4" />
+                        <span>Edit</span>
                       </button>
                       <button
                         onClick={() => setDeleteTarget(item)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        className="min-h-8 px-2.5 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Hapus Peralatan"
                       >
                         <Trash2 className="w-4 h-4" />
+                        <span>Hapus</span>
                       </button>
                     </div>
                   </td>

@@ -50,7 +50,7 @@ export const LogistikPage: React.FC = () => {
 
   const [formData, setFormData] = useState<Partial<FinancialExpense>>({
     kodeTransaksi: '',
-    tanggal: new Date().toLocaleDateString('id-ID'),
+    tanggal: new Date().toISOString().slice(0, 10),
     kategori: 'Bahan Baku',
     keteranganVendor: '',
     totalBiayaRp: 0,
@@ -64,6 +64,50 @@ export const LogistikPage: React.FC = () => {
   const [detailItems, setDetailItems] = useState<{ nama: string; qty: number; hargaSatuan: number }[]>([
     { nama: '', qty: 1, hargaSatuan: 0 },
   ]);
+
+  // ── Summary terpisah (total bulan ini dihitung dari SEMUA data, bukan halaman aktif) ──
+  const [summary, setSummary] = useState({ totalBulanIni: 0, totalTransportasi: 0, totalBahanOp: 0 });
+
+  // Parser tanggal robust: dukung 'YYYY-MM-DD', '14 Mei 2026', '05/08/2026', dsb.
+  const parseTanggal = (s: string): Date | null => {
+    if (!s) return null;
+    const t = String(s).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(t)) {
+      const d = new Date(t + 'T00:00:00');
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const match = t.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
+    if (match) {
+      // asumsi DD/MM/YYYY (format Indonesia)
+      const d = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(t);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const fetchSummary = async () => {
+    try {
+      const res = await logisticsApi.getFinancialLogs({ page: 1, limit: 1000 });
+      const all = res.data || [];
+      const now = new Date();
+      const inMonth = (e: FinancialExpense) => {
+        const d = parseTanggal(e.tanggal);
+        return d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      };
+      setSummary({
+        totalBulanIni: all.filter(inMonth).reduce((s, e) => s + (e.totalBiayaRp || 0), 0),
+        totalTransportasi: all
+          .filter((e) => e.kategori === 'Transportasi')
+          .reduce((s, e) => s + (e.totalBiayaRp || 0), 0),
+        totalBahanOp: all
+          .filter((e) => e.kategori === 'Bahan Baku' || e.kategori === 'Operasional')
+          .reduce((s, e) => s + (e.totalBiayaRp || 0), 0),
+      });
+    } catch {
+      // biarkan 0
+    }
+  };
 
   const fetchExpenses = async (targetPage = page, search = searchTerm, cat = selectedCategoryTab) => {
     setLoading(true);
@@ -92,6 +136,7 @@ export const LogistikPage: React.FC = () => {
 
   useEffect(() => {
     fetchExpenses(page, searchTerm, selectedCategoryTab);
+    fetchSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, searchTerm, selectedCategoryTab]);
 
@@ -107,11 +152,7 @@ export const LogistikPage: React.FC = () => {
     setEditingExpenseId(null);
     setFormData({
       kodeTransaksi: nextKode,
-      tanggal: new Date().toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }),
+      tanggal: new Date().toISOString().slice(0, 10),
       kategori: 'Bahan Baku',
       keteranganVendor: '',
       totalBiayaRp: 0,
@@ -162,6 +203,28 @@ export const LogistikPage: React.FC = () => {
     setAddExpenseModalOpen(false);
     setEditingExpenseId(null);
     fetchExpenses();
+
+    // ── Update TOTAL PENGELUARAN BULAN INI langsung (tanpa nunggu fetch ulang) ──
+    const d = parseTanggal(payload.tanggal);
+    const now = new Date();
+    const isThisMonth = d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    const amount = payload.totalBiayaRp || 0;
+    setSummary((prev) => {
+      const next = { ...prev };
+      if (editingExpenseId) {
+        // Edit: kurangi nilai lama dulu (di-backend), lalu tambah nilai baru
+        // Karena tidak tahu nilai lama, paling aman refetch summary di latar belakang.
+        // Tapi tetap update optimistik bila tanggalnya bulan ini.
+        if (isThisMonth) next.totalBulanIni = prev.totalBulanIni + amount;
+      } else {
+        if (isThisMonth) next.totalBulanIni = prev.totalBulanIni + amount;
+        if (payload.kategori === 'Transportasi') next.totalTransportasi = prev.totalTransportasi + amount;
+        if (payload.kategori === 'Bahan Baku' || payload.kategori === 'Operasional') next.totalBahanOp = prev.totalBahanOp + amount;
+      }
+      return next;
+    });
+    // Sinkronkan dengan backend (data edit perlu nilai lama) — berjalan di background
+    fetchSummary();
   };
 
   const confirmDelete = async () => {
@@ -169,6 +232,7 @@ export const LogistikPage: React.FC = () => {
     await logisticsApi.deleteExpense(deleteTarget.id);
     setDeleteTarget(null);
     fetchExpenses();
+    fetchSummary();
   };
 
   const goToPage = (targetPage: number) => {
@@ -191,15 +255,9 @@ export const LogistikPage: React.FC = () => {
   const formatRupiah = (n: number) =>
     `Rp ${(n || 0).toLocaleString('id-ID')}`;
 
-  const totalBulanIni = expenses
-    .filter((e) => e.tanggal && new Date(e.tanggal).getMonth() === new Date().getMonth() && new Date(e.tanggal).getFullYear() === new Date().getFullYear())
-    .reduce((s, e) => s + (e.totalBiayaRp || 0), 0);
-  const totalTransportasi = expenses
-    .filter((e) => e.kategori === 'Transportasi' || e.kategori === 'Transportasi & Bensin')
-    .reduce((s, e) => s + (e.totalBiayaRp || 0), 0);
-  const totalBahanOp = expenses
-    .filter((e) => e.kategori === 'Bahan Baku' || e.kategori === 'Operasional')
-    .reduce((s, e) => s + (e.totalBiayaRp || 0), 0);
+  const totalBulanIni = summary.totalBulanIni;
+  const totalTransportasi = summary.totalTransportasi;
+  const totalBahanOp = summary.totalBahanOp;
 
   // ── Export ──────────────────────────────────────────────────────────
   const fetchAllExpenses = async () => {
@@ -459,7 +517,14 @@ export const LogistikPage: React.FC = () => {
                   <td className="py-2 px-3 pl-4 font-bold text-[#2C4219]">
                     {item.kodeTransaksi}
                   </td>
-                  <td className="py-2 px-3 text-[#6B7280] font-medium">{item.tanggal}</td>
+                      <td className="py-2 px-3 text-[#6B7280] font-medium">
+                        {(() => {
+                          const d = parseTanggal(item.tanggal);
+                          return d
+                            ? d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                            : (item.tanggal || '-');
+                        })()}
+                      </td>
                   <td className="py-2 px-3">
                     <span className="px-2 py-0.5 bg-[#C3E28D]/30 text-[#172C05] rounded text-[10px] font-bold">
                       {item.kategori}
@@ -486,24 +551,27 @@ export const LogistikPage: React.FC = () => {
                     <div className="flex items-center justify-center gap-1.5">
                       <button
                         onClick={() => handleOpenReceipt(item)}
-                        className="p-1 text-[#44483e] hover:text-[#2C4219] hover:bg-[#efe0d2] rounded transition-colors cursor-pointer"
+                        className="min-h-8 px-2.5 py-1.5 text-[#2C4219] hover:bg-[#efe0d2] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Lihat Detail Nota Receipt"
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye className="w-4 h-4" />
+                        <span>Detail</span>
                       </button>
                       <button
                         onClick={() => handleOpenEditExpense(item)}
-                        className="p-1 text-amber-700 hover:bg-amber-50 rounded transition-colors cursor-pointer"
+                        className="min-h-8 px-2.5 py-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Edit Transaksi"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
                       </button>
                       <button
                         onClick={() => setDeleteTarget(item)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                        className="min-h-8 px-2.5 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Hapus Transaksi"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus</span>
                       </button>
                     </div>
                   </td>
@@ -737,6 +805,35 @@ export const LogistikPage: React.FC = () => {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+                Tanggal Transaksi
+              </label>
+              <input
+                type="date"
+                value={formData.tanggal || ''}
+                onChange={(e) => setFormData({ ...formData, tanggal: e.target.value })}
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+                Status Pembayaran
+              </label>
+              <select
+                value={formData.statusPembayaran}
+                onChange={(e) => setFormData({ ...formData, statusPembayaran: e.target.value as any })}
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+              >
+                <option value="LUNAS">Lunas</option>
+                <option value="PENDING">Pending</option>
+                <option value="DIBATALKAN">Dibatalkan</option>
+              </select>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
               Keterangan / Vendor
@@ -806,31 +903,16 @@ export const LogistikPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Total Biaya (Rp)
-              </label>
-              <input
-                type="number"
-                value={detailItems.reduce((s, it) => s + (it.nama.trim() ? (it.qty || 0) * (it.hargaSatuan || 0) : 0), 0)}
-                readOnly
-                className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-extrabold text-[#2C4219] cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Status Pembayaran
-              </label>
-              <select
-                value={formData.statusPembayaran}
-                onChange={(e) => setFormData({ ...formData, statusPembayaran: e.target.value as any })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-bold"
-              >
-                <option value="LUNAS">LUNAS</option>
-                <option value="PENDING">PENDING</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+              Total Biaya (Rp)
+            </label>
+            <input
+              type="number"
+              value={detailItems.reduce((s, it) => s + (it.nama.trim() ? (it.qty || 0) * (it.hargaSatuan || 0) : 0), 0)}
+              readOnly
+              className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-extrabold text-[#2C4219] cursor-not-allowed"
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">

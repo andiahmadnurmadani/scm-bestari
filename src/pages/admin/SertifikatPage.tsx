@@ -336,24 +336,27 @@ export const SertifikatPage: React.FC = () => {
                     <div className="flex items-center justify-center gap-1">
                       <button
                         onClick={() => handleOpenDetail(item)}
-                        className="p-1.5 text-[#2C4219] hover:bg-[#efe0d2] rounded-lg transition-colors cursor-pointer"
+                        className="min-h-8 px-2.5 py-1.5 text-[#2C4219] hover:bg-[#efe0d2] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Preview Sertifikat & Download"
                       >
                         <Eye className="w-4 h-4" />
+                        <span>Preview</span>
                       </button>
                       <button
                         onClick={() => handleOpenEdit(item)}
-                        className="p-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                        className="min-h-8 px-2.5 py-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Edit Sertifikat"
                       >
                         <Edit3 className="w-4 h-4" />
+                        <span>Edit</span>
                       </button>
                       <button
                         onClick={() => setDeleteTarget(item)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        className="min-h-8 px-2.5 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Hapus Sertifikat"
                       >
                         <Trash2 className="w-4 h-4" />
+                        <span>Hapus</span>
                       </button>
                     </div>
                   </td>

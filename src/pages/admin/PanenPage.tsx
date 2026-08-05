@@ -28,6 +28,7 @@ import { HarvestRecord, LandPlot } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
+import { ActionButtons } from '../../components/common/ActionButtons';
 import { timestampCode } from '../../utils/kodeGenerator';
 
 const filterInputCls =
@@ -600,14 +601,15 @@ export const PanenPage: React.FC = () => {
                     setFilterOpen((v) => !v);
                     setExportOpen(false);
                   }}
-                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer relative ${
+                  className={`min-h-9 px-3 py-2 rounded-lg border transition-colors cursor-pointer relative flex items-center gap-2 text-xs font-bold ${
                     activeFilterCount > 0
                       ? 'bg-[#2C4219] text-white border-[#2C4219]'
                       : 'bg-[#F7F7F5] border-[#c4c8bb]/30 text-[#2C4219] hover:bg-[#efe0d2]'
                   }`}
-                  title="Filter Data"
+                  title="Filter Data Panen"
                 >
                   <Filter className="w-3.5 h-3.5" />
+                  <span>Filter</span>
                   {activeFilterCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[#DEB938] text-[#172C05] text-[9px] font-black flex items-center justify-center">
                       {activeFilterCount}
@@ -725,10 +727,11 @@ export const PanenPage: React.FC = () => {
                     setExportOpen((v) => !v);
                     setFilterOpen(false);
                   }}
-                  className="p-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-[#2C4219] hover:bg-[#efe0d2] transition-colors cursor-pointer"
-                  title="Export Data (CSV / Excel)"
+                  className="min-h-9 px-3 py-2 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-[#2C4219] hover:bg-[#efe0d2] transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
+                  title="Download Laporan Data Hasil Panen"
                 >
                   <Download className="w-3.5 h-3.5" />
+                  <span>Download Laporan</span>
                 </button>
                 {exportOpen && (
                   <div className="absolute right-0 top-9 z-30 w-48 bg-white rounded-xl shadow-xl border border-[#c4c8bb]/30 p-1.5 space-y-0.5">
@@ -798,33 +801,15 @@ export const PanenPage: React.FC = () => {
                       <td className="py-2 px-3 font-bold text-[#2C4219]">
                         {(row.jumlahHasilKg / 1000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} Ton
                       </td>
-                      <td className="py-2 px-3 text-right">
-                        <button
-                          onClick={() => setSelectedDetail(row)}
-                          className="text-xs font-semibold text-[#2C4219] hover:text-[#172C05] hover:underline transition-colors cursor-pointer"
-                        >
-                          Lihat Detail &gt;
-                        </button>
-                      </td>
                       <td className="py-2 px-3 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => openEditModal(row)}
-                            title="Edit Data"
-                            className="p-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-[#2C4219] hover:bg-[#C3E28D]/40 hover:border-[#2C4219] transition-colors cursor-pointer"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(row)}
-                            title="Hapus Data"
-                            className="p-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <ActionButtons
+                          onDetail={() => setSelectedDetail(row)}
+                          onEdit={() => openEditModal(row)}
+                          onDelete={() => setDeleteTarget(row)}
+                          detailTitle="Lihat Detail Panen"
+                          editTitle="Edit Data Panen"
+                          deleteTitle="Hapus Data Panen"
+                        />
                       </td>
                     </tr>
                   ))

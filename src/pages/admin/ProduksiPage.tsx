@@ -277,17 +277,19 @@ export const ProduksiPage: React.FC = () => {
                     <div className="flex items-center justify-center gap-1.5">
                       <button
                         onClick={() => handleOpenEdit(item)}
-                        className="p-1 text-[#2C4219] hover:bg-[#efe0d2] rounded transition-colors cursor-pointer"
+                        className="min-h-8 px-2.5 py-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Edit Batch"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
                       </button>
                       <button
                         onClick={() => setDeleteTarget(item)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                        className="min-h-8 px-2.5 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Hapus Batch"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus</span>
                       </button>
                     </div>
                   </td>

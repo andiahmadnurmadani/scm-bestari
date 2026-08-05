@@ -269,16 +269,18 @@ export const MasterVarietasPage: React.FC = () => {
                         <button
                           onClick={() => openEditModal(v)}
                           title="Edit Varietas"
-                          className="p-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-[#2C4219] hover:bg-[#C3E28D]/40 hover:border-[#2C4219] transition-colors cursor-pointer"
+                          className="min-h-8 px-2.5 py-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-[#2C4219] hover:bg-[#C3E28D]/40 hover:border-[#2C4219] transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         >
                           <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit</span>
                         </button>
                         <button
                           onClick={() => setDeleteTarget(v)}
                           title="Hapus Varietas"
-                          className="p-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors cursor-pointer"
+                          className="min-h-8 px-2.5 py-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
                         </button>
                       </div>
                     </td>
