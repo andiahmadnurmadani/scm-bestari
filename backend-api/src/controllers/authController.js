@@ -195,6 +195,28 @@ export async function updateProfile(req, res) {
       avatar: 'avatar',
     };
 
+    // Validasi ukuran avatar (base64 data URL, maks 2 MB file → ±2.7 MB base64)
+    if (data.avatar !== undefined && data.avatar !== null && data.avatar !== '') {
+      const avatarStr = String(data.avatar);
+      const isDataUrl = avatarStr.startsWith('data:image/');
+      const estimatedBytes = isDataUrl
+        ? Math.floor((avatarStr.length - avatarStr.indexOf(',') - 1) * 0.75)
+        : avatarStr.length;
+      const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
+      if (estimatedBytes > MAX_AVATAR_BYTES) {
+        return res.status(400).json({
+          success: false,
+          message: 'Ukuran foto profil terlalu besar! Maksimal 2 MB.',
+        });
+      }
+      if (!/^data:image\/(jpeg|png|webp|jpg);base64,/i.test(avatarStr)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Format foto profil tidak didukung! Gunakan JPG, PNG, atau WebP.',
+        });
+      }
+    }
+
     const sets = [];
     const values = [];
     for (const [key, column] of Object.entries(fieldMap)) {

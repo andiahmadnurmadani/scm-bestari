@@ -85,6 +85,9 @@ export const ProfilePage: React.FC = () => {
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
   const [showPw, setShowPw] = useState({ current: false, new: false, confirm: false });
   const [pwError, setPwError] = useState('');
+  const [avatarError, setAvatarError] = useState('');
+  const MAX_AVATAR_MB = 2;
+  const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
   // Muat profil dari backend saat halaman dibuka
   useEffect(() => {
@@ -122,7 +125,23 @@ export const ProfilePage: React.FC = () => {
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = ''; // reset agar bisa pilih file sama lagi
     if (!file) return;
+
+    // Validasi tipe file
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setAvatarError('Format foto tidak didukung! Gunakan JPG, PNG, atau WebP.');
+      return;
+    }
+
+    // Validasi ukuran (maks 2 MB)
+    const maxBytes = MAX_AVATAR_MB * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setAvatarError(`Ukuran foto terlalu besar! Maksimal ${MAX_AVATAR_MB} MB (file Anda ${(file.size / (1024 * 1024)).toFixed(1)} MB).`);
+      return;
+    }
+
+    setAvatarError('');
     const reader = new FileReader();
     reader.onload = (ev) => setProfile((p) => ({ ...p, avatar: ev.target?.result as string }));
     reader.readAsDataURL(file);
@@ -146,7 +165,12 @@ export const ProfilePage: React.FC = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3500);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Gagal menyimpan profil.');
+      const msg = err instanceof Error ? err.message : 'Gagal menyimpan profil.';
+      setSaveError(msg);
+      // Jika server tolak avatar, tampilkan juga sebagai avatarError
+      if (/foto profil/i.test(msg)) {
+        setAvatarError(msg);
+      }
     }
   };
 
@@ -236,8 +260,22 @@ export const ProfilePage: React.FC = () => {
           <span className="flex items-center gap-1.5 text-[10px] text-[#A8B774]/80 font-semibold">
             <Edit3 className="w-3 h-3" /> Klik kamera untuk ganti foto
           </span>
+          <span className="block text-[9px] text-[#A8B774]/60 font-medium mt-1">
+            Maks {MAX_AVATAR_MB} MB · JPG, PNG, atau WebP
+          </span>
         </div>
       </div>
+
+      {/* Error notifikasi avatar */}
+      {avatarError && (
+        <div className="flex items-start gap-2.5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm font-semibold text-red-700">
+          <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+          <div>
+            <p>{avatarError}</p>
+            <p className="text-[11px] font-normal text-red-500 mt-0.5">Pilih foto lain dengan ukuran lebih kecil.</p>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 bg-white border border-[#c4c8bb]/30 rounded-xl p-1 w-fit shadow-sm">

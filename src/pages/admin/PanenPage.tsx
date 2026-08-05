@@ -340,7 +340,7 @@ export const PanenPage: React.FC = () => {
       'Lokasi Lahan': r.namaLahan || '-',
       'Varietas': r.varietas || '-',
       'Tanggal Panen': r.tanggalPanen ? new Date(r.tanggalPanen).toLocaleDateString('id-ID') : '-',
-      'Tonase (Ton)': (r.jumlahHasilKg / 1000).toFixed(2),
+      'Berat Hasil (Ton)': (r.jumlahHasilKg / 1000).toFixed(2),
       'Jumlah (Kg)': r.jumlahHasilKg ?? 0,
       'Kualitas Grade': r.kualitasGrade || '-',
       'Penanggung Jawab': r.petaniPenanggungJawab || '-',
@@ -769,7 +769,7 @@ export const PanenPage: React.FC = () => {
                   <th className="py-2 px-3">TANGGAL PANEN</th>
                   <th className="py-2 px-3">LOKASI LAHAN</th>
                   <th className="py-2 px-3">VARIETAS</th>
-                  <th className="py-2 px-3">TONASE</th>
+                  <th className="py-2 px-3">BERAT HASIL</th>
                   <th className="py-2 px-3 text-right">DETAIL</th>
                   <th className="py-2 px-3 text-center">AKSI</th>
                 </tr>
@@ -1067,14 +1067,14 @@ export const PanenPage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Tonase Hasil (Ton)
+                Berat Hasil Panen (Ton)
               </label>
               <input
                 type="number"
                 step="0.1"
                 value={formData.tonase}
                 onChange={(e) => setFormData({ ...formData, tonase: e.target.value })}
-                placeholder="Contoh: 35.5"
+                placeholder="Contoh: 35.5 ton"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
                 required
               />
@@ -1252,7 +1252,7 @@ export const PanenPage: React.FC = () => {
 
               <div className="p-3 bg-[#FFF8F4] rounded-xl border border-[#c4c8bb]/20">
                 <span className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider block">
-                  Tonase Hasil
+                  Berat Hasil Panen
                 </span>
                 <span className="text-sm font-black text-[#221A12] mt-0.5 block">
                   {(selectedDetail.jumlahHasilKg / 1000).toFixed(2)}

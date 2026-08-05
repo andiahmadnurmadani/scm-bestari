@@ -396,7 +396,7 @@ export const ProduksiPage: React.FC = () => {
               </label>
               <input
                 type="number"
-                value={formData.jumlahHasil}
+                value={formData.jumlahHasil || ''}
                 onChange={(e) => setFormData({ ...formData, jumlahHasil: Number(e.target.value) })}
                 placeholder="Contoh: 1000"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
@@ -411,7 +411,7 @@ export const ProduksiPage: React.FC = () => {
                 type="text"
                 value={formData.satuan}
                 onChange={(e) => setFormData({ ...formData, satuan: e.target.value })}
-                placeholder="Pouch / Kg / Botol"
+                placeholder="Contoh: Pouch / Kg / Botol"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
               />

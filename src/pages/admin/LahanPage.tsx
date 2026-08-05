@@ -644,7 +644,7 @@ export const LahanPage: React.FC = () => {
               <input
                 type="number"
                 step="0.1"
-                value={formData.luasHektar}
+                value={formData.luasHektar || ''}
                 onChange={(e) => setFormData({ ...formData, luasHektar: Number(e.target.value) })}
                 placeholder="Contoh: 2.5"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
@@ -724,7 +724,7 @@ export const LahanPage: React.FC = () => {
                 type="text"
                 value={formData.jenisTanah}
                 onChange={(e) => setFormData({ ...formData, jenisTanah: e.target.value })}
-                placeholder="Aluvial / Latosol / Grumosol"
+                placeholder="Contoh: Aluvial, Latosol, atau Grumosol"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
               />
@@ -737,7 +737,7 @@ export const LahanPage: React.FC = () => {
               <input
                 type="number"
                 step="0.1"
-                value={formData.panenLaluTon || 10.0}
+                value={formData.panenLaluTon || ''}
                 onChange={(e) => setFormData({ ...formData, panenLaluTon: Number(e.target.value) })}
                 placeholder="Contoh: 12"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"

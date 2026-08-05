@@ -60,9 +60,9 @@ export const LogistikPage: React.FC = () => {
     catatanNota: '',
   });
 
-  // Rincian barang/jasa dinamis (diisi user, total otomatis)
-  const [detailItems, setDetailItems] = useState<{ nama: string; qty: number; hargaSatuan: number }[]>([
-    { nama: '', qty: 1, hargaSatuan: 0 },
+  // Rincian barang/jasa dinamis (diisi user, total otomatis) — qty & hargaSatuan pakai string agar bisa dikosongkan
+  const [detailItems, setDetailItems] = useState<{ nama: string; qty: string; hargaSatuan: string }[]>([
+    { nama: '', qty: '', hargaSatuan: '' },
   ]);
 
   // ── Summary terpisah (total bulan ini dihitung dari SEMUA data, bukan halaman aktif) ──
@@ -161,7 +161,7 @@ export const LogistikPage: React.FC = () => {
       nomorNotaReceipt: '',
       catatanNota: '',
     });
-    setDetailItems([{ nama: '', qty: 1, hargaSatuan: 0 }]);
+    setDetailItems([{ nama: '', qty: '', hargaSatuan: '' }]);
     setAddExpenseModalOpen(true);
   };
 
@@ -180,8 +180,8 @@ export const LogistikPage: React.FC = () => {
     });
     setDetailItems(
       expense.detailItem && expense.detailItem.length > 0
-        ? expense.detailItem.map((it) => ({ nama: it.nama, qty: it.qty, hargaSatuan: it.hargaSatuan }))
-        : [{ nama: '', qty: 1, hargaSatuan: 0 }]
+        ? expense.detailItem.map((it) => ({ nama: it.nama, qty: String(it.qty ?? ''), hargaSatuan: String(it.hargaSatuan ?? '') }))
+        : [{ nama: '', qty: '', hargaSatuan: '' }]
     );
     setAddExpenseModalOpen(true);
   };
@@ -189,11 +189,13 @@ export const LogistikPage: React.FC = () => {
   const handleSaveExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     // Total otomatis dari rincian barang/jasa
-    const total = detailItems.reduce((s, it) => s + (it.nama.trim() ? (it.qty || 0) * (it.hargaSatuan || 0) : 0), 0);
+    const total = detailItems.reduce((s, it) => s + (it.nama.trim() ? (Number(it.qty) || 0) * (Number(it.hargaSatuan) || 0) : 0), 0);
     const payload: Partial<FinancialExpense> = {
       ...formData,
       totalBiayaRp: total,
-      detailItem: detailItems.filter((it) => it.nama.trim()),
+      detailItem: detailItems
+        .filter((it) => it.nama.trim())
+        .map((it) => ({ nama: it.nama, qty: Number(it.qty) || 0, hargaSatuan: Number(it.hargaSatuan) || 0 })),
     };
     if (editingExpenseId) {
       await logisticsApi.updateExpense(editingExpenseId, payload);
@@ -245,7 +247,7 @@ export const LogistikPage: React.FC = () => {
     setDetailItems((prev) => prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it)));
   };
   const addItem = () => {
-    setDetailItems((prev) => [...prev, { nama: '', qty: 1, hargaSatuan: 0 }]);
+      setDetailItems((prev) => [...prev, { nama: '', qty: '', hargaSatuan: '' }]);
   };
   const removeItem = (idx: number) => {
     setDetailItems((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev));
@@ -707,8 +709,8 @@ export const LogistikPage: React.FC = () => {
                       <tr key={idx} className="border-b border-[#c4c8bb]/15">
                         <td className="py-2 font-semibold text-[#221A12]">{item.nama}</td>
                         <td className="py-2 text-center">{item.qty}</td>
-                        <td className="py-2 text-right">Rp {item.hargaSatuan.toLocaleString('id-ID')}</td>
-                        <td className="py-2 text-right font-bold">Rp {(item.qty * item.hargaSatuan).toLocaleString('id-ID')}</td>
+                        <td className="py-2 text-right">Rp {Number(item.hargaSatuan).toLocaleString('id-ID')}</td>
+                        <td className="py-2 text-right font-bold">Rp {(Number(item.qty) * Number(item.hargaSatuan)).toLocaleString('id-ID')}</td>
                       </tr>
                     ))
                   ) : (
@@ -858,7 +860,7 @@ export const LogistikPage: React.FC = () => {
                 <div key={idx} className="grid grid-cols-[1fr_70px_1fr_70px_32px] gap-2 items-center">
                   <input
                     type="text"
-                    placeholder="Nama barang/jasa"
+                    placeholder="Nama barang atau jasa"
                     value={item.nama}
                     onChange={(e) => updateItem(idx, 'nama', e.target.value)}
                     className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-sm min-w-0"
@@ -866,21 +868,21 @@ export const LogistikPage: React.FC = () => {
                   <input
                     type="number"
                     min="1"
-                    placeholder="Qty"
+                    placeholder="Jumlah (contoh: 5)"
                     value={item.qty}
-                    onChange={(e) => updateItem(idx, 'qty', Number(e.target.value))}
+                    onChange={(e) => updateItem(idx, 'qty', e.target.value)}
                     className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-sm text-center"
                   />
                   <input
                     type="number"
                     min="0"
-                    placeholder="Harga/unit"
+                    placeholder="Harga satuan (contoh: 5000)"
                     value={item.hargaSatuan}
-                    onChange={(e) => updateItem(idx, 'hargaSatuan', Number(e.target.value))}
+                    onChange={(e) => updateItem(idx, 'hargaSatuan', e.target.value)}
                     className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-sm min-w-0"
                   />
                   <span className="text-xs font-extrabold text-[#2C4219] whitespace-nowrap">
-                    Rp {(item.qty * item.hargaSatuan).toLocaleString('id-ID')}
+                    Rp {(Number(item.qty) * Number(item.hargaSatuan)).toLocaleString('id-ID')}
                   </span>
                   <button
                     type="button"
@@ -909,7 +911,7 @@ export const LogistikPage: React.FC = () => {
             </label>
             <input
               type="number"
-              value={detailItems.reduce((s, it) => s + (it.nama.trim() ? (it.qty || 0) * (it.hargaSatuan || 0) : 0), 0)}
+              value={detailItems.reduce((s, it) => s + (it.nama.trim() ? (Number(it.qty) || 0) * (Number(it.hargaSatuan) || 0) : 0), 0)}
               readOnly
               className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-extrabold text-[#2C4219] cursor-not-allowed"
             />

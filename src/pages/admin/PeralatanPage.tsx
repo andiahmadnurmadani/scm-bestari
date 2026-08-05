@@ -35,7 +35,7 @@ export const PeralatanPage: React.FC = () => {
     kodeAlat: '',
     namaPeralatan: '',
     kategori: 'Mesin Olah Tanah',
-    jumlahStok: 1,
+    jumlahStok: '',
     kondisi: 'Sangat Baik',
     status: 'Tersedia',
     lokasiPenyimpanan: '',
@@ -119,7 +119,7 @@ export const PeralatanPage: React.FC = () => {
       kodeAlat: nextCode('ALAT-', equipmentList, 3),
       namaPeralatan: '',
       kategori: 'Pascapanen',
-      jumlahStok: 1,
+      jumlahStok: '',
       kondisi: 'Baik',
       status: 'Tersedia',
       lokasiPenyimpanan: '',
@@ -144,7 +144,7 @@ export const PeralatanPage: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalFotoUrl = formData.fotoUrl || imagePreview || '';
-    const payload = { ...formData, fotoUrl: finalFotoUrl };
+    const payload = { ...formData, fotoUrl: finalFotoUrl, jumlahStok: Number(formData.jumlahStok) || 0 };
 
     if (editId) {
       await equipmentApi.update(editId, payload);
@@ -489,7 +489,7 @@ export const PeralatanPage: React.FC = () => {
               <input
                 type="number"
                 value={formData.jumlahStok}
-                onChange={(e) => setFormData({ ...formData, jumlahStok: Number(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, jumlahStok: e.target.value })}
                 placeholder="Contoh: 3"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
