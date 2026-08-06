@@ -18,6 +18,7 @@ import {
   Upload,
   Image as ImageIcon,
   X,
+  Edit3,
   FileSpreadsheet,
   AlertTriangle,
 } from 'lucide-react';
@@ -156,13 +157,6 @@ export const PanenPage: React.FC = () => {
       .getAll()
       .then((res) => {
         setVarietyList(res.data || []);
-        // Sinkronkan default formData.varietas jika belum terisi
-        setFormData((prev) => {
-          if (res.data && res.data.length > 0 && !prev.varietas) {
-            return { ...prev, varietas: res.data[0].name };
-          }
-          return prev;
-        });
       })
       .catch(() => setVarietyList([]))
       .finally(() => setVarietyLoading(false));
@@ -174,19 +168,6 @@ export const PanenPage: React.FC = () => {
       .getAll({ limit: 100 })
       .then((res) => {
         setLandList(res.data || []);
-        // Sinkronkan default formData.lokasiLahan jika belum terisi
-        setFormData((prev) => {
-          if (res.data && res.data.length > 0 && !prev.lokasiLahan) {
-            const first = res.data[0];
-            return {
-              ...prev,
-              lokasiLahan: first.namaLahan,
-              varietas: prev.varietas || first.varietasSorgum,
-              petaniPenanggungJawab: prev.petaniPenanggungJawab || first.pemilikKelompokTani,
-            };
-          }
-          return prev;
-        });
       })
       .catch(() => setLandList([]))
       .finally(() => setLandLoading(false));
@@ -199,7 +180,6 @@ export const PanenPage: React.FC = () => {
       ...prev,
       lokasiLahan: namaLahan,
       varietas: selected?.varietasSorgum || prev.varietas,
-      petaniPenanggungJawab: selected?.pemilikKelompokTani || prev.petaniPenanggungJawab,
     }));
   };
 
@@ -207,11 +187,11 @@ export const PanenPage: React.FC = () => {
   const openCreateModal = () => {
     setEditingId(null);
     setFormData({
-      lokasiLahan: landList[0]?.namaLahan || '',
-      varietas: landList[0]?.varietasSorgum || '',
+      lokasiLahan: '',
+      varietas: '',
       tanggalPanen: new Date().toISOString().split('T')[0],
       tonase: '',
-      petaniPenanggungJawab: landList[0]?.pemilikKelompokTani || '',
+      petaniPenanggungJawab: '',
       catatan: '',
     });
     // Kode panen otomatis, hanya untuk tampilan (read-only)
@@ -1003,7 +983,7 @@ export const PanenPage: React.FC = () => {
               required
             >
               <option value="" disabled>
-                {landLoading ? 'Memuat data lahan...' : 'Pilih lokasi lahan'}
+                {landLoading ? 'Memuat data lahan...' : '-- Pilih Lokasi Lahan --'}
               </option>
               {landList.map((l) => (
                 <option key={l.id} value={l.namaLahan}>
@@ -1055,9 +1035,10 @@ export const PanenPage: React.FC = () => {
                 value={formData.varietas}
                 onChange={(e) => setFormData({ ...formData, varietas: e.target.value })}
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                required
               >
                 <option value="" disabled>
-                  {varietyLoading ? 'Memuat varietas...' : 'Pilih varietas sorgum'}
+                  {varietyLoading ? 'Memuat varietas...' : '-- Pilih Varietas Sorgum --'}
                 </option>
                 {varietyList.map((v) => (
                   <option key={v.id} value={v.name}>
@@ -1085,7 +1066,7 @@ export const PanenPage: React.FC = () => {
 
           <div>
             <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Penanggung Jawab Lahan
+              Penanggung Jawab Panen
             </label>
             <input
               type="text"
@@ -1134,15 +1115,19 @@ export const PanenPage: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={handleRemoveImage}
-                  className="p-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors shrink-0 cursor-pointer"
-                  title="Hapus foto"
+                  onClick={() => document.getElementById('panen-foto-input')?.click()}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#2C4219] text-white text-[11px] font-bold hover:bg-[#213213] transition-colors shrink-0 cursor-pointer"
+                  title="Ganti foto panen"
                 >
-                  <X className="w-4 h-4" />
+                  <Edit3 className="w-3.5 h-3.5" />
+                  Edit
                 </button>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-[#c4c8bb]/50 hover:border-[#2C4219] bg-[#fff1e5]/60 hover:bg-[#FFF8F4] rounded-2xl cursor-pointer transition-all text-center">
+              <label
+                htmlFor="panen-foto-input"
+                className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-[#c4c8bb]/50 hover:border-[#2C4219] bg-[#fff1e5]/60 hover:bg-[#FFF8F4] rounded-2xl cursor-pointer transition-all text-center"
+              >
                 <div className="w-10 h-10 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center mb-2">
                   <Upload className="w-5 h-5" />
                 </div>
@@ -1152,14 +1137,17 @@ export const PanenPage: React.FC = () => {
                 <span className="text-[11px] text-[#74796d] font-semibold mt-0.5">
                   Format yang didukung: <strong className="text-[#2C4219]">.JPG, .JPEG, .PNG</strong> (Maks. 5 MB)
                 </span>
-                <input
-                  type="file"
-                  accept="image/png, image/jpeg, image/jpg"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
               </label>
             )}
+
+            {/* Input file selalu ada di DOM agar tombol Edit bisa memicunya */}
+            <input
+              id="panen-foto-input"
+              type="file"
+              accept="image/png, image/jpeg, image/jpg"
+              onChange={handleImageChange}
+              className="hidden"
+            />
 
             {imageError && (
               <p className="text-xs font-bold text-red-600 mt-1.5 flex items-center gap-1">
@@ -1264,7 +1252,7 @@ export const PanenPage: React.FC = () => {
 
               <div className="p-3 bg-[#FFF8F4] rounded-xl border border-[#c4c8bb]/20">
                 <span className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider block">
-                  Penanggung Jawab
+                  Penanggung Jawab Panen
                 </span>
                 <span className="text-sm font-extrabold text-[#221A12] mt-0.5 block">
                   {selectedDetail.petaniPenanggungJawab || '-'}

@@ -356,15 +356,19 @@ export const MasterVarietasPage: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={handleRemoveImage}
-                  className="p-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors shrink-0 cursor-pointer"
-                  title="Hapus gambar"
+                  onClick={() => document.getElementById('varietas-gambar-input')?.click()}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#2C4219] text-white text-[11px] font-bold hover:bg-[#213213] transition-colors shrink-0 cursor-pointer"
+                  title="Ganti gambar varietas"
                 >
-                  <X className="w-4 h-4" />
+                  <Pencil className="w-3.5 h-3.5" />
+                  Edit
                 </button>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-[#c4c8bb]/50 hover:border-[#2C4219] bg-[#fff1e5]/60 hover:bg-[#FFF8F4] rounded-2xl cursor-pointer transition-all text-center">
+              <label
+                htmlFor="varietas-gambar-input"
+                className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-[#c4c8bb]/50 hover:border-[#2C4219] bg-[#fff1e5]/60 hover:bg-[#FFF8F4] rounded-2xl cursor-pointer transition-all text-center"
+              >
                 <div className="w-10 h-10 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center mb-2">
                   <Upload className="w-5 h-5" />
                 </div>
@@ -374,14 +378,17 @@ export const MasterVarietasPage: React.FC = () => {
                 <span className="text-[11px] text-[#74796d] font-semibold mt-0.5">
                   Format yang didukung: <strong className="text-[#2C4219]">.JPG, .JPEG, .PNG</strong> (Maks. 5 MB)
                 </span>
-                <input
-                  type="file"
-                  accept="image/png, image/jpeg, image/jpg"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
               </label>
             )}
+
+            {/* Input file selalu ada di DOM agar tombol Edit bisa memicunya */}
+            <input
+              id="varietas-gambar-input"
+              type="file"
+              accept="image/png, image/jpeg, image/jpg"
+              onChange={handleImageChange}
+              className="hidden"
+            />
 
             {imageError && (
               <p className="text-xs font-bold text-red-600 mt-1.5 flex items-center gap-1">

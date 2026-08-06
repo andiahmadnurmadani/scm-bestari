@@ -23,6 +23,7 @@ import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { Toast } from '../../components/common/Toast';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
+import { formatTanggalId } from '../../utils/dateUtils';
 
 export const LogistikPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
@@ -329,10 +330,11 @@ export const LogistikPage: React.FC = () => {
       const rowsHtml = data.map((r) => `
         <tr>
           <td>${esc(r.kodeTransaksi)}</td>
-          <td>${esc(r.tanggal)}</td>
+          <td>${esc(formatTanggalId(r.tanggal))}</td>
           <td>${esc(r.kategori)}</td>
           <td>${esc(r.keteranganVendor)}</td>
           <td>${esc((r.totalBiayaRp || 0).toLocaleString('id-ID'))}</td>
+          <td>${esc(r.nomorNotaReceipt || '-')}</td>
           <td>${esc(r.statusPembayaran)}</td>
         </tr>`).join('');
       win.document.write(`
@@ -349,7 +351,7 @@ export const LogistikPage: React.FC = () => {
         </style></head><body>
         <h1>Laporan Keuangan Logistik</h1>
         <p class="meta">Sorgum SCM • Dicetak ${new Date().toLocaleDateString('id-ID')} • Jumlah: ${data.length} transaksi</p>
-        <table><thead><tr><th>Kode</th><th>Tanggal</th><th>Kategori</th><th>Vendor</th><th>Biaya (Rp)</th><th>Status</th></tr></thead>
+        <table><thead><tr><th>Kode</th><th>Tanggal</th><th>Kategori</th><th>Vendor</th><th>Biaya (Rp)</th><th>No. Nota</th><th>Status</th></tr></thead>
         <tbody>${rowsHtml}</tbody></table>
         <p class="meta" style="margin-top:12px">Total Pengeluaran: <b>${formatRupiah(data.reduce((s, r) => s + (r.totalBiayaRp || 0), 0))}</b></p>
         <script>window.print();</script>
@@ -659,7 +661,7 @@ export const LogistikPage: React.FC = () => {
                   </p>
                   <p className="text-sm font-extrabold text-[#221A12]">{activeReceipt.nomorNotaReceipt}</p>
                   <p className="text-[11px] text-[#74796d] font-semibold">
-                    {activeReceipt.tanggal ? new Date(activeReceipt.tanggal).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                    {formatTanggalId(activeReceipt.tanggal, { weekday: true })}
                   </p>
                 </div>
               </div>
@@ -698,11 +700,11 @@ export const LogistikPage: React.FC = () => {
               <p className="text-xs font-bold text-[#74796d] uppercase mb-2">Rincian Barang / Jasa</p>
               <table className="w-full text-xs border-collapse">
                 <thead>
-                  <tr className="text-[#6B7280] font-bold uppercase text-[10px] tracking-wider border-b border-[#c4c8bb]/30">
-                    <th className="py-2 text-left">Item</th>
-                    <th className="py-2 text-center">Qty</th>
-                    <th className="py-2 text-right">Harga Satuan</th>
-                    <th className="py-2 text-right">Subtotal</th>
+                  <tr className="text-[#6B7280] font-bold uppercase text-[10px] tracking-wider border-b-2 border-[#2C4219]">
+                    <th className="py-2 pr-2 text-left">Item</th>
+                    <th className="py-2 px-2 text-center">Jumlah</th>
+                    <th className="py-2 px-2 text-right">Harga Satuan</th>
+                    <th className="py-2 pl-2 text-right">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>

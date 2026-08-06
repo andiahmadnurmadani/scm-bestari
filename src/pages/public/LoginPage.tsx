@@ -127,9 +127,6 @@ export const LoginPage: React.FC = () => {
                     />
                     Ingat Saya
                   </label>
-                  <a href="#" className="font-semibold text-[#2C4219] hover:underline">
-                    Lupa Kata Sandi?
-                  </a>
                 </div>
 
                 {/* Login Button Full Width */}

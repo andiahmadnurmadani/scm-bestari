@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { CmsProvider } from './context/CmsContext';
 import { ApiOfflineBanner } from './components/common/ApiOfflineBanner';
+import { ProtectedRoute } from './components/common/ProtectedRoute';
 
 // Public Pages
 import { LandingPage } from './pages/public/LandingPage';
@@ -31,7 +32,14 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
 
           {/* Protected / Admin Dashboard Routes */}
-          <Route path="/dashboard" element={<AdminLayout />}>
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<DashboardPage />} />
             <Route path="panen" element={<PanenPage />} />
             <Route path="lahan" element={<LahanPage />} />

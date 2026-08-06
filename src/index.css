@@ -57,13 +57,34 @@ html {
   #print-struk * {
     visibility: visible;
   }
+  /* Batalkan constraint modal (fixed/overflow/max-height) agar struk utuh.
+     #print-struk dikecualikan agar tetap absolute di halaman cetak. */
+  .fixed,
+  .fixed :not(#print-struk):not(#print-struk *) {
+    position: static !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
   #print-struk {
-    position: absolute;
-    inset: 0;
+    position: absolute !important;
+    left: 0;
+    top: 0;
     width: 100%;
     margin: 0;
     box-shadow: none;
     border: none;
     background: #ffffff !important;
   }
+  #print-struk table {
+    page-break-inside: auto;
+  }
+  #print-struk tr {
+    page-break-inside: avoid;
+  }
 }
+
+

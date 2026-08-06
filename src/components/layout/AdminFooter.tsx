@@ -13,7 +13,7 @@ export const AdminFooter: React.FC = () => {
   };
 
   return (
-    <footer className="w-full py-2.5 px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center text-[11px] text-[#44483e] mt-auto border-t border-[#c4c8bb]/20 bg-[#fff1e5]">
+    <footer className="w-full py-2.5 px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center text-[11px] text-[#44483e] mt-auto border-t border-[#c4c8bb]/20 bg-[#FFF8F4]">
       <p className="font-medium text-center sm:text-left mb-2 sm:mb-0">
         © 2026 Sorgum SCM. Seluruh hak cipta dilindungi.
       </p>

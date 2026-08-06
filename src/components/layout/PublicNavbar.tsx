@@ -75,15 +75,17 @@ export const PublicNavbar: React.FC = () => {
         </nav>
 
         {/* CTA Buttons */}
-        <div className="hidden md:flex items-center gap-2.5">
-          <Link
-            to="/login"
-            className="px-3 py-1.5 text-xs font-bold text-[#2C4219] hover:text-[#172C05] flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <LogIn className="w-3.5 h-3.5" />
-            {cms.navbarLogin}
-          </Link>
-        </div>
+        {location.pathname !== '/login' && (
+          <div className="hidden md:flex items-center gap-2.5">
+            <Link
+              to="/login"
+              className="px-3 py-1.5 text-xs font-bold text-[#2C4219] hover:text-[#172C05] flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              {cms.navbarLogin}
+            </Link>
+          </div>
+        )}
 
         {/* Mobile menu button */}
         <button
