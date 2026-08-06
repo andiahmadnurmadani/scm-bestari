@@ -49,6 +49,8 @@ export const SertifikatPage: React.FC = () => {
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Certificate | null>(null); // Data yang akan dihapus
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Pagination State
   const [page, setPage] = useState(1);
@@ -160,26 +162,47 @@ export const SertifikatPage: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Konversi tanggal input (YYYY-MM-DD) ke format Indonesia sebelum simpan
-    const payload = {
-      ...formData,
-      tanggalTerbit: formatDateForSave(formData.tanggalTerbit || ''),
-      tanggalKadaluarsa: formatDateForSave(formData.tanggalKadaluarsa || ''),
-    };
-    if (editId) {
-      await certificatesApi.update(editId, payload);
-    } else {
-      await certificatesApi.upload(payload);
+    if (!formData.namaSertifikat?.trim()) {
+      setToast({ msg: 'Nama sertifikat wajib diisi.', type: 'error' });
+      return;
     }
-    setFormModalOpen(false);
-    fetchCertificates();
+    setSaving(true);
+    try {
+      // Konversi tanggal input (YYYY-MM-DD) ke format Indonesia sebelum simpan
+      const payload = {
+        ...formData,
+        tanggalTerbit: formatDateForSave(formData.tanggalTerbit || ''),
+        tanggalKadaluarsa: formatDateForSave(formData.tanggalKadaluarsa || ''),
+      };
+      if (editId) {
+        await certificatesApi.update(editId, payload);
+        setToast({ msg: 'Sertifikat berhasil diperbarui.', type: 'success' });
+      } else {
+        await certificatesApi.upload(payload);
+        setToast({ msg: 'Sertifikat baru berhasil ditambahkan.', type: 'success' });
+      }
+      setFormModalOpen(false);
+      fetchCertificates();
+    } catch (err: any) {
+      setToast({ msg: err?.response?.data?.message || 'Gagal menyimpan sertifikat. Coba lagi.', type: 'error' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    await certificatesApi.delete(deleteTarget.id);
-    setDeleteTarget(null);
-    fetchCertificates();
+    setDeleting(true);
+    try {
+      await certificatesApi.delete(deleteTarget.id);
+      setDeleteTarget(null);
+      setToast({ msg: 'Sertifikat berhasil dihapus.', type: 'success' });
+      fetchCertificates();
+    } catch (err: any) {
+      setToast({ msg: err?.response?.data?.message || 'Gagal menghapus sertifikat. Coba lagi.', type: 'error' });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Process File Selection (PDF, JPG, PNG)
@@ -822,7 +845,7 @@ export const SertifikatPage: React.FC = () => {
             <Button type="button" variant="outline" onClick={() => setFormModalOpen(false)}>
               Batal
             </Button>
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="primary" loading={saving}>
               {editId ? 'Perbarui Dokumen' : 'Simpan Dokumen'}
             </Button>
           </div>
@@ -857,7 +880,7 @@ export const SertifikatPage: React.FC = () => {
               <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)}>
                 Batal
               </Button>
-              <Button type="button" variant="danger" onClick={confirmDelete}>
+              <Button type="button" variant="danger" onClick={confirmDelete} loading={deleting}>
                 <Trash2 className="w-3.5 h-3.5" />
                 Ya, Hapus
               </Button>
