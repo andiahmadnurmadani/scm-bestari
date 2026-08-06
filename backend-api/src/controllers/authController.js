@@ -277,8 +277,8 @@ export async function changePassword(req, res) {
     if (!currentPassword || !String(currentPassword).trim()) {
       return res.status(400).json({ success: false, message: 'Kata sandi saat ini wajib diisi.' });
     }
-    if (!newPassword || String(newPassword).length < 6) {
-      return res.status(400).json({ success: false, message: 'Kata sandi baru minimal 6 karakter.' });
+    if (!newPassword || String(newPassword).length < 8) {
+      return res.status(400).json({ success: false, message: 'Kata sandi baru minimal 8 karakter.' });
     }
 
     const [rows] = await pool.execute('SELECT id, password_hash FROM users WHERE id = ? LIMIT 1', [req.userId]);
