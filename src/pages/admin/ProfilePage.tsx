@@ -153,6 +153,7 @@ export const ProfilePage: React.FC = () => {
     try {
       await authApi.updateProfile({
         name: profile.name,
+        email: profile.email,
         phone: profile.phone,
         jabatan: profile.jabatan,
         namaKWT: profile.namaKWT,
@@ -314,8 +315,8 @@ export const ProfilePage: React.FC = () => {
               <Field label="Nama Lengkap" id="name">
                 <input
                   id="name" type="text" value={profile.name}
-                  disabled
-                  className={`${inputCls} opacity-60 cursor-not-allowed`} placeholder="Nama Lengkap"
+                  onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))}
+                  className={inputCls} placeholder="Nama Lengkap" required
                 />
               </Field>
               <Field label="Jabatan / Peran" id="jabatan">
@@ -328,21 +329,18 @@ export const ProfilePage: React.FC = () => {
               <Field label="Nama Kelompok Wanita Tani" id="namaKWT">
                 <input
                   id="namaKWT" type="text" value={profile.namaKWT}
-                  disabled
-                  className={`${inputCls} opacity-60 cursor-not-allowed`} placeholder="Nama KWT"
+                  onChange={(e) => setProfile((p) => ({ ...p, namaKWT: e.target.value }))}
+                  className={inputCls} placeholder="Nama KWT"
                 />
               </Field>
               <Field label="Bio / Deskripsi Singkat" id="bio">
                 <input
                   id="bio" type="text" value={profile.bio}
-                  disabled
-                  className={`${inputCls} opacity-60 cursor-not-allowed`} placeholder="Deskripsi peran Anda"
+                  onChange={(e) => setProfile((p) => ({ ...p, bio: e.target.value }))}
+                  className={inputCls} placeholder="Deskripsi peran Anda"
                 />
               </Field>
             </div>
-            <p className="mt-3 text-[11px] text-[#6B7280] flex items-center gap-1.5">
-              <Lock className="w-3 h-3" /> Informasi admin bersifat tetap dan tidak dapat diubah.
-            </p>
           </SectionCard>
 
           <SectionCard title="Kontak & Alamat" icon={<Phone className="w-4 h-4" />}>
@@ -352,13 +350,10 @@ export const ProfilePage: React.FC = () => {
                   <Mail className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280]" />
                   <input
                     id="email" type="email" value={profile.email}
-                    disabled
-                    className={`${inputCls} pl-9 opacity-60 cursor-not-allowed`} placeholder="email@kwt.com"
+                    onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))}
+                    className={`${inputCls} pl-9`} placeholder="email@kwt.com" required
                   />
                 </div>
-                <p className="mt-1 text-[10px] text-[#6B7280] flex items-center gap-1">
-                  <Lock className="w-3 h-3" /> Email dipakai untuk masuk ke aplikasi, tidak dapat diubah.
-                </p>
               </Field>
               <Field label="Nomor WhatsApp / HP" id="phone">
                 <div className="relative">

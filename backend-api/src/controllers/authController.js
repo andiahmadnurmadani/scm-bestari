@@ -179,12 +179,21 @@ export async function updateProfile(req, res) {
     const data = req.body || {};
     const pool = getPool();
 
-    // Email dipakai sebagai identitas login — tidak boleh diubah
+    // Email dapat diubah — validasi format & cek duplikat
     if (data.email !== undefined) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email tidak dapat diubah karena dipakai untuk masuk ke aplikasi.',
-      });
+      const newEmail = String(data.email).trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newEmail)) {
+        return res.status(400).json({ success: false, message: 'Format email tidak valid.' });
+      }
+      const [dup] = await pool.execute('SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1', [
+        newEmail,
+        req.userId,
+      ]);
+      if (dup.length > 0) {
+        return res.status(409).json({ success: false, message: 'Email sudah digunakan akun lain.' });
+      }
+      data.email = newEmail;
     }
 
     const [existing] = await pool.execute('SELECT id FROM users WHERE id = ? LIMIT 1', [req.userId]);
@@ -194,6 +203,7 @@ export async function updateProfile(req, res) {
 
     const fieldMap = {
       name: 'name',
+      email: 'email',
       phone: 'phone',
       jabatan: 'jabatan',
       namaKWT: 'nama_kwt',

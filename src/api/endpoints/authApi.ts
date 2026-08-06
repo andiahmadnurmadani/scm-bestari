@@ -105,7 +105,7 @@ export const authApi = {
   },
 
   /** Update profil user aktif. */
-  updateProfile: async (data: { name?: string; phone?: string; jabatan?: string; namaKWT?: string; alamat?: string; kecamatan?: string; kabupaten?: string; bio?: string; avatar?: string }) => {
+  updateProfile: async (data: { name?: string; email?: string; phone?: string; jabatan?: string; namaKWT?: string; alamat?: string; kecamatan?: string; kabupaten?: string; bio?: string; avatar?: string }) => {
     try {
       const response = await axiosClient.put('/auth/me', data);
       const result = response.data;
