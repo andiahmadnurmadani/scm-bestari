@@ -31,13 +31,15 @@ export const ProduksiPage: React.FC = () => {
   const [harvestList, setHarvestList] = useState<HarvestRecord[]>([]);
   const [bahanBakuType, setBahanBakuType] = useState<'panen' | 'raw'>('panen');
 
-  const [formData, setFormData] = useState<Partial<ProductionBatch>>({
+  const [formData, setFormData] = useState<
+    Partial<ProductionBatch> & { jumlahHasil?: string }
+  >({
     kodeBatch: '',
     namaProduk: '',
     kategori: 'Ready to Eat (Siap Konsumsi)',
     tanggalProduksi: new Date().toLocaleDateString('id-ID'),
     tanggalKadaluarsa: '',
-    jumlahHasil: 0,
+    jumlahHasil: '',
     satuan: 'Pouch',
     nomorBatchBahanBaku: '',
     operatorProduksi: '',
@@ -97,7 +99,7 @@ export const ProduksiPage: React.FC = () => {
       kategori: 'Ready to Eat (Siap Konsumsi)',
       tanggalProduksi: new Date().toLocaleDateString('id-ID'),
       tanggalKadaluarsa: '',
-      jumlahHasil: 0,
+      jumlahHasil: '',
       satuan: 'Pouch',
       nomorBatchBahanBaku: '',
       operatorProduksi: '',
@@ -109,7 +111,10 @@ export const ProduksiPage: React.FC = () => {
 
   const handleOpenEdit = (item: ProductionBatch) => {
     setEditId(item.id);
-    setFormData({ ...item });
+    setFormData({
+      ...item,
+      jumlahHasil: String(item.jumlahHasil ?? ''),
+    });
     // Deteksi jenis bahan baku dari kode: PN-* = hasil panen, PRD-* = raw mentah
     setBahanBakuType(item.nomorBatchBahanBaku?.startsWith('PN-') ? 'panen' : 'raw');
     setIsModalOpen(true);
@@ -117,10 +122,14 @@ export const ProduksiPage: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const payload = {
+      ...formData,
+      jumlahHasil: Number(formData.jumlahHasil) || 0,
+    };
     if (editId) {
-      await productionApi.update(editId, formData);
+      await productionApi.update(editId, payload);
     } else {
-      await productionApi.create(formData);
+      await productionApi.create(payload);
     }
     setIsModalOpen(false);
     fetchProduction();
@@ -396,8 +405,8 @@ export const ProduksiPage: React.FC = () => {
               </label>
               <input
                 type="number"
-                value={formData.jumlahHasil || ''}
-                onChange={(e) => setFormData({ ...formData, jumlahHasil: Number(e.target.value) })}
+                value={formData.jumlahHasil}
+                onChange={(e) => setFormData({ ...formData, jumlahHasil: e.target.value })}
                 placeholder="Contoh: 1000"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required

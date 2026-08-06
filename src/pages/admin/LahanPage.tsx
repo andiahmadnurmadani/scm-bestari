@@ -36,18 +36,20 @@ export const LahanPage: React.FC = () => {
   // Varietas dari API (Master Varietas)
   const [varieties, setVarieties] = useState<Variety[]>([]);
 
-  const [formData, setFormData] = useState<Partial<LandPlot>>({
+  const [formData, setFormData] = useState<
+    Partial<LandPlot> & { luasHektar?: string; panenLaluTon?: string }
+  >({
     namaLahan: '',
     lokasiDesa: '',
     kecamatan: '',
-    luasHektar: 0,
+    luasHektar: '',
     varietasSorgum: 'Bioguma',
     statusIrigasi: 'Irigasi Teknis',
     jenisTanah: '',
     pemilikKelompokTani: '',
     statusKesiapan: 'Siap Tanam',
     statusBadge: 'AKTIF',
-    panenLaluTon: 0,
+    panenLaluTon: '',
     fotoUrl: '',
     latitude: undefined,
     longitude: undefined,
@@ -136,14 +138,14 @@ export const LahanPage: React.FC = () => {
       namaLahan: '',
       lokasiDesa: '',
       kecamatan: '',
-      luasHektar: 0,
+      luasHektar: '',
       varietasSorgum: '',
       statusIrigasi: '',
       jenisTanah: '',
       pemilikKelompokTani: '',
       statusKesiapan: '',
       statusBadge: 'AKTIF',
-      panenLaluTon: 0,
+      panenLaluTon: '',
       fotoUrl: '',
       latitude: undefined,
       longitude: undefined,
@@ -154,7 +156,11 @@ export const LahanPage: React.FC = () => {
 
   const handleOpenEdit = (plot: LandPlot) => {
     setEditingPlot(plot);
-    setFormData(plot);
+    setFormData({
+      ...plot,
+      luasHektar: String(plot.luasHektar ?? ''),
+      panenLaluTon: String(plot.panenLaluTon ?? ''),
+    });
     setSelectedImage(null);
     setImageError('');
     setImagePreview(plot.fotoUrl || '');
@@ -164,12 +170,17 @@ export const LahanPage: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalFotoUrl = formData.fotoUrl || imagePreview || '';
-    
+    const payload = {
+      ...formData,
+      luasHektar: Number(formData.luasHektar) || 0,
+      panenLaluTon: Number(formData.panenLaluTon) || 0,
+    };
+
     if (editingPlot) {
-      await landApi.update(editingPlot.id, { ...formData, fotoUrl: finalFotoUrl });
+      await landApi.update(editingPlot.id, { ...payload, fotoUrl: finalFotoUrl });
     } else {
       await landApi.create({
-        ...formData,
+        ...payload,
         fotoUrl: finalFotoUrl,
       });
     }
@@ -644,8 +655,8 @@ export const LahanPage: React.FC = () => {
               <input
                 type="number"
                 step="0.1"
-                value={formData.luasHektar || ''}
-                onChange={(e) => setFormData({ ...formData, luasHektar: Number(e.target.value) })}
+                value={formData.luasHektar}
+                onChange={(e) => setFormData({ ...formData, luasHektar: e.target.value })}
                 placeholder="Contoh: 2.5"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
@@ -698,7 +709,6 @@ export const LahanPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-
             <div>
               <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
                 Status Badge
@@ -712,6 +722,19 @@ export const LahanPage: React.FC = () => {
                 <option value="PERSIAPAN">PERSIAPAN</option>
                 <option value="PEMBESARAN">PEMBESARAN</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+                Kelompok Tani / Pengelola
+              </label>
+              <input
+                type="text"
+                value={formData.pemilikKelompokTani}
+                onChange={(e) => setFormData({ ...formData, pemilikKelompokTani: e.target.value })}
+                placeholder="Contoh: KWT Sukamaju Tani"
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+              />
             </div>
           </div>
 
@@ -737,8 +760,8 @@ export const LahanPage: React.FC = () => {
               <input
                 type="number"
                 step="0.1"
-                value={formData.panenLaluTon || ''}
-                onChange={(e) => setFormData({ ...formData, panenLaluTon: Number(e.target.value) })}
+                value={formData.panenLaluTon}
+                onChange={(e) => setFormData({ ...formData, panenLaluTon: e.target.value })}
                 placeholder="Contoh: 12"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
               />
@@ -771,15 +794,19 @@ export const LahanPage: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={handleRemoveImage}
-                  className="p-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors shrink-0 cursor-pointer"
-                  title="Hapus foto"
+                  onClick={() => document.getElementById('lahan-foto-input')?.click()}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#2C4219] text-white text-[11px] font-bold hover:bg-[#213213] transition-colors shrink-0 cursor-pointer"
+                  title="Ganti foto lahan"
                 >
-                  <X className="w-4 h-4" />
+                  <Edit3 className="w-3.5 h-3.5" />
+                  Edit
                 </button>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-[#c4c8bb]/50 hover:border-[#2C4219] bg-[#fff1e5]/60 hover:bg-[#FFF8F4] rounded-2xl cursor-pointer transition-all text-center">
+              <label
+                htmlFor="lahan-foto-input"
+                className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-[#c4c8bb]/50 hover:border-[#2C4219] bg-[#fff1e5]/60 hover:bg-[#FFF8F4] rounded-2xl cursor-pointer transition-all text-center"
+              >
                 <div className="w-10 h-10 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center mb-2">
                   <Upload className="w-5 h-5" />
                 </div>
@@ -789,14 +816,17 @@ export const LahanPage: React.FC = () => {
                 <span className="text-[11px] text-[#74796d] font-semibold mt-0.5">
                   Format yang didukung: <strong className="text-[#2C4219]">.JPG, .JPEG, .PNG</strong> (Maks. 5 MB)
                 </span>
-                <input
-                  type="file"
-                  accept="image/png, image/jpeg, image/jpg"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
               </label>
             )}
+
+            {/* Input file selalu ada di DOM agar tombol Edit bisa memicunya */}
+            <input
+              id="lahan-foto-input"
+              type="file"
+              accept="image/png, image/jpeg, image/jpg"
+              onChange={handleImageChange}
+              className="hidden"
+            />
 
             {imageError && (
               <p className="text-xs font-bold text-red-600 mt-1.5 flex items-center gap-1">

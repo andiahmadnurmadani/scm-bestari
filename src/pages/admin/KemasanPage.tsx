@@ -122,10 +122,16 @@ export const KemasanPage: React.FC = () => {
   // Toast notifikasi
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
-  const [formData, setFormData] = useState<Partial<PackagingMaterial>>({
+  const [formData, setFormData] = useState<
+    Partial<PackagingMaterial> & {
+      stokTersedia?: string;
+      stokMinimal?: string;
+      hargaPerUnitRp?: string;
+    }
+  >({
     kodeKemasan: '', namaKemasan: '', kategori: 'Standing Pouch',
-    kapasitas: '', stokTersedia: 0, satuan: 'Pcs',
-    stokMinimal: 0, pemasok: '', hargaPerUnitRp: 0,
+    kapasitas: '', stokTersedia: '', satuan: 'Pcs',
+    stokMinimal: '', pemasok: '', hargaPerUnitRp: '',
   });
   const [formExtra, setFormExtra] = useState<ProductExtra>({
     komposisi: '', nilaiGizi: { ...defaultNilaiGizi },
@@ -170,8 +176,8 @@ export const KemasanPage: React.FC = () => {
     setFormData({
       kodeKemasan: nextCode('KMG-', packagingList, 3),
       namaKemasan: '', kategori: 'Standing Pouch', kapasitas: '',
-      stokTersedia: 0, satuan: 'Pcs', stokMinimal: 0,
-      pemasok: '', hargaPerUnitRp: 0,
+      stokTersedia: '', satuan: 'Pcs', stokMinimal: '',
+      pemasok: '', hargaPerUnitRp: '',
     });
     setFormExtra({ komposisi: '', nilaiGizi: { ...defaultNilaiGizi }, akg: defaultAkg.map((r) => ({ ...r })), riwayat: [] });
     setIsModalOpen(true);
@@ -180,7 +186,12 @@ export const KemasanPage: React.FC = () => {
   const handleOpenEdit = (item: PackagingMaterial) => {
     setEditId(item.id);
     setModalTab('dasar');
-    setFormData({ ...item });
+    setFormData({
+      ...item,
+      stokTersedia: String(item.stokTersedia ?? ''),
+      stokMinimal: String(item.stokMinimal ?? ''),
+      hargaPerUnitRp: String(item.hargaPerUnitRp ?? ''),
+    });
     setFormExtra(getExtra(item));
     setIsModalOpen(true);
   };
@@ -196,6 +207,9 @@ export const KemasanPage: React.FC = () => {
     };
     const payload: Partial<PackagingMaterial> = {
       ...formData,
+      stokTersedia: Number(formData.stokTersedia) || 0,
+      stokMinimal: Number(formData.stokMinimal) || 0,
+      hargaPerUnitRp: Number(formData.hargaPerUnitRp) || 0,
       extraData: {
         komposisi: formExtra.komposisi,
         nilaiGizi: formExtra.nilaiGizi,
@@ -671,15 +685,15 @@ export const KemasanPage: React.FC = () => {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className={labelCls}>Stok Tersedia</label>
-                  <input type="number" value={formData.stokTersedia || ''} onChange={(e) => setFormData({ ...formData, stokTersedia: Number(e.target.value) })} placeholder="Contoh: 2000" className={inputCls} required />
+                  <input type="number" value={formData.stokTersedia} onChange={(e) => setFormData({ ...formData, stokTersedia: e.target.value })} placeholder="Contoh: 2000" className={inputCls} required />
                 </div>
                 <div>
                   <label className={labelCls}>Stok Minimal</label>
-                  <input type="number" value={formData.stokMinimal || ''} onChange={(e) => setFormData({ ...formData, stokMinimal: Number(e.target.value) })} placeholder="Contoh: 500" className={inputCls} required />
+                  <input type="number" value={formData.stokMinimal} onChange={(e) => setFormData({ ...formData, stokMinimal: e.target.value })} placeholder="Contoh: 500" className={inputCls} required />
                 </div>
                 <div>
                   <label className={labelCls}>Harga / Unit (Rp)</label>
-                  <input type="number" value={formData.hargaPerUnitRp || ''} onChange={(e) => setFormData({ ...formData, hargaPerUnitRp: Number(e.target.value) })} placeholder="Contoh: 1850" className={inputCls} required />
+                  <input type="number" value={formData.hargaPerUnitRp} onChange={(e) => setFormData({ ...formData, hargaPerUnitRp: e.target.value })} placeholder="Contoh: 1850" className={inputCls} required />
                 </div>
               </div>
 
@@ -730,7 +744,7 @@ export const KemasanPage: React.FC = () => {
                     <input
                       type="number"
                       step="0.1"
-                      value={formExtra.nilaiGizi[key] || ''}
+                      value={formExtra.nilaiGizi[key] ?? ''}
                       onChange={(e) => updateGizi(key, parseFloat(e.target.value) || 0)}
                       className={inputCls}
                     />
@@ -770,7 +784,7 @@ export const KemasanPage: React.FC = () => {
                       <label className={labelCls}>% AKG</label>
                       <input
                         type="number"
-                        value={row.akgPersen || ''}
+                        value={row.akgPersen ?? ''}
                         onChange={(e) => updateAkg(i, 'akgPersen', Number(e.target.value))}
                         className={inputCls}
                         min="0"
