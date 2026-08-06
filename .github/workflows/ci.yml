@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Lint & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # ── Frontend ──────────────────────────────────────────────
+      - name: Install dependensi frontend
+        run: npm ci
+
+      - name: Lint frontend (tsc --noEmit)
+        run: npm run lint
+
+      - name: Build frontend (vite build)
+        run: npm run build
+
+      # ── Backend ───────────────────────────────────────────────
+      - name: Install dependensi backend
+        working-directory: backend-api
+        run: npm ci
+
+      - name: Cek syntax backend (node --check)
+        working-directory: backend-api
+        run: |
+          for f in src/server.js src/config/*.js src/middleware/*.js src/seeders/*.js src/controllers/*.js src/routes/*.js; do
+            node --check "$f" || exit 1
+          done
+          echo "Semua file backend valid."
