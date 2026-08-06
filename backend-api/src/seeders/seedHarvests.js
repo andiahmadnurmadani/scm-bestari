@@ -3,6 +3,7 @@ import { getPool } from '../config/db.js';
 /**
  * Seed data panen awal — dijalankan sekali jika tabel harvests masih kosong,
  * agar halaman Panen memiliki data untuk pagination (10 baris/halaman).
+ * Kode panen memakai format PN-XXX (konsisten dengan prefix FE: timestampCode('PN-')).
  */
 export async function seedHarvests() {
   const pool = getPool();
@@ -14,18 +15,18 @@ export async function seedHarvests() {
 
   const sampleData = [
     // [kodePanen, namaLahan, varietas, tanggal, kg, grade, petani, status, catatan]
-    ['PANEN-2026-001', 'Lahan Sektor A (Tani Makmur)', 'Sorgum Bioguma 1', '2026-05-14', 4850, 'Grade A (Premium)', 'Pak Karso & Kelompok Tani Tani Makmur', 'Selesai', 'Kadar air saat panen 14.2%, warna bulir cokelat kemerahan bersih.'],
-    ['PANEN-2026-002', 'Lahan Sektor B (Sedyo Rukun)', 'Sorgum Numbu', '2026-05-18', 3200, 'Grade A (Premium)', 'Ibu Sugiyanti & KWT Sedyo Rukun', 'Tersimpan di Gudang', 'Hasil dipisahkan untuk bahan baku utama Tepung Sorgum Pouch 500g.'],
-    ['PANEN-2026-003', 'Lahan Sektor C (Mekar Tani)', 'Sorgum Suri 4 (Manis)', '2026-06-02', 5100, 'Grade B (Standar)', 'Pak Bambang Mulyono', 'Selesai', 'Batang sorgum manis diproses lebih lanjut menjadi Gula Cair Sorgum Nira.'],
-    ['PANEN-2026-004', 'Lahan Sektor D (Sorgum Lestari)', 'Sorgum Kawali', '2026-06-25', 6400, 'Grade A (Premium)', 'Pak Suwarto & Kelompok Sorgum Lestari', 'Dalam Proses', 'Prosedur pemisahan bulir di thresher sedang berlangsung di lokasi penjemuran.'],
-    ['PANEN-2026-005', 'Lahan Sektor E (Mulia Tani)', 'Sorgum Bioguma 2', '2026-07-10', 2800, 'Grade C (Pakan)', 'Pak Joko Subagyo', 'Siap Panen', 'Prediksi panen raya tanggal 12 Juli, siap kirim armada truk pengangkut.'],
-    ['PANEN-2026-006', 'Lahan Sektor F (Karya Tani)', 'Sorgum Suri 4 (Manis)', '2026-07-15', 3900, 'Grade A (Premium)', 'Ibu Sri Rahayu & KWT Karya Tani', 'Selesai', 'Hasil panen berkualitas premium untuk ekspor beras sorgum.'],
-    ['PANEN-2026-007', 'Lahan Sektor G (Subur Makmur)', 'Sorgum Numbu', '2026-07-20', 2750, 'Grade B (Standar)', 'Pak Ahmad Fauzi', 'Tersimpan di Gudang', 'Disimpan di Gudang B untuk proses pengolahan tepung.'],
-    ['PANEN-2026-008', 'Lahan Sektor H (Tani Lestari)', 'Sorgum Bioguma 1', '2026-07-25', 5300, 'Grade A (Premium)', 'Ibu Rina Marlina', 'Dalam Proses', 'Penjemuran bulir di solar dryer dome kapasitas 2 ton.'],
-    ['PANEN-2026-009', 'Lahan Sektor I (Makmur Jaya)', 'Sorgum Kawali', '2026-07-28', 3100, 'Grade B (Standar)', 'Pak Hendra Gunawan', 'Selesai', 'Hasil dipisahkan untuk pakan ternak dan bahan baku rengginang.'],
-    ['PANEN-2026-010', 'Lahan Sektor J (Berkah Tani)', 'Sorgum Bioguma 2', '2026-07-30', 4600, 'Grade A (Premium)', 'Ibu Nurul Hidayah', 'Siap Panen', 'Panen raya minggu depan, koordinasi armada truk sedang disiapkan.'],
-    ['PANEN-2026-011', 'Lahan Sektor K (Sido Makmur)', 'Sorgum Suri 4 (Manis)', '2026-08-02', 3850, 'Grade B (Standar)', 'Pak Dedi Kurniawan', 'Dalam Proses', 'Batang sorgum manis disadap untuk produksi gula cair nira.'],
-    ['PANEN-2026-012', 'Lahan Sektor L (Tani Subur)', 'Sorgum Numbu', '2026-08-05', 2950, 'Grade A (Premium)', 'Ibu Yuni Astuti', 'Selesai', 'Hasil panen disimpan di gudang utama KWT Sorgum.'],
+    ['PN-001', 'Blok A - Sukamaju', 'Sorgum Bioguma 1', '2026-05-14', 4850, 'Grade A (Premium)', 'Pak Karso & KWT Sukamaju Tani', 'Selesai', 'Kadar air saat panen 14.2%, warna bulir cokelat kemerahan bersih.'],
+    ['PN-002', 'Blok B - Cisarua', 'Sorgum Kawali', '2026-05-18', 3200, 'Grade A (Premium)', 'Ibu Sugiyanti & Kelompok Tani Cisarua', 'Tersimpan di Gudang', 'Hasil dipisahkan untuk bahan baku utama Tepung Sorgum Pouch 500g.'],
+    ['PN-003', 'Blok C - Ciawi', 'Sorgum Suri 4 (Manis)', '2026-06-02', 5100, 'Grade B (Standar)', 'Pak Bambang Mulyono & Gapoktan Ciawi Subur', 'Selesai', 'Batang sorgum manis diproses lebih lanjut menjadi Gula Cair Sorgum Nira.'],
+    ['PN-004', 'Blok D - Parung', 'Sorgum Numbu', '2026-06-25', 6400, 'Grade A (Premium)', 'Pak Suwarto & KWT Parung Mandiri', 'Dalam Proses', 'Prosedur pemisahan bulir di thresher sedang berlangsung di lokasi penjemuran.'],
+    ['PN-005', 'Blok E - Subang', 'Sorgum Bioguma 2', '2026-07-10', 2800, 'Grade C (Pakan)', 'Pak Joko Subagyo & Kelompok Tani Tani Makmur', 'Siap Panen', 'Prediksi panen raya tanggal 12 Juli, siap kirim armada truk pengangkut.'],
+    ['PN-006', 'Blok F - Indramayu', 'Sorgum Suri 4 (Manis)', '2026-07-15', 3900, 'Grade A (Premium)', 'Ibu Sri Rahayu & KWT Indramayu Sorgum', 'Selesai', 'Hasil panen berkualitas premium untuk ekspor beras sorgum.'],
+    ['PN-007', 'Blok A - Sukamaju', 'Sorgum Numbu', '2026-07-20', 2750, 'Grade B (Standar)', 'Pak Ahmad Fauzi & KWT Sukamaju Tani', 'Tersimpan di Gudang', 'Disimpan di Gudang B untuk proses pengolahan tepung.'],
+    ['PN-008', 'Blok B - Cisarua', 'Sorgum Bioguma 1', '2026-07-25', 5300, 'Grade A (Premium)', 'Ibu Rina Marlina & Kelompok Tani Cisarua', 'Dalam Proses', 'Penjemuran bulir di solar dryer dome kapasitas 2 ton.'],
+    ['PN-009', 'Blok C - Ciawi', 'Sorgum Kawali', '2026-07-28', 3100, 'Grade B (Standar)', 'Pak Hendra Gunawan & Gapoktan Ciawi Subur', 'Selesai', 'Hasil dipisahkan untuk pakan ternak dan bahan baku rengginang.'],
+    ['PN-010', 'Blok D - Parung', 'Sorgum Bioguma 2', '2026-07-30', 4600, 'Grade A (Premium)', 'Ibu Nurul Hidayah & KWT Parung Mandiri', 'Siap Panen', 'Panen raya minggu depan, koordinasi armada truk sedang disiapkan.'],
+    ['PN-011', 'Blok E - Subang', 'Sorgum Suri 4 (Manis)', '2026-08-02', 3850, 'Grade B (Standar)', 'Pak Dedi Kurniawan & Kelompok Tani Tani Makmur', 'Dalam Proses', 'Batang sorgum manis disadap untuk produksi gula cair nira.'],
+    ['PN-012', 'Blok F - Indramayu', 'Sorgum Numbu', '2026-08-05', 2950, 'Grade A (Premium)', 'Ibu Yuni Astuti & KWT Indramayu Sorgum', 'Selesai', 'Hasil panen disimpan di gudang utama KWT Sorgum.'],
   ];
 
   const insertSQL = `

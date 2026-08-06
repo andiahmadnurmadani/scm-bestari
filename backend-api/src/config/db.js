@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
 
 dotenv.config();
 
@@ -91,6 +92,30 @@ export async function initDatabase() {
     console.log('✓ Kolom "users.avatar" dipastikan LONGTEXT.');
   } catch (alterError) {
     console.warn('⚠ Migrasi users.avatar dilewati:', alterError.message);
+  }
+
+  // Seed user admin awal jika tabel users kosong
+  const [uCount] = await pool.query('SELECT COUNT(*) AS total FROM users');
+  if (Number(uCount[0].total) === 0) {
+    const adminHash = await bcrypt.hash('password', 10);
+    await pool.execute(
+      `INSERT INTO users (name, email, phone, password_hash, role, jabatan, nama_kwt, alamat, kecamatan, kabupaten, bio)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        'Admin Sorgum SCM',
+        'admin@sorgum.com',
+        '081234567890',
+        adminHash,
+        'Admin KWT',
+        'Ketua KWT',
+        'KWT Sorgum Mandiri Sejahtera',
+        'Dusun Sukamaju, Desa Sukamaju',
+        'Cisalak',
+        'Kabupaten Bogor',
+        'Pengelola sistem manajemen rantai pasok sorgum untuk Kelompok Wanita Tani.',
+      ]
+    );
+    console.log('✓ Seed user admin: admin@sorgum.com / password');
   }
 
   // Auto-migrasi: tabel cms_settings (konten landing page)
@@ -220,12 +245,12 @@ export async function initDatabase() {
   const [lCount] = await pool.query('SELECT COUNT(*) AS total FROM lands');
   if (Number(lCount[0].total) === 0) {
     const seedLands = [
-      ['BLK-SKM-01', 'Blok A - Sukamaju', 'Sukamaju', 'Cisalak', 2.5, 'Sorgum Bioguma 1', 'Irigasi Teknis', 'Aluvial', 'KWT Sukamaju Tani', 'Siap Tanam', 'AKTIF', 12.4, 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'],
-      ['BLK-CSR-02', 'Blok B - Cisarua', 'Cisarua', 'Lembang', 1.8, 'Sorgum Kawali', 'Semi Teknis', 'Latosol', 'Kelompok Tani Cisarua', 'Masa Pertumbuhan', 'PERSIAPAN', 9.2, 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80'],
-      ['BLK-CAW-03', 'Blok C - Ciawi', 'Ciawi', 'Bogor', 3.2, 'Sorgum Bioguma 2', 'Tadah Hujan', 'Grumosol', 'Gapoktan Ciawi Subur', 'Siap Tanam', 'AKTIF', 15.1, 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=800&q=80'],
-      ['BLK-PRG-04', 'Blok D - Parung', 'Parung', 'Parung', 1.2, 'Sorgum Numbu', 'Irigasi Teknis', 'Aluvial', 'KWT Parung Mandiri', 'Masa Pertumbuhan', 'PEMBESARAN', 5.5, 'https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&w=800&q=80'],
-      ['BLK-SBG-05', 'Blok E - Subang', 'Argomulyo', 'Cangkringan', 4.5, 'Sorgum Bioguma 2', 'Irigasi Teknis', 'Vulkanik Regosol', 'Kelompok Tani Tani Makmur', 'Masa Panen', 'AKTIF', 18.3, 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'],
-      ['BLK-IDM-06', 'Blok F - Indramayu', 'Jatibarang', 'Indramayu', 5.0, 'Sorgum Suri 4 (Manis)', 'Semi Teknis', 'Alluvial Subur', 'KWT Indramayu Sorgum', 'Masa Panen', 'AKTIF', 21.0, 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80'],
+      ['BLK-001', 'Blok A - Sukamaju', 'Sukamaju', 'Cisalak', 2.5, 'Sorgum Bioguma 1', 'Irigasi Teknis', 'Aluvial', 'KWT Sukamaju Tani', 'Siap Tanam', 'AKTIF', 12.4, 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'],
+      ['BLK-002', 'Blok B - Cisarua', 'Cisarua', 'Lembang', 1.8, 'Sorgum Kawali', 'Semi Teknis', 'Latosol', 'Kelompok Tani Cisarua', 'Masa Pertumbuhan', 'PERSIAPAN', 9.2, 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80'],
+      ['BLK-003', 'Blok C - Ciawi', 'Ciawi', 'Bogor', 3.2, 'Sorgum Bioguma 2', 'Tadah Hujan', 'Grumosol', 'Gapoktan Ciawi Subur', 'Siap Tanam', 'AKTIF', 15.1, 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=800&q=80'],
+      ['BLK-004', 'Blok D - Parung', 'Parung', 'Parung', 1.2, 'Sorgum Numbu', 'Irigasi Teknis', 'Aluvial', 'KWT Parung Mandiri', 'Masa Pertumbuhan', 'PEMBESARAN', 5.5, 'https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&w=800&q=80'],
+      ['BLK-005', 'Blok E - Subang', 'Argomulyo', 'Cangkringan', 4.5, 'Sorgum Bioguma 2', 'Irigasi Teknis', 'Vulkanik Regosol', 'Kelompok Tani Tani Makmur', 'Masa Panen', 'AKTIF', 18.3, 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'],
+      ['BLK-006', 'Blok F - Indramayu', 'Jatibarang', 'Indramayu', 5.0, 'Sorgum Suri 4 (Manis)', 'Semi Teknis', 'Alluvial Subur', 'KWT Indramayu Sorgum', 'Masa Panen', 'AKTIF', 21.0, 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80'],
     ];
     for (const row of seedLands) {
       await pool.execute(
@@ -273,12 +298,12 @@ export async function initDatabase() {
   const [eCount] = await pool.query('SELECT COUNT(*) AS total FROM equipment');
   if (Number(eCount[0].total) === 0) {
     const seedEquipment = [
-      ['S-001 Hand Tractor', 'Hand Tractor Quick G1000 Kubota 8.5 HP', 'Mesin Olah Tanah', 3, 'Sangat Baik', 'Tersedia', 'Gudang Alat Lahan A (Gubug Tani)', '15 Maret 2024', 'Mesin Diesel Kubota RD 85 DI-1T, Kecepatan 2 Maju 1 Mundur, Kapasitas Kerja 0.12 Ha/Jam.', 'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=800&q=80', '10 April 2026'],
-      ['S-002 Thresher', 'Mesin Perontok Sorgum Multi-Guna Model S-500', 'Pascapanen', 2, 'Baik', 'Sedang Digunakan', 'Sentra Pengolahan KWT Sorgum', '10 Juni 2024', 'Motor Penggerak Honda GX200 6.5 HP, Kapasitas Perontokan 500-700 kg/jam, Tingkat Kebersihan 98%.', 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80', '22 Mei 2026'],
-      ['S-003 Disc Mill', 'Mesin Penepung Sorgum Disc Mill FFC-23 Stainless', 'Pengolahan Produk', 4, 'Sangat Baik', 'Tersedia', 'Ruang Produksi Tepung KWT', '02 Januari 2025', 'Bahan Full Stainless Steel 304 (Food Grade), Daya Listrik 3 kW 3-Phase, Kehalusan Tepung 80-100 Mesh.', 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80', '05 Juni 2026'],
-      ['S-004 Solar Dryer', 'Rumah Pengering Efek Rumah Kaca (Solar Dryer Dome)', 'Pengeringan', 1, 'Baik', 'Tersedia', 'Pelataran Penjemuran Lahan B', '18 Agustus 2024', 'Atap Polycarbonate UV Protection, Dinding Kasa Stainless anti serangga, Luas 6x12 Meter, Kapasitas 2 Ton.', 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80', '12 Januari 2026'],
-      ['S-005 Seed Cleaner', 'Mesin Pembersih Biji Sorgum (Seed Cleaner)', 'Pascapanen', 2, 'Baik', 'Tersedia', 'Gudang Pascapanen KWT', '05 Juli 2024', 'Sistem Ayakan 2 Tingkat + Blower, Kapasitas 300 kg/jam, Cocok untuk biji sorgum.', 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80', '18 Maret 2026'],
-      ['S-006 Trailer Angkut', 'Trailer Angkut Hasil Panen 1.5 Ton', 'Transportasi', 2, 'Baik', 'Sedang Digunakan', 'Gudang Alat Lahan A', '20 September 2024', 'Dimensi 2.4x1.2m, Rangka Besi Galvanis, Kapasitas Muat 1.5 Ton, Roda 4.', 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=800&q=80', '30 April 2026'],
+      ['ALAT-001', 'Hand Tractor Quick G1000 Kubota 8.5 HP', 'Mesin Olah Tanah', 3, 'Sangat Baik', 'Tersedia', 'Gudang Alat Lahan A (Gubug Tani)', '15 Maret 2024', 'Mesin Diesel Kubota RD 85 DI-1T, Kecepatan 2 Maju 1 Mundur, Kapasitas Kerja 0.12 Ha/Jam.', 'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=800&q=80', '10 April 2026'],
+      ['ALAT-002', 'Mesin Perontok Sorgum Multi-Guna Model S-500', 'Pascapanen', 2, 'Baik', 'Sedang Digunakan', 'Sentra Pengolahan KWT Sorgum', '10 Juni 2024', 'Motor Penggerak Honda GX200 6.5 HP, Kapasitas Perontokan 500-700 kg/jam, Tingkat Kebersihan 98%.', 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80', '22 Mei 2026'],
+      ['ALAT-003', 'Mesin Penepung Sorgum Disc Mill FFC-23 Stainless', 'Pengolahan Produk', 4, 'Sangat Baik', 'Tersedia', 'Ruang Produksi Tepung KWT', '02 Januari 2025', 'Bahan Full Stainless Steel 304 (Food Grade), Daya Listrik 3 kW 3-Phase, Kehalusan Tepung 80-100 Mesh.', 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80', '05 Juni 2026'],
+      ['ALAT-004', 'Rumah Pengering Efek Rumah Kaca (Solar Dryer Dome)', 'Pengeringan', 1, 'Baik', 'Tersedia', 'Pelataran Penjemuran Lahan B', '18 Agustus 2024', 'Atap Polycarbonate UV Protection, Dinding Kasa Stainless anti serangga, Luas 6x12 Meter, Kapasitas 2 Ton.', 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80', '12 Januari 2026'],
+      ['ALAT-005', 'Mesin Pembersih Biji Sorgum (Seed Cleaner)', 'Pascapanen', 2, 'Baik', 'Tersedia', 'Gudang Pascapanen KWT', '05 Juli 2024', 'Sistem Ayakan 2 Tingkat + Blower, Kapasitas 300 kg/jam, Cocok untuk biji sorgum.', 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80', '18 Maret 2026'],
+      ['ALAT-006', 'Trailer Angkut Hasil Panen 1.5 Ton', 'Transportasi', 2, 'Baik', 'Sedang Digunakan', 'Gudang Alat Lahan A', '20 September 2024', 'Dimensi 2.4x1.2m, Rangka Besi Galvanis, Kapasitas Muat 1.5 Ton, Roda 4.', 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=800&q=80', '30 April 2026'],
     ];
     for (const row of seedEquipment) {
       await pool.execute(
@@ -317,12 +342,12 @@ export async function initDatabase() {
   const [pCount] = await pool.query('SELECT COUNT(*) AS total FROM production_batches');
   if (Number(pCount[0].total) === 0) {
     const seedBatches = [
-      ['PRD-2026-001', 'Tepung Sorgum Bioguma White Premium 500g', 'Ready to Eat (Siap Konsumsi)', '15 Mei 2026', '15 Mei 2027', 2500, 'Kemasan (Pouch)', 'HARVEST-S-014', 'Ibu KWT Tani Rahayu (Ny. Hastuti)', 'Lolos QC', 'Gudang A - Rak Pouch Ready'],
-      ['PRD-2026-002', 'Rengginang Sorgum Bumbu Savory Herbs', 'Ready to Eat (Siap Konsumsi)', '18 Mei 2026', '18 Nopember 2026', 1800, 'Box (150g)', 'HARVEST-S-012', 'Tim Olahan KWT Pertiwi', 'Lolos QC', 'Gudang A - Rak Box Snack'],
-      ['PRD-2026-003', 'Gula Cair Sorgum Nira Manis Murni', 'Ready to Eat (Siap Konsumsi)', '22 Mei 2026', '22 Mei 2028', 850, 'Botol Kaca (350ml)', 'NIRA-S-008', 'Pak Slamet & Tim Ekstraksi Nira', 'Lolos QC', 'Gudang B - Suhu Ruang Terkontrol'],
-      ['PRD-2026-004', 'Biji Sorgum Sosoh Kering (Grains Raw)', 'Raw (Bahan Mentah)', '02 Juni 2026', '02 Juni 2027', 4500, 'Kg (Karung Bulk 25kg)', 'HARVEST-S-018', 'Unit Sosoh & Cleaner Lahan B', 'Lolos QC', 'Gudang Raw Material C'],
-      ['PRD-2026-005', 'Nira Sorgum Murni (Raw Sap Extractions)', 'Raw (Bahan Mentah)', '10 Juni 2026', '12 Juni 2026', 1200, 'Liter (Drum Cool Container)', 'NIRA-S-010', 'Tim Sadap Nira Batang Sorgum', 'Pending QC', 'Tangki Pendingin Sementara'],
-      ['PRD-2026-006', 'Tepung Sorgum Halus Mesh 100 Non-Gluten', 'Raw (Bahan Mentah)', '20 Juni 2026', '20 Juni 2027', 3200, 'Kg (Karung Paper 25kg)', 'HARVEST-S-020', 'Unit Penggilingan Sentra KWT', 'Lolos QC', 'Gudang A - Rak Tepung'],
+      ['PRD-001', 'Tepung Sorgum Bioguma White Premium 500g', 'Ready to Eat (Siap Konsumsi)', '15 Mei 2026', '15 Mei 2027', 2500, 'Kemasan (Pouch)', 'PN-001', 'Ibu KWT Tani Rahayu (Ny. Hastuti)', 'Lolos QC', 'Gudang A - Rak Pouch Ready'],
+      ['PRD-002', 'Rengginang Sorgum Bumbu Savory Herbs', 'Ready to Eat (Siap Konsumsi)', '18 Mei 2026', '18 November 2026', 1800, 'Box (150g)', 'PN-002', 'Tim Olahan KWT Pertiwi', 'Lolos QC', 'Gudang A - Rak Box Snack'],
+      ['PRD-003', 'Gula Cair Sorgum Nira Manis Murni', 'Ready to Eat (Siap Konsumsi)', '22 Mei 2026', '22 Mei 2028', 850, 'Botol Kaca (350ml)', 'PN-003', 'Pak Slamet & Tim Ekstraksi Nira', 'Lolos QC', 'Gudang B - Suhu Ruang Terkontrol'],
+      ['PRD-004', 'Biji Sorgum Sosoh Kering (Grains Raw)', 'Raw (Bahan Mentah)', '02 Juni 2026', '02 Juni 2027', 4500, 'Kg (Karung Bulk 25kg)', 'PN-004', 'Unit Sosoh & Cleaner Lahan B', 'Lolos QC', 'Gudang Raw Material C'],
+      ['PRD-005', 'Nira Sorgum Murni (Raw Sap Extractions)', 'Raw (Bahan Mentah)', '10 Juni 2026', '12 Juni 2026', 1200, 'Liter (Drum Cool Container)', 'PN-005', 'Tim Sadap Nira Batang Sorgum', 'Pending QC', 'Tangki Pendingin Sementara'],
+      ['PRD-006', 'Tepung Sorgum Halus Mesh 100 Non-Gluten', 'Raw (Bahan Mentah)', '20 Juni 2026', '20 Juni 2027', 3200, 'Kg (Karung Paper 25kg)', 'PN-006', 'Unit Penggilingan Sentra KWT', 'Lolos QC', 'Gudang A - Rak Tepung'],
     ];
     for (const row of seedBatches) {
       await pool.execute(
@@ -367,11 +392,11 @@ export async function initDatabase() {
   const [cCount] = await pool.query('SELECT COUNT(*) AS total FROM certificates');
   if (Number(cCount[0].total) === 0) {
     const seedCerts = [
-      ['CERT-HALAL-001', 'Sertifikat Halal Produk Olahan Sorgum BPJPH', 'BPJPH Kementerian Agama RI & LPPOM MUI', 'ID311100012948120323', '12 Maret 2024', '12 Maret 2028', 'AKTIF', 'Sertifikat Halal', docPlaceholder, 'Sertifikat_Halal_BPJPH_2024', 'image', 'Mencakup Tepung Sorgum, Rengginang, dan Gula Cair Sorgum KWT Mitra.'],
-      ['CERT-PIRT-002', 'Izin Edar P-IRT Tepung & Olahan Sorgum', 'Dinas Kesehatan & PTSP Kabupaten Sleman', 'P-IRT 2063404010892-28', '05 Januari 2023', '05 Januari 2028', 'AKTIF', 'Izin P-IRT', docPlaceholder, 'Izin_PIRT_Sleman_2023', 'image', 'Kelayakan hygiene saniter tempat produksi dan standar kemasan kedap udara.'],
-      ['CERT-LAB-003', 'Hasil Uji Lab Bebas Gluten (Gluten-Free Test)', 'Laboratorium Penguji Pangan IPB University', 'LAB-IPB-2025/11/0491', '20 November 2025', '20 November 2026', 'AKTIF', 'Uji Lab Nutrisi', docPlaceholder, 'Hasil_Uji_Lab_GlutenFree_IPB', 'image', 'Terbukti kadar gluten < 5 ppm (Memenuhi standar Internasional Gluten-Free).'],
-      ['CERT-ORG-004', 'Sertifikasi Pertanian Organik Indonesia (SNI 6729:2016)', 'Lembaga Sertifikasi Organik (LSO) Inofice', '184-LSO-005-IDN-08-23', '14 Agustus 2023', '14 Agustus 2026', 'PROSES', 'Sertifikat Organik', docPlaceholder, 'Sertifikat_Organik_SNI_2023', 'image', 'Sedang dalam pengajuan perpanjangan audit surveillance tahunan ke-3.'],
-      ['CERT-LAB-005', 'Uji Laboratorium Indeks Glikemik Rendah (GI 52)', 'Laboratorium Gizi Universitas Gadjah Mada', 'UGM-NUTR-2022-8971', '10 Februari 2022', '10 Februari 2025', 'KADALUARSA', 'Uji Lab Nutrisi', docPlaceholder, 'Uji_GI_UGM_2022', 'image', 'Perlu pembaruan uji untuk memperkuat klaim low-GI pada kemasan.'],
+      ['CERT-001', 'Sertifikat Halal Produk Olahan Sorgum BPJPH', 'BPJPH Kementerian Agama RI & LPPOM MUI', 'ID311100012948120323', '12 Maret 2024', '12 Maret 2028', 'AKTIF', 'Sertifikat Halal', docPlaceholder, 'Sertifikat_Halal_BPJPH_2024', 'image', 'Mencakup Tepung Sorgum, Rengginang, dan Gula Cair Sorgum KWT Mitra.'],
+      ['CERT-002', 'Izin Edar P-IRT Tepung & Olahan Sorgum', 'Dinas Kesehatan & PTSP Kabupaten Sleman', 'P-IRT 2063404010892-28', '05 Januari 2023', '05 Januari 2028', 'AKTIF', 'Izin P-IRT', docPlaceholder, 'Izin_PIRT_Sleman_2023', 'image', 'Kelayakan hygiene saniter tempat produksi dan standar kemasan kedap udara.'],
+      ['CERT-003', 'Hasil Uji Lab Bebas Gluten (Gluten-Free Test)', 'Laboratorium Penguji Pangan IPB University', 'LAB-IPB-2025/11/0491', '20 November 2025', '20 November 2026', 'AKTIF', 'Uji Lab Nutrisi', docPlaceholder, 'Hasil_Uji_Lab_GlutenFree_IPB', 'image', 'Terbukti kadar gluten < 5 ppm (Memenuhi standar Internasional Gluten-Free).'],
+      ['CERT-004', 'Sertifikasi Pertanian Organik Indonesia (SNI 6729:2016)', 'Lembaga Sertifikasi Organik (LSO) Inofice', '184-LSO-005-IDN-08-23', '14 Agustus 2023', '14 Agustus 2026', 'PROSES', 'Sertifikat Organik', docPlaceholder, 'Sertifikat_Organik_SNI_2023', 'image', 'Sedang dalam pengajuan perpanjangan audit surveillance tahunan ke-3.'],
+      ['CERT-005', 'Uji Laboratorium Indeks Glikemik Rendah (GI 52)', 'Laboratorium Gizi Universitas Gadjah Mada', 'UGM-NUTR-2022-8971', '10 Februari 2022', '10 Februari 2025', 'KADALUARSA', 'Uji Lab Nutrisi', docPlaceholder, 'Uji_GI_UGM_2022', 'image', 'Perlu pembaruan uji untuk memperkuat klaim low-GI pada kemasan.'],
     ];
     for (const row of seedCerts) {
       await pool.execute(
