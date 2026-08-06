@@ -19,7 +19,7 @@ export async function getVarieties(req, res) {
   try {
     const pool = getPool();
     const [rows] = await pool.query(
-      'SELECT id, name, description, image_url, is_active, created_at FROM varieties ORDER BY name ASC'
+      'SELECT id, name, description, image_url, is_active, created_at FROM varieties ORDER BY id DESC'
     );
     return res.status(200).json({
       success: true,
