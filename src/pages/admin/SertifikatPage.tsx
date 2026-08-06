@@ -26,6 +26,7 @@ import { Modal } from '../../components/common/Modal';
 import { Toast } from '../../components/common/Toast';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { nextCode } from '../../utils/kodeGenerator';
+import { parseTanggal, toDateInputValue, todayISO } from '../../utils/dateUtils';
 
 export const SertifikatPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
@@ -42,6 +43,9 @@ export const SertifikatPage: React.FC = () => {
   const [activeCert, setActiveCert] = useState<Certificate | null>(null);
   const [iframeError, setIframeError] = useState(false);
 
+  // Blob URL untuk "Buka Tab Baru" (data URL base64 sering blank di tab baru)
+  const [tabUrl, setTabUrl] = useState<string | null>(null);
+
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Certificate | null>(null); // Data yang akan dihapus
@@ -57,7 +61,7 @@ export const SertifikatPage: React.FC = () => {
     namaSertifikat: '',
     penerbitSertifikat: '',
     nomorSertifikat: '',
-    tanggalTerbit: new Date().toLocaleDateString('id-ID'),
+    tanggalTerbit: todayISO(),
     tanggalKadaluarsa: '',
     status: 'AKTIF',
     jenisDokumen: 'Sertifikat Halal',
@@ -99,6 +103,25 @@ export const SertifikatPage: React.FC = () => {
   const handleOpenDetail = (cert: Certificate) => {
     setActiveCert(cert);
     setIframeError(false);
+    setTabUrl(null);
+    // Buat Blob URL agar PDF/gambar base64 tidak blank saat dibuka di tab baru
+    if (cert.fileUrl) {
+      try {
+        const isDataUrl = cert.fileUrl.startsWith('data:');
+        if (isDataUrl) {
+          const [meta, b64] = cert.fileUrl.split(',');
+          const mime = meta.match(/data:([^;]+)/)?.[1] || 'application/octet-stream';
+          const bin = atob(b64);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          setTabUrl(URL.createObjectURL(new Blob([bytes], { type: mime })));
+        } else {
+          setTabUrl(cert.fileUrl);
+        }
+      } catch {
+        setTabUrl(cert.fileUrl);
+      }
+    }
     setDetailModalOpen(true);
   };
 
@@ -109,7 +132,7 @@ export const SertifikatPage: React.FC = () => {
       namaSertifikat: '',
       penerbitSertifikat: '',
       nomorSertifikat: '',
-      tanggalTerbit: new Date().toLocaleDateString('id-ID'),
+      tanggalTerbit: todayISO(),
       tanggalKadaluarsa: '',
       status: 'AKTIF',
       jenisDokumen: 'Sertifikat Halal',
@@ -127,12 +150,26 @@ export const SertifikatPage: React.FC = () => {
     setFormModalOpen(true);
   };
 
+  // Konversi ke format Indonesia sebelum dikirim ke backend
+  const formatDateForSave = (iso: string): string => {
+    if (!iso) return '';
+    const d = parseTanggal(iso);
+    if (!d) return iso;
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Konversi tanggal input (YYYY-MM-DD) ke format Indonesia sebelum simpan
+    const payload = {
+      ...formData,
+      tanggalTerbit: formatDateForSave(formData.tanggalTerbit || ''),
+      tanggalKadaluarsa: formatDateForSave(formData.tanggalKadaluarsa || ''),
+    };
     if (editId) {
-      await certificatesApi.update(editId, formData);
+      await certificatesApi.update(editId, payload);
     } else {
-      await certificatesApi.upload(formData);
+      await certificatesApi.upload(payload);
     }
     setFormModalOpen(false);
     fetchCertificates();
@@ -410,7 +447,11 @@ export const SertifikatPage: React.FC = () => {
       {/* Detail & Document Preview Modal */}
       <Modal
         isOpen={detailModalOpen}
-        onClose={() => setDetailModalOpen(false)}
+        onClose={() => {
+          setDetailModalOpen(false);
+          if (tabUrl && tabUrl.startsWith('blob:')) URL.revokeObjectURL(tabUrl);
+          setTabUrl(null);
+        }}
         title="Detail & Pratinjau Dokumen Legalitas"
         subtitle={activeCert ? `${activeCert.kodeDokumen} - ${activeCert.namaSertifikat}` : ''}
         maxWidth="lg"
@@ -501,7 +542,7 @@ export const SertifikatPage: React.FC = () => {
 
                     <div className="flex items-center gap-2">
                       <a
-                        href={activeCert.fileUrl}
+                        href={tabUrl || activeCert.fileUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="px-3 py-1.5 rounded-lg bg-[#F7F7F5] hover:bg-[#efe0d2] text-[#2C4219] font-bold text-xs flex items-center gap-1.5 transition-colors"
@@ -730,10 +771,9 @@ export const SertifikatPage: React.FC = () => {
                 Tanggal Terbit
               </label>
               <input
-                type="text"
-                value={formData.tanggalTerbit}
+                type="date"
+                value={toDateInputValue(formData.tanggalTerbit)}
                 onChange={(e) => setFormData({ ...formData, tanggalTerbit: e.target.value })}
-                placeholder="Contoh: 12 Maret 2026"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
               />
@@ -743,10 +783,9 @@ export const SertifikatPage: React.FC = () => {
                 Tanggal Exp.
               </label>
               <input
-                type="text"
-                value={formData.tanggalKadaluarsa}
+                type="date"
+                value={toDateInputValue(formData.tanggalKadaluarsa)}
                 onChange={(e) => setFormData({ ...formData, tanggalKadaluarsa: e.target.value })}
-                placeholder="Contoh: 12 Maret 2028"
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                 required
               />

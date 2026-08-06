@@ -35,6 +35,13 @@ export function parseTanggal(value: string | null | undefined): Date | null {
     }
   }
 
+  // Format 'DD/MM/YYYY' atau 'D/M/YYYY' (toLocaleDateString id-ID)
+  const dm = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dm) {
+    const d = new Date(Number(dm[3]), Number(dm[2]) - 1, Number(dm[1]));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
   // Fallback: biarkan Date engine mencoba (MM/DD/YYYY, dll)
   const d = new Date(s);
   return isNaN(d.getTime()) ? null : d;
@@ -54,3 +61,23 @@ export function formatTanggalId(
     year: 'numeric',
   });
 }
+
+/** Konversi tanggal (format apa pun) ke nilai untuk <input type="date">: 'YYYY-MM-DD'. */
+export function toDateInputValue(value: string | null | undefined): string {
+  const d = parseTanggal(value);
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Tanggal hari ini dalam format ISO lokal 'YYYY-MM-DD' (aman dari zona waktu UTC). */
+export function todayISO(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
