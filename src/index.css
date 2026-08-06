@@ -50,31 +50,40 @@ html {
 
 /* ── Print: hanya struk nota yang dicetak ─────────────────────────────── */
 @media print {
+  /* 1) Semua konten disembunyikan DAN tingginya dicuitkan jadi 0,
+        sehingga tidak ada ruang sisa → dokumen cetak tidak melebar
+        ke halaman kosong berikutnya. */
   body * {
     visibility: hidden;
+    height: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
   }
+
+  /* 2) Modal (fixed) & isinya: boleh overflow terlihat agar struk
+        tidak terpotong oleh scroll area modal. */
+  .fixed,
+  .fixed * {
+    overflow: visible !important;
+  }
+
+  /* 3) Struk nota: tampil penuh, tinggi otomatis.
+        position:fixed → selalu mulai dari pojok kiri-atas halaman
+        (tidak terpotong & tidak tergantung posisi parent). */
   #print-struk,
   #print-struk * {
     visibility: visible;
-  }
-  /* Batalkan constraint modal (fixed/overflow/max-height) agar struk utuh.
-     #print-struk dikecualikan agar tetap absolute di halaman cetak. */
-  .fixed,
-  .fixed :not(#print-struk):not(#print-struk *) {
-    position: static !important;
-    overflow: visible !important;
-    max-height: none !important;
     height: auto !important;
-    box-shadow: none !important;
-    border: none !important;
-    background: transparent !important;
+    min-height: auto !important;
+    overflow: visible !important;
   }
   #print-struk {
-    position: absolute !important;
-    left: 0;
-    top: 0;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
     width: 100%;
     margin: 0;
+    padding: 20px;
     box-shadow: none;
     border: none;
     background: #ffffff !important;
