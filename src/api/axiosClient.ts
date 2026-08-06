@@ -53,7 +53,16 @@ axiosClient.interceptors.response.use(
 
     if (error.response) {
       if (error.response.status === 401) {
-        if (!backendMessage) console.warn('Sesi berakhir atau tidak terotorisasi. Silakan login kembali.');
+        // Token tidak valid / kedaluwarsa → logout otomatis & redirect ke login
+        const hadToken = !!localStorage.getItem('token');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        if (hadToken && window.location.pathname !== '/login') {
+          console.warn(backendMessage || 'Sesi berakhir. Silakan login kembali.');
+          window.location.href = '/login';
+        } else if (!backendMessage) {
+          console.warn('Sesi berakhir atau tidak terotorisasi. Silakan login kembali.');
+        }
       } else if (error.response.status === 403) {
         console.error(backendMessage || 'Akses ditolak: Anda tidak memiliki izin untuk tindakan ini.');
       } else if (error.response.status === 500) {

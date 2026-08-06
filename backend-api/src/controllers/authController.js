@@ -29,7 +29,7 @@ function signToken(userId) {
   return jwt.sign(
     { sub: String(userId) },
     process.env.JWT_SECRET || 'sorgum_scm_secret',
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn: process.env.JWT_EXPIRES_IN || '14d' }
   );
 }
 

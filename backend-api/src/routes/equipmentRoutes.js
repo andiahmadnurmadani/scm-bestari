@@ -6,8 +6,12 @@ import {
   updateEquipment,
   deleteEquipment,
 } from '../controllers/equipmentController.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
+
+// Semua endpoint wajib login (JWT)
+router.use(authenticateToken);
 
 // CRUD Sarana & Peralatan
 router.get('/', getEquipmentList);           // GET /api/equipment?page=1&limit=10&search=...

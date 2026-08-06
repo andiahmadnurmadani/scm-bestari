@@ -6,8 +6,12 @@ import {
   updateExpense,
   deleteExpense,
 } from '../controllers/logisticsController.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
+
+// Semua endpoint wajib login (JWT)
+router.use(authenticateToken);
 
 // CRUD Logistik & Keuangan
 router.get('/', getExpenses);           // GET /api/logistics?page=1&limit=10&search=...

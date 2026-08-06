@@ -6,8 +6,12 @@ import {
   updateCertificate,
   deleteCertificate,
 } from '../controllers/certificateController.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
+
+// Semua endpoint wajib login (JWT)
+router.use(authenticateToken);
 
 // CRUD Kelola Sertifikat
 router.get('/', getCertificates);           // GET /api/certificates?page=1&limit=10&search=...

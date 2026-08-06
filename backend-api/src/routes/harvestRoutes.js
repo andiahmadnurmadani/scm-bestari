@@ -6,8 +6,12 @@ import {
   updateHarvest,
   deleteHarvest,
 } from '../controllers/harvestController.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
+
+// Semua endpoint wajib login (JWT)
+router.use(authenticateToken);
 
 // CRUD Data Panen
 router.get('/', getHarvests);           // GET /api/harvest?page=1&limit=10&search=...

@@ -6,8 +6,12 @@ import {
   updateLand,
   deleteLand,
 } from '../controllers/landController.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
+
+// Semua endpoint wajib login (JWT)
+router.use(authenticateToken);
 
 // CRUD Kelola Lahan
 router.get('/', getLands);           // GET /api/land?page=1&limit=10&search=...

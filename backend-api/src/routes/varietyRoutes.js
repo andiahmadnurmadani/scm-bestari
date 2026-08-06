@@ -5,8 +5,12 @@ import {
   updateVariety,
   deleteVariety,
 } from '../controllers/varietyController.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
+
+// Semua endpoint wajib login (JWT)
+router.use(authenticateToken);
 
 // Master Data Varietas Sorgum
 router.get('/', getVarieties);          // GET /api/varieties

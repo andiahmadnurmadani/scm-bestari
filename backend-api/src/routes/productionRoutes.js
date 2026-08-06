@@ -6,8 +6,12 @@ import {
   updateBatch,
   deleteBatch,
 } from '../controllers/productionController.js';
+import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = Router();
+
+// Semua endpoint wajib login (JWT)
+router.use(authenticateToken);
 
 // CRUD Kelola Produksi
 router.get('/', getBatches);           // GET /api/production?page=1&limit=10&search=...
