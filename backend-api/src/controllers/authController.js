@@ -179,6 +179,14 @@ export async function updateProfile(req, res) {
     const data = req.body || {};
     const pool = getPool();
 
+    // Email dipakai sebagai identitas login — tidak boleh diubah
+    if (data.email !== undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email tidak dapat diubah karena dipakai untuk masuk ke aplikasi.',
+      });
+    }
+
     const [existing] = await pool.execute('SELECT id FROM users WHERE id = ? LIMIT 1', [req.userId]);
     if (existing.length === 0) {
       return res.status(404).json({ success: false, message: 'User tidak ditemukan.' });
