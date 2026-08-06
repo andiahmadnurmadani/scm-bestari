@@ -81,13 +81,25 @@ export const authApi = {
       // Fallback hanya untuk data profil lokal (tidak untuk autentikasi)
       const savedUser = localStorage.getItem('user');
       if (savedUser) {
-        return JSON.parse(savedUser);
+        try {
+          return JSON.parse(savedUser);
+        } catch {
+          // lanjut ke default
+        }
       }
       return {
         id: 'user-01',
         name: 'Ibu KWT',
         email: 'kwt.sorgum@gmail.com',
+        phone: '',
         role: 'Anggota KWT',
+        avatar: null,
+        jabatan: '',
+        namaKWT: '',
+        alamat: '',
+        kecamatan: '',
+        kabupaten: '',
+        bio: '',
       };
     }
   },

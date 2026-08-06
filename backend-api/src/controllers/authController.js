@@ -115,7 +115,8 @@ export async function login(req, res) {
     // Login menerima email (usernameOrEmail di FE sebenarnya berisi email)
     const identifier = String(usernameOrEmail).trim().toLowerCase();
     const rows = await query(
-      `SELECT id, name, email, phone, password_hash, role, avatar, created_at
+      `SELECT id, name, email, phone, password_hash, role, avatar,
+              jabatan, nama_kwt, alamat, kecamatan, kabupaten, bio, created_at
        FROM users WHERE email = ? LIMIT 1`,
       [identifier]
     );
