@@ -281,9 +281,6 @@ export const DashboardPage: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-semibold text-[#2C4219] tracking-tight">
             Dashboard
           </h1>
-          <p className="text-xs text-[#6B7280] font-medium mt-0.5">
-            Ringkasan data real dari sistem rantai pasok sorgum
-          </p>
         </div>
       </div>
 
@@ -684,9 +681,6 @@ export const DashboardPage: React.FC = () => {
             <h2 className="text-sm font-semibold text-[#2C4219]">
               Catatan Panen & Hasil Olahan Terbaru
             </h2>
-            <p className="text-[11px] text-[#6B7280] font-medium">
-              Daftar hasil panen sorgum yang baru dicatat di sistem
-            </p>
           </div>
           <Link
             to="/dashboard/panen"

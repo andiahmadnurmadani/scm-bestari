@@ -150,9 +150,6 @@ export const MasterVarietasPage: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-semibold text-[#2C4219] tracking-tight">
             Master Data Varietas Sorgum
           </h1>
-          <p className="text-xs text-[#6B7280] font-medium mt-0.5">
-            Kelola daftar varietas sorgum yang digunakan di seluruh modul (Panen, Lahan, Produksi)
-          </p>
         </div>
 
         <Button onClick={openCreateModal} icon={<Plus className="w-3.5 h-3.5 text-[#C3E28D]" />}>
