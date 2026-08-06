@@ -122,9 +122,23 @@ export async function createPackaging(req, res) {
 
     let kodeKemasan = String(data.kodeKemasan || '').trim();
     if (!kodeKemasan) {
-      const [countRows] = await pool.execute('SELECT COUNT(*) AS total FROM packaging_materials');
-      const seq = Number(countRows[0].total) + 1;
-      kodeKemasan = `KMG-NEW-${String(seq).padStart(3, '0')}`;
+      // Lanjutkan urutan MAX kode KMG-xxx + 1 (konsisten dengan FE nextCode)
+      const [rows] = await pool.execute(
+        `SELECT kode_kemasan FROM packaging_materials WHERE kode_kemasan LIKE 'KMG-%'`
+      );
+      let maxSeq = 0;
+      for (const r of rows) {
+        const m = String(r.kode_kemasan).match(/KMG-(\d+)/);
+        if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
+      }
+      kodeKemasan = `KMG-${String(maxSeq + 1).padStart(3, '0')}`;
+    }
+
+    // Foto produk WAJIB saat menambah data kemasan baru
+    const hasFoto = data.extraData && typeof data.extraData.imageDataUrl === 'string'
+      && data.extraData.imageDataUrl.startsWith('data:image/');
+    if (!hasFoto) {
+      return res.status(400).json({ success: false, message: 'Foto produk wajib diisi saat menambah data kemasan.' });
     }
 
     const stokTersedia = Number(data.stokTersedia) || 0;

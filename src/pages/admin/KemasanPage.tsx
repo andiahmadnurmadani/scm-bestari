@@ -10,6 +10,7 @@ import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { nextCode } from '../../utils/kodeGenerator';
+import { Toast } from '../../components/common/Toast';
 
 // ── Extended types ─────────────────────────────────────────────────────────────
 
@@ -113,11 +114,13 @@ export const KemasanPage: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<PackagingMaterial | null>(null);
   const [modalTab, setModalTab] = useState<'dasar' | 'komposisi' | 'gizi' | 'akg'>('dasar');
 
-  // Pagination State
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Toast notifikasi
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   const [formData, setFormData] = useState<Partial<PackagingMaterial>>({
     kodeKemasan: '', namaKemasan: '', kategori: 'Standing Pouch',
@@ -204,6 +207,11 @@ export const KemasanPage: React.FC = () => {
     if (editId) {
       await packagingApi.update(editId, payload);
     } else {
+      // Foto WAJIB saat menambah data kemasan baru
+      if (!formExtra.imageDataUrl) {
+        setToast({ msg: 'Foto produk wajib diisi. Silakan unggah foto kemasan terlebih dahulu.', type: 'error' });
+        return;
+      }
       await packagingApi.create(payload);
     }
     setIsModalOpen(false);
@@ -624,6 +632,11 @@ export const KemasanPage: React.FC = () => {
                   )}
                   <input ref={fileRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={handleImageUpload} />
                 </div>
+                {!editId && (
+                  <p className="text-[11px] font-semibold text-red-500 mt-1">
+                    * Foto produk wajib diisi saat menambah data kemasan baru
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -817,6 +830,15 @@ export const KemasanPage: React.FC = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Toast notifikasi */}
+      {toast && (
+        <Toast
+          message={toast.msg}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

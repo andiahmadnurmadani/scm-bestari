@@ -445,23 +445,71 @@ export async function initDatabase() {
   // Seed kemasan awal
   const [pkCount] = await pool.query('SELECT COUNT(*) AS total FROM packaging_materials');
   if (Number(pkCount[0].total) === 0) {
+    // Placeholder foto (data URL base64 1x1 transparan) supaya semua data dummy punya foto
+    const dummyFoto =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
     const seedPackaging = [
-      ['KMG-POUCH-500', 'Standing Pouch Alufoil Ziplock Valve 500g', 'Standing Pouch', '500 gram', 4200, 'Pcs', 1000, 'PT Kemasan Mulia Jaya Yogyakarta', 1850, 'Stok Cukup'],
-      ['KMG-POUCH-250', 'Standing Pouch Window Craft Paper 250g', 'Standing Pouch', '250 gram', 650, 'Pcs', 1000, 'PT Kemasan Mulia Jaya Yogyakarta', 1400, 'Stok Menipis'],
-      ['KMG-BOX-SAVORY', 'Box Duplex Custom Printing Rengginang 150g', 'Box Custom', '150 gram', 2800, 'Pcs', 500, 'CV Cetak Offset Nusantara', 2200, 'Stok Cukup'],
-      ['KMG-BOTOL-350', 'Botol Kaca Marasca 350ml Tutup Segel Aluminium', 'Botol Kaca', '350 ml', 0, 'Botol', 300, 'PT Glassindo Industri Indonesia', 4500, 'Habis'],
-      ['KMG-KARUNG-25', 'Karung Woven PP Food Grade 25kg Laminated', 'Karung Bulk', '25 kg', 1500, 'Karung', 300, 'PT Karung Jaya Plastindo', 3500, 'Stok Cukup'],
+      { kode: 'KMG-001', nama: 'Standing Pouch Alufoil Ziplock Valve 500g', kategori: 'Standing Pouch', kapasitas: '500 gram', stok: 4200, satuan: 'Pcs', min: 1000, pemasok: 'PT Kemasan Mulia Jaya Yogyakarta', harga: 1850, status: 'Stok Cukup' },
+      { kode: 'KMG-002', nama: 'Standing Pouch Window Craft Paper 250g', kategori: 'Standing Pouch', kapasitas: '250 gram', stok: 650, satuan: 'Pcs', min: 1000, pemasok: 'PT Kemasan Mulia Jaya Yogyakarta', harga: 1400, status: 'Stok Menipis' },
+      { kode: 'KMG-003', nama: 'Box Duplex Custom Printing Rengginang 150g', kategori: 'Box Custom', kapasitas: '150 gram', stok: 2800, satuan: 'Pcs', min: 500, pemasok: 'CV Cetak Offset Nusantara', harga: 2200, status: 'Stok Cukup' },
+      { kode: 'KMG-004', nama: 'Botol Kaca Marasca 350ml Tutup Segel Aluminium', kategori: 'Botol Kaca', kapasitas: '350 ml', stok: 0, satuan: 'Botol', min: 300, pemasok: 'PT Glassindo Industri Indonesia', harga: 4500, status: 'Habis' },
+      { kode: 'KMG-005', nama: 'Karung Woven PP Food Grade 25kg Laminated', kategori: 'Karung Bulk', kapasitas: '25 kg', stok: 1500, satuan: 'Karung', min: 300, pemasok: 'PT Karung Jaya Plastindo', harga: 3500, status: 'Stok Cukup' },
     ];
     for (const row of seedPackaging) {
       await pool.execute(
         `INSERT INTO packaging_materials
           (kode_kemasan, nama_kemasan, kategori, kapasitas, stok_tersedia, satuan,
-           stok_minimal, pemasok, harga_per_unit_rp, status_stok)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        row
+           stok_minimal, pemasok, harga_per_unit_rp, status_stok, extra_data)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [row.kode, row.nama, row.kategori, row.kapasitas, row.stok, row.satuan,
+         row.min, row.pemasok, row.harga, row.status,
+         JSON.stringify({ komposisi: '', nilaiGizi: {}, akg: [], riwayat: [], imageDataUrl: dummyFoto })]
       );
     }
     console.log(`✓ Seed kemasan: ${seedPackaging.length} baris dimasukkan.`);
+  }
+
+  // Auto-migrasi data lama: kode lama (KMG-POUCH-500, dll) → format KMG-00x
+  // + isi extra_data.imageDataUrl placeholder supaya semua punya foto.
+  try {
+    const dummyFoto =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const [legacyRows] = await pool.execute(
+      `SELECT id, kode_kemasan FROM packaging_materials
+       WHERE kode_kemasan NOT REGEXP '^KMG-[0-9]{3}$'`
+    );
+    let nextSeq = 6; // lanjut dari seed KMG-001..005
+    // Cari MAX KMG-xxx yang sudah ada untuk menghindari tabrakan
+    const [allCodes] = await pool.execute(
+      `SELECT kode_kemasan FROM packaging_materials WHERE kode_kemasan REGEXP '^KMG-[0-9]{3}$'`
+    );
+    for (const c of allCodes) {
+      const m = String(c.kode_kemasan).match(/^KMG-(\d{3})$/);
+      if (m) nextSeq = Math.max(nextSeq, parseInt(m[1], 10) + 1);
+    }
+    for (const row of legacyRows) {
+      const newCode = `KMG-${String(nextSeq).padStart(3, '0')}`;
+      nextSeq += 1;
+      // Ambil extra_data lama kalau ada, lalu pastikan imageDataUrl terisi
+      const [ex] = await pool.execute(
+        'SELECT extra_data FROM packaging_materials WHERE id = ? LIMIT 1',
+        [row.id]
+      );
+      let extra = {};
+      if (ex[0]?.extra_data) {
+        try { extra = JSON.parse(ex[0].extra_data); } catch { extra = {}; }
+      }
+      if (!extra.imageDataUrl) extra.imageDataUrl = dummyFoto;
+      await pool.execute(
+        'UPDATE packaging_materials SET kode_kemasan = ?, extra_data = ? WHERE id = ?',
+        [newCode, JSON.stringify(extra), row.id]
+      );
+    }
+    if (legacyRows.length > 0) {
+      console.log(`✓ Migrasi kemasan: ${legacyRows.length} baris lama disesuaikan (kode + foto).`);
+    }
+  } catch (migrateErr) {
+    console.warn('⚠ Migrasi data kemasan lama dilewati:', migrateErr.message);
   }
 
   // Auto-migrasi: tabel logistics_expenses (logistik & keuangan)
