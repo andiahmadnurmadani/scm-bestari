@@ -367,7 +367,7 @@ export const LahanPage: React.FC = () => {
                       <span>
                         Panen Lalu:{' '}
                         <strong className="text-[#221A12]">
-                          {item.panenLaluTon || (item.luasHektar * 4.8).toFixed(1)} Ton
+                          {item.panenLaluTon != null ? item.panenLaluTon : (item.luasHektar * 4.8).toFixed(1)} Ton
                         </strong>
                       </span>
                     </div>
@@ -524,7 +524,7 @@ export const LahanPage: React.FC = () => {
                   Panen Lalu
                 </span>
                 <span className="text-sm font-black text-[#221A12] mt-0.5 block">
-                  {detailPlot.panenLaluTon || (detailPlot.luasHektar * 4.8).toFixed(1)} Ton
+                  {detailPlot.panenLaluTon != null ? detailPlot.panenLaluTon : (detailPlot.luasHektar * 4.8).toFixed(1)} Ton
                 </span>
               </div>
 
