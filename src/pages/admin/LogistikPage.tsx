@@ -459,7 +459,7 @@ export const LogistikPage: React.FC = () => {
             Riwayat Transaksi Keuangan
           </h3>
 
-          <div className="flex items-center gap-3 text-xs font-bold overflow-x-auto max-w-full custom-scrollbar pb-1 md:pb-0">
+          <div className="flex items-center gap-1.5 bg-[#F7F7F5] p-1 rounded-lg border border-[#c4c8bb]/30 overflow-x-auto max-w-full custom-scrollbar">
             {[
               'Semua Transaksi',
               'Bahan Baku',
@@ -472,10 +472,10 @@ export const LogistikPage: React.FC = () => {
               <button
                 key={tab}
                 onClick={() => setSelectedCategoryTab(tab)}
-                className={`py-1 transition-colors cursor-pointer whitespace-nowrap ${
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   selectedCategoryTab === tab
-                    ? 'text-[#2C4219] border-b-2 border-[#2C4219] font-bold'
-                    : 'text-[#6B7280] hover:text-[#2C4219]'
+                    ? 'bg-[#C3E28D] text-[#172C05] shadow-2xs'
+                    : 'text-[#44483e] hover:text-[#172C05]'
                 }`}
               >
                 {tab}
