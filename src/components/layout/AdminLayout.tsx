@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, useOutletContext, Link, useLocation } from 'react-router-dom';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
@@ -18,6 +18,11 @@ export const AdminLayout: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
   const pathname = location.pathname;
+
+  // Reset kata kunci pencarian setiap pindah halaman
+  useEffect(() => {
+    setSearchTerm('');
+  }, [pathname]);
 
   const renderBreadcrumbs = () => {
     const paths = pathname.split('/').filter(Boolean);

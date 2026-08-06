@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Trash2, Search, Sprout, CheckCircle2, XCircle, Pencil, Upload, Image as ImageIcon, X, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Sprout, CheckCircle2, XCircle, Pencil, Upload, Image as ImageIcon, X, AlertTriangle } from 'lucide-react';
 import { varietyApi, Variety } from '../../api/endpoints/varietyApi';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { Toast } from '../../components/common/Toast';
+import { useAdminSearch } from '../../components/layout/AdminLayout';
 
 export const MasterVarietasPage: React.FC = () => {
+  const { searchTerm } = useAdminSearch();
   const [varieties, setVarieties] = useState<Variety[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
 
   // Modal state (tambah/edit)
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,11 +44,12 @@ export const MasterVarietasPage: React.FC = () => {
     fetchVarieties();
   }, [fetchVarieties]);
 
-  // Filter pencarian lokal (data master kecil, cukup di frontend)
+  // Filter pencarian (data master kecil, cukup di frontend) —
+  // sinkron dengan search bar global di header.
   const filtered = varieties.filter(
     (v) =>
-      v.name.toLowerCase().includes(search.toLowerCase()) ||
-      v.description.toLowerCase().includes(search.toLowerCase())
+      v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const openCreateModal = () => {
@@ -190,16 +192,9 @@ export const MasterVarietasPage: React.FC = () => {
             <h2 className="text-sm font-bold text-[#221A12]">Daftar Varietas</h2>
           </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6B7280]" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari varietas..."
-              className="pl-8 pr-3 py-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-xs font-semibold text-[#221A12] placeholder:text-[#6B7280] focus:outline-none focus:border-[#2C4219] w-full sm:w-56"
-            />
-          </div>
+          <p className="text-[10px] text-[#74796d] font-medium">
+            Gunakan kolom pencarian di bagian atas untuk mencari varietas
+          </p>
         </div>
 
         {/* Table */}
