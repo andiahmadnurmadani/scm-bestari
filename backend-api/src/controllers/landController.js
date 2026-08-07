@@ -34,6 +34,7 @@ function validateLand(data) {
   if (!data.lokasiDesa || !String(data.lokasiDesa).trim()) return 'Lokasi desa wajib diisi.';
   if (!data.kecamatan || !String(data.kecamatan).trim()) return 'Kecamatan wajib diisi.';
   if (data.luasHektar == null || Number(data.luasHektar) < 0) return 'Luas lahan tidak valid.';
+  if (!data.fotoUrl || !String(data.fotoUrl).trim()) return 'Foto lahan wajib diisi.';
   if (data.statusIrigasi && !irigasiValues.includes(data.statusIrigasi)) return 'Status irigasi tidak valid.';
   if (data.statusKesiapan && !kesiapanValues.includes(data.statusKesiapan)) return 'Status kesiapan tidak valid.';
   return null;
@@ -200,6 +201,11 @@ export async function updateLand(req, res) {
     const [existing] = await pool.execute('SELECT id FROM lands WHERE id = ? LIMIT 1', [id]);
     if (existing.length === 0) {
       return res.status(404).json({ success: false, message: 'Data lahan tidak ditemukan.' });
+    }
+
+    // Foto lahan wajib — tolak jika dikirim kosong (menghapus foto)
+    if (data.fotoUrl !== undefined && !String(data.fotoUrl).trim()) {
+      return res.status(400).json({ success: false, message: 'Foto lahan wajib diisi.' });
     }
 
     const fieldMap = {

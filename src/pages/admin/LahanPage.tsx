@@ -9,12 +9,14 @@ import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { ActionButtons } from '../../components/common/ActionButtons';
+import { Toast } from '../../components/common/Toast';
 import { nextCode } from '../../utils/kodeGenerator';
 
 export const LahanPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
   const [landList, setLandList] = useState<LandPlot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -170,23 +172,36 @@ export const LahanPage: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalFotoUrl = formData.fotoUrl || imagePreview || '';
+
+    // Foto lahan WAJIB diisi (tambah & edit)
+    if (!finalFotoUrl) {
+      setToast({ msg: 'Foto lahan wajib diisi. Silakan unggah gambar lahan terlebih dahulu.', type: 'error' });
+      return;
+    }
+
     const payload = {
       ...formData,
       luasHektar: Number(formData.luasHektar) || 0,
       panenLaluTon: Number(formData.panenLaluTon) || 0,
     };
 
-    if (editingPlot) {
-      await landApi.update(editingPlot.id, { ...payload, fotoUrl: finalFotoUrl });
-    } else {
-      await landApi.create({
-        ...payload,
-        fotoUrl: finalFotoUrl,
-      });
+    try {
+      if (editingPlot) {
+        await landApi.update(editingPlot.id, { ...payload, fotoUrl: finalFotoUrl });
+        setToast({ msg: 'Data lahan berhasil diperbarui.', type: 'success' });
+      } else {
+        await landApi.create({
+          ...payload,
+          fotoUrl: finalFotoUrl,
+        });
+        setToast({ msg: 'Data lahan baru berhasil ditambahkan.', type: 'success' });
+      }
+      setIsModalOpen(false);
+      handleRemoveImage();
+      fetchLand();
+    } catch (err: any) {
+      setToast({ msg: err?.response?.data?.message || 'Gagal menyimpan data lahan. Coba lagi.', type: 'error' });
     }
-    setIsModalOpen(false);
-    handleRemoveImage();
-    fetchLand();
   };
 
   // Handler perubahan lokasi dari MapPicker
@@ -771,7 +786,7 @@ export const LahanPage: React.FC = () => {
           {/* Upload Foto Lahan (JPG/PNG Only) */}
           <div>
             <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Foto Lahan (Khusus JPG / PNG)
+              Foto Lahan (Khusus JPG / PNG) <span className="text-red-600">*</span>
             </label>
 
             {imagePreview ? (
@@ -882,7 +897,11 @@ export const LahanPage: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Toast Floating Notifikasi */}
+      {toast && (
+        <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />
+      )}
     </div>
   );
 };
-
