@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { authApi } from '../../api/endpoints/authApi';
 import { apiKeyApi, ApiKey, ApiKeyCreated } from '../../api/endpoints/apiKeyApi';
+import { getApiBaseUrl, setApiBaseUrl, resetApiBaseUrl, getDocsUrl } from '../../utils/apiConfig';
 import { Toast } from '../../components/common/Toast';
 
 // ---------- Types ----------
@@ -104,6 +105,11 @@ export const ProfilePage: React.FC = () => {
   const [creatingKey, setCreatingKey] = useState(false);
   const [createdKey, setCreatedKey] = useState<ApiKeyCreated | null>(null);
   const [copiedKey, setCopiedKey] = useState(false);
+
+  // ── State URL API (tab Pengaturan) ──
+  const [apiUrlInput, setApiUrlInput] = useState(getApiBaseUrl());
+  const [testingUrl, setTestingUrl] = useState(false);
+  const [urlTestResult, setUrlTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Muat profil dari backend saat halaman dibuka
   useEffect(() => {
@@ -294,6 +300,38 @@ export const ProfilePage: React.FC = () => {
     } catch (err: any) {
       setKeysToast({ msg: err?.response?.data?.message || 'Gagal menghapus API key.', type: 'error' });
     }
+  };
+
+  // ── Handler URL API ──
+  const handleSaveApiUrl = async () => {
+    const clean = apiUrlInput.trim().replace(/\/+$/, '');
+    if (!clean) {
+      setUrlTestResult({ ok: false, msg: 'URL API tidak boleh kosong.' });
+      return;
+    }
+    setTestingUrl(true);
+    setUrlTestResult(null);
+    try {
+      // Tes koneksi ke endpoint health
+      const res = await fetch(`${clean}/health`, { signal: AbortSignal.timeout(6000) });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      if (!json.success) throw new Error('Respons tidak valid');
+      setApiBaseUrl(clean);
+      setUrlTestResult({ ok: true, msg: 'Koneksi berhasil! URL API disimpan.' });
+      setKeysToast({ msg: 'URL API berhasil disimpan & diterapkan.', type: 'success' });
+    } catch {
+      setUrlTestResult({ ok: false, msg: 'Tidak dapat terhubung ke URL tersebut. Periksa kembali.' });
+    } finally {
+      setTestingUrl(false);
+    }
+  };
+
+  const handleResetApiUrl = () => {
+    resetApiBaseUrl();
+    setApiUrlInput(getApiBaseUrl());
+    setUrlTestResult(null);
+    setKeysToast({ msg: 'URL API dikembalikan ke default.', type: 'success' });
   };
 
   const pwFieldConfig: { key: 'current' | 'new' | 'confirm'; label: string }[] = [
@@ -577,6 +615,49 @@ export const ProfilePage: React.FC = () => {
       {/* ===== TAB PENGATURAN (API Key) ===== */}
       {activeTab === 'pengaturan' && (
         <div className="space-y-4">
+          {/* URL API */}
+          <SectionCard title="URL API Backend" icon={<RefreshCw className="w-4 h-4" />}>
+            <div className="space-y-3">
+              <p className="text-[11px] text-[#6B7280] leading-relaxed">
+                Atur alamat server API. Berguna saat aplikasi di-hosting (contoh:{' '}
+                <code className="bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded px-1 py-0.5 text-[10px]">https://scm-bestari.kolab.top/api</code>)
+                atau memakai server lain. Perubahan langsung diterapkan ke seluruh aplikasi.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={apiUrlInput}
+                  onChange={(e) => { setApiUrlInput(e.target.value); setUrlTestResult(null); }}
+                  placeholder="https://scm-bestari.kolab.top/api"
+                  className={`${inputCls} flex-1 font-mono text-[11px]`}
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveApiUrl}
+                    disabled={testingUrl}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2C4219] text-white font-bold text-xs hover:bg-[#213213] shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${testingUrl ? 'animate-spin' : ''}`} />
+                    {testingUrl ? 'Menguji...' : 'Simpan & Tes'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetApiUrl}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#F7F7F5] text-[#44483e] font-bold text-xs border border-[#c4c8bb]/30 hover:bg-[#efe0d2] transition-colors cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+              {urlTestResult && (
+                <p className={`text-[11px] font-bold ${urlTestResult.ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {urlTestResult.ok ? '✓ ' : '✗ '}{urlTestResult.msg}
+                </p>
+              )}
+            </div>
+          </SectionCard>
+
           <SectionCard title="API Key (Akses Read-Only)" icon={<KeyRound className="w-4 h-4" />}>
             <div className="space-y-4">
               <div className="p-4 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl">
@@ -587,12 +668,12 @@ export const ProfilePage: React.FC = () => {
                   API key <b>hanya bisa membaca</b> (GET) — perubahan data tetap butuh login admin.
                   Dokumentasi lengkap tersedia di{' '}
                   <a
-                    href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'}/docs`}
+                    href={getDocsUrl()}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-[#2C4219] font-bold hover:underline"
                   >
-                    /api/docs <ExternalLink className="w-3 h-3" />
+                    {getDocsUrl()} <ExternalLink className="w-3 h-3" />
                   </a>
                 </p>
               </div>

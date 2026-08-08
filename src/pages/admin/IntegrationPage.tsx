@@ -23,6 +23,7 @@ import {
   LayoutDashboard,
 } from 'lucide-react';
 import { Toast } from '../../components/common/Toast';
+import { getApiBaseUrl } from '../../utils/apiConfig';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -151,9 +152,7 @@ const EndpointRow: React.FC<{
 
 export const IntegrationPage: React.FC = () => {
   // API Config state
-  const [apiBaseUrl, setApiBaseUrl] = useState(
-    (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000/api'
-  );
+  const [apiBaseUrl, setApiBaseUrl] = useState(getApiBaseUrl());
   const [apiKey, setApiKey] = useState(generateKey());
   const [webhookUrl, setWebhookUrl] = useState('https://');
   const [webhookSecret, setWebhookSecret] = useState(generateWebhookSecret());
