@@ -7,11 +7,15 @@ import {
   deletePackaging,
 } from '../controllers/packagingController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
+import { authenticateTokenOrApiKey } from '../middleware/apiKeyMiddleware.js';
 
 const router = Router();
 
-// Semua endpoint wajib login (JWT)
-router.use(authenticateToken);
+// GET: boleh JWT atau API key (read-only). Tulis (POST/PUT/DELETE): wajib JWT.
+router.use((req, res, next) => {
+  if (req.method === 'GET') return authenticateTokenOrApiKey(req, res, next);
+  return authenticateToken(req, res, next);
+});
 
 // CRUD Kelola Kemasan
 router.get('/', getPackagingList);           // GET /api/packaging?page=1&limit=10&search=...

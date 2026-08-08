@@ -17,6 +17,9 @@ import packagingRoutes from './routes/packagingRoutes.js';
 import logisticsRoutes from './routes/logisticsRoutes.js';
 import cmsRoutes from './routes/cmsRoutes.js';
 import notificationsRoutes from './routes/notificationsRoutes.js';
+import apiKeyRoutes from './routes/apiKeyRoutes.js';
+import { openApiSpec } from './openapi.js';
+import { apiReference } from '@scalar/express-api-reference';
 import { seedHarvests } from './seeders/seedHarvests.js';
 
 dotenv.config();
@@ -58,6 +61,18 @@ app.use('/api/packaging', packagingRoutes);
 app.use('/api/logistics', logisticsRoutes);
 app.use('/api/cms', cmsRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/keys', apiKeyRoutes);
+
+// ── Dokumentasi API (Scalar) ─────────────────────────────────────────────────
+app.use(
+  '/api/docs',
+  apiReference({
+    spec: {
+      content: openApiSpec,
+    },
+    theme: 'default',
+  })
+);
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((req, res) => {

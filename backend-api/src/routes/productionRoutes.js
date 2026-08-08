@@ -7,11 +7,15 @@ import {
   deleteBatch,
 } from '../controllers/productionController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
+import { authenticateTokenOrApiKey } from '../middleware/apiKeyMiddleware.js';
 
 const router = Router();
 
-// Semua endpoint wajib login (JWT)
-router.use(authenticateToken);
+// GET: boleh JWT atau API key (read-only). Tulis (POST/PUT/DELETE): wajib JWT.
+router.use((req, res, next) => {
+  if (req.method === 'GET') return authenticateTokenOrApiKey(req, res, next);
+  return authenticateToken(req, res, next);
+});
 
 // CRUD Kelola Produksi
 router.get('/', getBatches);           // GET /api/production?page=1&limit=10&search=...

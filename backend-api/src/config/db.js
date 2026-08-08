@@ -611,6 +611,32 @@ export async function initDatabase() {
     console.log(`✓ Seed notifikasi: ${seedNotif.length} baris dimasukkan.`);
   }
 
+  // Auto-migrasi: tabel api_keys (untuk akses API read-only dari luar)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      nama VARCHAR(100) NOT NULL,
+      key_value VARCHAR(64) NOT NULL UNIQUE,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      last_used_at TIMESTAMP NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      revoked_at TIMESTAMP NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  console.log('✓ Tabel "api_keys" siap.');
+
+  // Seed 1 API key demo saat tabel kosong
+  const [kCount] = await pool.query('SELECT COUNT(*) AS total FROM api_keys');
+  if (Number(kCount[0].total) === 0) {
+    const crypto = await import('crypto');
+    const demoKey = `sk-${crypto.randomBytes(24).toString('hex')}`;
+    await pool.execute(
+      `INSERT INTO api_keys (nama, key_value) VALUES (?, ?)`,
+      ['Kunci Demo (read-only)', demoKey]
+    );
+    console.log(`✓ Seed API key demo dibuat.`);
+  }
+
   return pool;
 }
 
