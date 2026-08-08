@@ -39,12 +39,6 @@ export const openApiSpec = {
   ],
   components: {
     securitySchemes: {
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        description: 'Token dari POST /auth/login (Authorization: Bearer <token>)',
-      },
       apiKey: {
         type: 'apiKey',
         in: 'header',
@@ -363,13 +357,13 @@ export const openApiSpec = {
       get: {
         tags: ['Autentikasi'],
         summary: 'Ambil profil user aktif',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         responses: { 200: { description: 'Profil user' }, 401: { description: 'Token tidak valid' } },
       },
       put: {
         tags: ['Autentikasi'],
         summary: 'Perbarui profil user aktif',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         requestBody: {
           content: {
             'application/json': {
@@ -395,7 +389,7 @@ export const openApiSpec = {
       put: {
         tags: ['Autentikasi'],
         summary: 'Ganti kata sandi',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         requestBody: {
           required: true,
           content: {
@@ -420,13 +414,13 @@ export const openApiSpec = {
       get: {
         tags: ['API Key'],
         summary: 'Daftar API key (hanya preview)',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         responses: { 200: { description: 'Daftar key' }, 401: { description: 'Wajib login' } },
       },
       post: {
         tags: ['API Key'],
         summary: 'Buat API key baru (key penuh hanya ditampilkan sekali)',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         requestBody: {
           required: true,
           content: {
@@ -450,7 +444,7 @@ export const openApiSpec = {
       put: {
         tags: ['API Key'],
         summary: 'Aktifkan / nonaktifkan API key',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         requestBody: {
           required: true,
@@ -469,7 +463,7 @@ export const openApiSpec = {
       delete: {
         tags: ['API Key'],
         summary: 'Hapus API key',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Key dihapus' }, 404: { description: 'Key tidak ditemukan' } },
       },
@@ -480,7 +474,7 @@ export const openApiSpec = {
       get: {
         tags: ['Panen'],
         summary: 'Daftar panen (pagination + filter)',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'integer', default: 10, maximum: 100 } },
@@ -497,7 +491,7 @@ export const openApiSpec = {
       post: {
         tags: ['Panen'],
         summary: 'Tambah data panen',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         requestBody: {
           required: true,
           content: {
@@ -528,21 +522,21 @@ export const openApiSpec = {
       get: {
         tags: ['Panen'],
         summary: 'Detail satu panen',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Data panen' }, 404: { description: 'Tidak ditemukan' } },
       },
       put: {
         tags: ['Panen'],
         summary: 'Perbarui data panen',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Panen diperbarui' }, 401: { description: 'Wajib JWT' }, 404: { description: 'Tidak ditemukan' } },
       },
       delete: {
         tags: ['Panen'],
         summary: 'Hapus data panen',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Panen dihapus' }, 401: { description: 'Wajib JWT' }, 404: { description: 'Tidak ditemukan' } },
       },
@@ -553,13 +547,13 @@ export const openApiSpec = {
       get: {
         tags: ['Varietas'],
         summary: 'Daftar varietas sorgum',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         responses: { 200: { description: 'Daftar varietas' }, 401: { description: 'Butuh JWT atau API key' } },
       },
       post: {
         tags: ['Varietas'],
         summary: 'Tambah varietas',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         requestBody: {
           required: true,
           content: {
@@ -583,7 +577,7 @@ export const openApiSpec = {
       put: {
         tags: ['Varietas'],
         summary: 'Perbarui varietas',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         requestBody: {
           content: {
@@ -605,7 +599,7 @@ export const openApiSpec = {
       delete: {
         tags: ['Varietas'],
         summary: 'Hapus varietas (ditolak jika dipakai data panen)',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Varietas dihapus' }, 409: { description: 'Sedang dipakai panen' }, 404: { description: 'Tidak ditemukan' } },
       },
@@ -616,7 +610,7 @@ export const openApiSpec = {
       get: {
         tags: ['Lahan'],
         summary: 'Daftar lahan (pagination + search)',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'integer', default: 10, maximum: 100 } },
@@ -627,7 +621,7 @@ export const openApiSpec = {
       post: {
         tags: ['Lahan'],
         summary: 'Tambah lahan (foto WAJIB)',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         requestBody: {
           required: true,
           content: {
@@ -661,21 +655,21 @@ export const openApiSpec = {
       get: {
         tags: ['Lahan'],
         summary: 'Detail satu lahan',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Data lahan' }, 404: { description: 'Tidak ditemukan' } },
       },
       put: {
         tags: ['Lahan'],
         summary: 'Perbarui lahan',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Lahan diperbarui' }, 400: { description: 'Foto kosong ditolak' }, 404: { description: 'Tidak ditemukan' } },
       },
       delete: {
         tags: ['Lahan'],
         summary: 'Hapus lahan',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Lahan dihapus' }, 404: { description: 'Tidak ditemukan' } },
       },
@@ -686,7 +680,7 @@ export const openApiSpec = {
       get: {
         tags: ['Peralatan'],
         summary: 'Daftar peralatan (pagination + search)',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'integer', default: 10, maximum: 100 } },
@@ -697,7 +691,7 @@ export const openApiSpec = {
       post: {
         tags: ['Peralatan'],
         summary: 'Tambah peralatan',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         responses: { 201: { description: 'Peralatan dibuat' }, 400: { description: 'Validasi gagal' }, 401: { description: 'Wajib JWT' } },
       },
     },
@@ -705,21 +699,21 @@ export const openApiSpec = {
       get: {
         tags: ['Peralatan'],
         summary: 'Detail peralatan',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Data peralatan' }, 404: { description: 'Tidak ditemukan' } },
       },
       put: {
         tags: ['Peralatan'],
         summary: 'Perbarui peralatan',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Peralatan diperbarui' }, 404: { description: 'Tidak ditemukan' } },
       },
       delete: {
         tags: ['Peralatan'],
         summary: 'Hapus peralatan',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Peralatan dihapus' }, 404: { description: 'Tidak ditemukan' } },
       },
@@ -730,7 +724,7 @@ export const openApiSpec = {
       get: {
         tags: ['Produksi'],
         summary: 'Daftar batch produksi (pagination + filter)',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'integer', default: 10, maximum: 100 } },
@@ -742,7 +736,7 @@ export const openApiSpec = {
       post: {
         tags: ['Produksi'],
         summary: 'Tambah batch produksi',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         responses: { 201: { description: 'Batch dibuat' }, 400: { description: 'Validasi gagal' }, 401: { description: 'Wajib JWT' } },
       },
     },
@@ -750,21 +744,21 @@ export const openApiSpec = {
       get: {
         tags: ['Produksi'],
         summary: 'Detail batch produksi',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Data batch' }, 404: { description: 'Tidak ditemukan' } },
       },
       put: {
         tags: ['Produksi'],
         summary: 'Perbarui batch produksi',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Batch diperbarui' }, 404: { description: 'Tidak ditemukan' } },
       },
       delete: {
         tags: ['Produksi'],
         summary: 'Hapus batch produksi',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Batch dihapus' }, 404: { description: 'Tidak ditemukan' } },
       },
@@ -775,7 +769,7 @@ export const openApiSpec = {
       get: {
         tags: ['Sertifikat'],
         summary: 'Daftar sertifikat (pagination + search)',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'integer', default: 10, maximum: 100 } },
@@ -786,7 +780,7 @@ export const openApiSpec = {
       post: {
         tags: ['Sertifikat'],
         summary: 'Tambah sertifikat',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         responses: { 201: { description: 'Sertifikat dibuat' }, 400: { description: 'Validasi gagal' }, 401: { description: 'Wajib JWT' } },
       },
     },
@@ -794,21 +788,21 @@ export const openApiSpec = {
       get: {
         tags: ['Sertifikat'],
         summary: 'Detail sertifikat',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Data sertifikat' }, 404: { description: 'Tidak ditemukan' } },
       },
       put: {
         tags: ['Sertifikat'],
         summary: 'Perbarui sertifikat',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Sertifikat diperbarui' }, 404: { description: 'Tidak ditemukan' } },
       },
       delete: {
         tags: ['Sertifikat'],
         summary: 'Hapus sertifikat',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Sertifikat dihapus' }, 404: { description: 'Tidak ditemukan' } },
       },
@@ -819,7 +813,7 @@ export const openApiSpec = {
       get: {
         tags: ['Kemasan'],
         summary: 'Daftar kemasan (pagination + filter kategori)',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'integer', default: 10, maximum: 100 } },
@@ -831,7 +825,7 @@ export const openApiSpec = {
       post: {
         tags: ['Kemasan'],
         summary: 'Tambah bahan kemasan',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         responses: { 201: { description: 'Kemasan dibuat' }, 400: { description: 'Validasi gagal' }, 401: { description: 'Wajib JWT' } },
       },
     },
@@ -839,21 +833,21 @@ export const openApiSpec = {
       get: {
         tags: ['Kemasan'],
         summary: 'Detail kemasan',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Data kemasan' }, 404: { description: 'Tidak ditemukan' } },
       },
       put: {
         tags: ['Kemasan'],
         summary: 'Perbarui kemasan',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Kemasan diperbarui' }, 404: { description: 'Tidak ditemukan' } },
       },
       delete: {
         tags: ['Kemasan'],
         summary: 'Hapus kemasan',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Kemasan dihapus' }, 404: { description: 'Tidak ditemukan' } },
       },
@@ -864,7 +858,7 @@ export const openApiSpec = {
       get: {
         tags: ['Logistik'],
         summary: 'Daftar pengeluaran logistik (pagination + filter)',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
           { name: 'limit', in: 'query', schema: { type: 'integer', default: 10, maximum: 100 } },
@@ -876,7 +870,7 @@ export const openApiSpec = {
       post: {
         tags: ['Logistik'],
         summary: 'Catat pengeluaran baru',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         responses: { 201: { description: 'Transaksi dibuat' }, 400: { description: 'Validasi gagal' }, 401: { description: 'Wajib JWT' } },
       },
     },
@@ -884,21 +878,21 @@ export const openApiSpec = {
       get: {
         tags: ['Logistik'],
         summary: 'Detail pengeluaran',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Data transaksi' }, 404: { description: 'Tidak ditemukan' } },
       },
       put: {
         tags: ['Logistik'],
         summary: 'Perbarui pengeluaran',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Transaksi diperbarui' }, 404: { description: 'Tidak ditemukan' } },
       },
       delete: {
         tags: ['Logistik'],
         summary: 'Hapus pengeluaran',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Transaksi dihapus' }, 404: { description: 'Tidak ditemukan' } },
       },
@@ -909,13 +903,13 @@ export const openApiSpec = {
       get: {
         tags: ['Notifikasi'],
         summary: 'Daftar notifikasi (max 50, terbaru dulu) + jumlah belum dibaca',
-        security: [{ bearerAuth: [] }, { apiKey: [] }],
+        security: [{ apiKey: [] }],
         responses: { 200: { description: 'Daftar notifikasi + unread' }, 401: { description: 'Butuh JWT atau API key' } },
       },
       post: {
         tags: ['Notifikasi'],
         summary: 'Buat notifikasi',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         responses: { 201: { description: 'Notifikasi dibuat' }, 400: { description: 'Judul/pesan wajib' }, 401: { description: 'Wajib JWT' } },
       },
     },
@@ -923,7 +917,7 @@ export const openApiSpec = {
       put: {
         tags: ['Notifikasi'],
         summary: 'Tandai notifikasi dibaca (id = "all" untuk semua)',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: 'all' } }],
         responses: { 200: { description: 'Notifikasi ditandai dibaca' }, 404: { description: 'Tidak ditemukan' } },
       },
@@ -932,7 +926,7 @@ export const openApiSpec = {
       delete: {
         tags: ['Notifikasi'],
         summary: 'Hapus notifikasi',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Notifikasi dihapus' }, 404: { description: 'Tidak ditemukan' } },
       },
@@ -948,7 +942,7 @@ export const openApiSpec = {
       put: {
         tags: ['CMS'],
         summary: 'Simpan konten landing page',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { type: 'object', description: 'Objek CmsData lengkap' } } },
@@ -958,7 +952,7 @@ export const openApiSpec = {
       delete: {
         tags: ['CMS'],
         summary: 'Reset konten ke default',
-        security: [{ bearerAuth: [] }],
+        security: [{ apiKey: [] }],
         responses: { 200: { description: 'Konten direset' }, 401: { description: 'Wajib JWT' } },
       },
     },
