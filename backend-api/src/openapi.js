@@ -9,7 +9,7 @@ export const openApiSpec = {
     title: 'Sorgum SCM API',
     description:
       'Dokumentasi API untuk **Sistem Manajemen Rantai Pasok Sorgum** (Kelompok Wanita Tani).\n\n' +
-      '- Sebagian besar endpoint **membutuhkan autentikasi**: `Authorization: Bearer <JWT>` (dari login) **atau** header `x-api-key` (untuk endpoint GET read-only).\n' +
+      '- Endpoint GET read-only **membutuhkan autentikasi** via header `x-api-key`. Endpoint tulis memakai JWT (login).\n' +
       '- Endpoint **tulis** (POST/PUT/DELETE) hanya bisa diakses dengan **JWT** (login).\n' +
       '- Format respons selalu `{ success, message?, data?, pagination? }`.\n' +
       '- UI interaktif ini bisa digunakan langsung (tombol "Try it").',

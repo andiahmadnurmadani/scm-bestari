@@ -1,4 +1,3 @@
-import jwt from 'jsonwebtoken';
 import { getPool } from '../config/db.js';
 
 /**
@@ -42,32 +41,16 @@ export async function authenticateApiKey(req, res, next) {
 }
 
 /**
- * Middleware gabungan: terima JWT (Authorization: Bearer) ATAU API key (x-api-key).
- * Dipakai pada endpoint GET read-only agar bisa diakses dari luar tanpa login.
- * Endpoint tulis (POST/PUT/DELETE) TETAP wajib JWT via authenticateToken.
+ * Middleware autentikasi endpoint GET read-only: HANYA menerima API key (x-api-key).
+ * Endpoint tulis (POST/PUT/DELETE) tetap memakai authenticateToken (JWT) terpisah.
  */
 export async function authenticateTokenOrApiKey(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-  // 1) Coba JWT dulu
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'sorgum_scm_secret');
-      req.userId = decoded.sub;
-      return next();
-    } catch {
-      // JWT tidak valid → lanjut cek API key
-    }
-  }
-
-  // 2) Fallback ke API key
   if (req.headers['x-api-key']) {
     return authenticateApiKey(req, res, next);
   }
 
   return res.status(401).json({
     success: false,
-    message: 'Autentikasi diperlukan. Gunakan Bearer token (JWT) atau x-api-key.',
+    message: 'Autentikasi diperlukan. Gunakan header x-api-key.',
   });
 }
