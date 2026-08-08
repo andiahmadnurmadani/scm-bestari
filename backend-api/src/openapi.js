@@ -20,7 +20,7 @@ export const openApiSpec = {
     },
   },
   servers: [
-    { url: 'http://localhost:8000/api', description: 'Server lokal (development)' },
+    { url: 'https://scm-bestari.kolab.top/api', description: 'Produksi (hosting)' },
   ],
   tags: [
     { name: 'Kesehatan', description: 'Cek status server' },
