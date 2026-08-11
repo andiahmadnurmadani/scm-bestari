@@ -20,8 +20,8 @@ import {
   Settings,
   AlertCircle,
   Headphones,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { authApi } from '../../api/endpoints/authApi';
 import { Modal } from '../common/Modal';
@@ -139,25 +139,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </nav>
       </div>
 
-      {/* Tombol collapse/expand — di tengah sidebar, antara menu & footer */}
+      {/* Tombol collapse/expand — bulat di tepi kanan sidebar */}
       {onToggleCollapse && (
-        <div className="pt-3 pb-1">
+        <div className="pt-3 pb-1 hidden lg:flex justify-center">
           <button
             onClick={onToggleCollapse}
             title={collapsed ? 'Perluas menu' : 'Ciutkan menu'}
-            className={`hidden lg:flex w-full items-center gap-2.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
-              collapsed
-                ? 'justify-center px-1.5 py-2.5 bg-[#fff1e5] text-[#2C4219] hover:bg-[#efe0d2]'
-                : 'px-3 py-2.5 bg-[#fff1e5] text-[#2C4219] hover:bg-[#efe0d2]'
-            }`}
+            className="w-8 h-8 rounded-full bg-[#2C4219] text-white hover:bg-[#172C05] shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0"
           >
             {collapsed ? (
-              <PanelLeftOpen className="w-4 h-4 shrink-0" />
+              <ChevronRight className="w-4 h-4" />
             ) : (
-              <>
-                <PanelLeftClose className="w-4 h-4 shrink-0" />
-                <span>Ciutkan menu</span>
-              </>
+              <ChevronLeft className="w-4 h-4" />
             )}
           </button>
         </div>
