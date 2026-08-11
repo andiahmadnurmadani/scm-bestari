@@ -71,7 +71,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const sidebarContent = (
     <div
       className={`relative flex flex-col h-full bg-[#FFF8F4] border-r border-[#c4c8bb]/20 p-3 justify-between select-none transition-all duration-300 ${
-        collapsed ? 'w-[68px]' : 'w-64'
+        collapsed ? 'w-14' : 'w-56'
       }`}
     >
       <div>
@@ -388,7 +388,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       {/* Desktop fixed sidebar */}
       <aside
         className={`hidden lg:block fixed left-0 top-0 bottom-0 z-40 h-screen transition-all duration-300 ${
-          collapsed ? 'w-[68px]' : 'w-64'
+          collapsed ? 'w-14' : 'w-56'
         }`}
       >
         {sidebarContent}

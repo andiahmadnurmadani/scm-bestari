@@ -95,7 +95,7 @@ export const AdminLayout: React.FC = () => {
       {/* Main Content Area */}
       <div
         className={`flex-1 flex flex-col min-h-screen min-w-0 transition-all duration-300 ${
-          sidebarCollapsed ? 'lg:ml-[68px]' : 'lg:ml-64'
+          sidebarCollapsed ? 'lg:ml-14' : 'lg:ml-56'
         }`}
       >
         <AdminHeader
