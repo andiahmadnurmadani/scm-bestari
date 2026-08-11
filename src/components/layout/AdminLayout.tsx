@@ -16,8 +16,28 @@ export function useAdminSearch() {
 export const AdminLayout: React.FC = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  // Preferensi collapse sidebar (desktop) — disimpan agar diingat antar sesi
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('sidebar_collapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
   const location = useLocation();
   const pathname = location.pathname;
+
+  const toggleSidebarCollapse = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sidebar_collapsed', next ? '1' : '0');
+      } catch {
+        // abaikan jika localStorage tidak tersedia
+      }
+      return next;
+    });
+  };
 
   // Reset kata kunci pencarian setiap pindah halaman
   useEffect(() => {
@@ -68,10 +88,16 @@ export const AdminLayout: React.FC = () => {
       <AdminSidebar
         isMobileOpen={mobileSidebarOpen}
         onMobileClose={() => setMobileSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0">
+      <div
+        className={`flex-1 flex flex-col min-h-screen min-w-0 transition-all duration-300 ${
+          sidebarCollapsed ? 'lg:ml-[68px]' : 'lg:ml-64'
+        }`}
+      >
         <AdminHeader
           onMenuClick={() => setMobileSidebarOpen(true)}
           searchTerm={searchTerm}

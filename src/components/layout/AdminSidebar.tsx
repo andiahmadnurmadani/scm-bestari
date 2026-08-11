@@ -20,6 +20,8 @@ import {
   Settings,
   AlertCircle,
   Headphones,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { authApi } from '../../api/endpoints/authApi';
 import { Modal } from '../common/Modal';
@@ -28,11 +30,15 @@ import { useCms } from '../../context/CmsContext';
 interface AdminSidebarProps {
   isMobileOpen?: boolean;
   onMobileClose?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   isMobileOpen = false,
   onMobileClose,
+  collapsed = false,
+  onToggleCollapse,
 }) => {
   const { cms } = useCms();
   const navigate = useNavigate();
@@ -63,7 +69,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   ];
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-[#FFF8F4] border-r border-[#c4c8bb]/20 p-3 justify-between select-none">
+    <div
+      className={`flex flex-col h-full bg-[#FFF8F4] border-r border-[#c4c8bb]/20 p-3 justify-between select-none transition-all duration-300 ${
+        collapsed ? 'w-[68px]' : 'w-64'
+      }`}
+    >
       <div>
         {/* Logo Banner */}
         <div className="flex items-center justify-between mb-4 px-1 pt-0.5">
@@ -79,14 +89,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 <Sprout className="w-3.5 h-3.5 text-[#C3E28D]" />
               </div>
             )}
-            <div className="flex flex-col">
-              <h1 className="text-sm font-extrabold text-[#172C05] leading-none whitespace-nowrap">
-                {cms.siteName || 'Sorgum SCM'}
-              </h1>
-              <p className="text-[9px] font-bold text-[#44483e] tracking-wider uppercase mt-0.5">
-                {cms.siteTagline || 'Sistem Manajemen'}
-              </p>
-            </div>
+            {!collapsed && (
+              <div className="flex flex-col">
+                <h1 className="text-sm font-extrabold text-[#172C05] leading-none whitespace-nowrap">
+                  {cms.siteName || 'Sorgum SCM'}
+                </h1>
+                <p className="text-[9px] font-bold text-[#44483e] tracking-wider uppercase mt-0.5">
+                  {cms.siteTagline || 'Sistem Manajemen'}
+                </p>
+              </div>
+            )}
           </div>
           {onMobileClose && (
             <button
@@ -107,9 +119,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 key={item.path}
                 to={item.path}
                 end={item.end}
+                title={collapsed ? item.label : undefined}
                 onClick={onMobileClose}
                 className={({ isActive }) =>
                   `flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 whitespace-nowrap ${
+                    collapsed ? 'justify-center px-1.5' : ''
+                  } ${
                     isActive
                       ? 'bg-[#C3E28D] text-[#172C05] font-semibold shadow-2xs'
                       : 'text-[#44483e] hover:text-[#172C05] hover:bg-[#efe0d2]/50'
@@ -117,29 +132,59 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 }
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
-                <span>{item.label}</span>
+                {!collapsed && <span>{item.label}</span>}
               </NavLink>
             );
           })}
         </nav>
       </div>
 
+      {/* Tombol collapse/expand — di tengah sidebar, antara menu & footer */}
+      {onToggleCollapse && (
+        <div className="pt-3 pb-1">
+          <button
+            onClick={onToggleCollapse}
+            title={collapsed ? 'Perluas menu' : 'Ciutkan menu'}
+            className={`hidden lg:flex w-full items-center gap-2.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
+              collapsed
+                ? 'justify-center px-1.5 py-2.5 bg-[#fff1e5] text-[#2C4219] hover:bg-[#efe0d2]'
+                : 'px-3 py-2.5 bg-[#fff1e5] text-[#2C4219] hover:bg-[#efe0d2]'
+            }`}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="w-4 h-4 shrink-0" />
+            ) : (
+              <>
+                <PanelLeftClose className="w-4 h-4 shrink-0" />
+                <span>Ciutkan menu</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Utility Bottom Links */}
       <div className="pt-3 border-t border-[#c4c8bb]/30 space-y-0.5">
         <button
           onClick={() => setHelpModalOpen(true)}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#44483e] hover:text-[#172C05] hover:bg-[#efe0d2]/50 transition-colors cursor-pointer"
+          title={collapsed ? 'Bantuan' : undefined}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#44483e] hover:text-[#172C05] hover:bg-[#efe0d2]/50 transition-colors cursor-pointer ${
+            collapsed ? 'justify-center px-1.5' : ''
+          }`}
         >
           <HelpCircle className="w-4 h-4 shrink-0" />
-          <span>Bantuan</span>
+          {!collapsed && <span>Bantuan</span>}
         </button>
 
         <button
           onClick={handleLogoutClick}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+          title={collapsed ? 'Keluar' : undefined}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50 transition-colors cursor-pointer ${
+            collapsed ? 'justify-center px-1.5' : ''
+          }`}
         >
           <LogOut className="w-4 h-4 shrink-0" />
-          <span>Keluar</span>
+          {!collapsed && <span>Keluar</span>}
         </button>
       </div>
 
@@ -349,7 +394,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   return (
     <>
       {/* Desktop fixed sidebar */}
-      <aside className="hidden lg:block fixed left-0 top-0 bottom-0 z-40 w-64 h-screen">
+      <aside
+        className={`hidden lg:block fixed left-0 top-0 bottom-0 z-40 h-screen transition-all duration-300 ${
+          collapsed ? 'w-[68px]' : 'w-64'
+        }`}
+      >
         {sidebarContent}
       </aside>
 
