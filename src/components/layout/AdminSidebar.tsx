@@ -70,7 +70,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   const sidebarContent = (
     <div
-      className={`flex flex-col h-full bg-[#FFF8F4] border-r border-[#c4c8bb]/20 p-3 justify-between select-none transition-all duration-300 ${
+      className={`relative flex flex-col h-full bg-[#FFF8F4] border-r border-[#c4c8bb]/20 p-3 justify-between select-none transition-all duration-300 ${
         collapsed ? 'w-[68px]' : 'w-64'
       }`}
     >
@@ -139,21 +139,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </nav>
       </div>
 
-      {/* Tombol collapse/expand — bulat di tepi kanan sidebar */}
+      {/* Tombol collapse/expand — bulat di GARIS perbatasan sidebar & main
+          (menonjol keluar dari tepi kanan sidebar, di tengah vertikal) */}
       {onToggleCollapse && (
-        <div className="pt-3 pb-1 hidden lg:flex justify-center">
-          <button
-            onClick={onToggleCollapse}
-            title={collapsed ? 'Perluas menu' : 'Ciutkan menu'}
-            className="w-8 h-8 rounded-full bg-[#2C4219] text-white hover:bg-[#172C05] shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0"
-          >
-            {collapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
-            )}
-          </button>
-        </div>
+        <button
+          onClick={onToggleCollapse}
+          title={collapsed ? 'Perluas menu' : 'Ciutkan menu'}
+          className="hidden lg:flex absolute right-[-14px] top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-[#2C4219] text-white hover:bg-[#172C05] shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer items-center justify-center shrink-0"
+        >
+          {collapsed ? (
+            <ChevronRight className="w-4 h-4" />
+          ) : (
+            <ChevronLeft className="w-4 h-4" />
+          )}
+        </button>
       )}
 
       {/* Utility Bottom Links */}
