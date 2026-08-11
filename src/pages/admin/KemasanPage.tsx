@@ -43,7 +43,8 @@ interface ProductExtra {
   nilaiGizi: NilaiGizi;
   akg: AkgRow[];
   riwayat: RiwayatItem[];
-  imageDataUrl?: string;      // base64 preview
+  imageDataUrl?: string;      // backward compat (1 foto lama)
+  imagesDataUrl?: string[];   // 1–4 foto baru
 }
 
 // ── Default values ────────────────────────────────────────────────────────────
@@ -81,6 +82,7 @@ const getExtra = (item?: { extraData?: PackagingMaterial['extraData'] } | null):
     akg: e.akg && e.akg.length > 0 ? e.akg.map((r) => ({ ...r })) : defaultAkg.map((r) => ({ ...r })),
     riwayat: e.riwayat || [],
     imageDataUrl: e.imageDataUrl,
+    imagesDataUrl: Array.isArray(e.imagesDataUrl) ? [...e.imagesDataUrl] : undefined,
   };
 };
 
@@ -135,10 +137,10 @@ export const KemasanPage: React.FC = () => {
   });
   const [formExtra, setFormExtra] = useState<ProductExtra>({
     komposisi: '', nilaiGizi: { ...defaultNilaiGizi },
-    akg: defaultAkg.map((r) => ({ ...r })), riwayat: [], imageDataUrl: undefined,
+    akg: defaultAkg.map((r) => ({ ...r })), riwayat: [], imageDataUrl: undefined, imagesDataUrl: undefined,
   });
 
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
   const fetchPackaging = async (targetPage = page, search = searchTerm, cat = activeCategoryTab) => {
     setLoading(true);
@@ -179,7 +181,7 @@ export const KemasanPage: React.FC = () => {
       stokTersedia: '', satuan: 'Pcs', stokMinimal: '',
       pemasok: '', hargaPerUnitRp: '',
     });
-    setFormExtra({ komposisi: '', nilaiGizi: { ...defaultNilaiGizi }, akg: defaultAkg.map((r) => ({ ...r })), riwayat: [] });
+    setFormExtra({ komposisi: '', nilaiGizi: { ...defaultNilaiGizi }, akg: defaultAkg.map((r) => ({ ...r })), riwayat: [], imageDataUrl: undefined, imagesDataUrl: undefined });
     setIsModalOpen(true);
   };
 
@@ -216,14 +218,18 @@ export const KemasanPage: React.FC = () => {
         akg: formExtra.akg,
         riwayat: [newRiwayat, ...(formExtra.riwayat ?? [])],
         imageDataUrl: formExtra.imageDataUrl,
+        imagesDataUrl: formExtra.imagesDataUrl && formExtra.imagesDataUrl.length > 0 ? formExtra.imagesDataUrl : undefined,
       },
     };
     if (editId) {
       await packagingApi.update(editId, payload);
     } else {
       // Foto WAJIB saat menambah data kemasan baru
-      if (!formExtra.imageDataUrl) {
-        setToast({ msg: 'Foto produk wajib diisi. Silakan unggah foto kemasan terlebih dahulu.', type: 'error' });
+      const hasImage =
+        (formExtra.imagesDataUrl && formExtra.imagesDataUrl.length > 0) ||
+        !!formExtra.imageDataUrl;
+      if (!hasImage) {
+        setToast({ msg: 'Foto produk wajib diisi. Silakan unggah minimal 1 foto kemasan.', type: 'error' });
         return;
       }
       await packagingApi.create(payload);
@@ -244,12 +250,51 @@ export const KemasanPage: React.FC = () => {
     setPage(targetPage);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, slot: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => setFormExtra((prev) => ({ ...prev, imageDataUrl: reader.result as string }));
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setFormExtra((prev) => {
+        const images = prev.imagesDataUrl ? [...prev.imagesDataUrl] : [];
+        // Slot 0 = gambar utama (imageDataUrl untuk backward compat), 1..3 = gambar tambahan
+        if (slot === 0) {
+          images[0] = dataUrl;
+          return { ...prev, imagesDataUrl: images.slice(0, 4), imageDataUrl: dataUrl };
+        }
+        images[slot] = dataUrl;
+        return { ...prev, imagesDataUrl: images.slice(0, 4) };
+      });
+    };
     reader.readAsDataURL(file);
+  };
+
+  const removeImage = (slot: number) => {
+    setFormExtra((prev) => {
+      const images = prev.imagesDataUrl ? [...prev.imagesDataUrl] : [];
+      if (slot === 0) {
+        images.splice(0, 1);
+        return {
+          ...prev,
+          imagesDataUrl: images.slice(0, 4),
+          imageDataUrl: images[0],
+        };
+      }
+      images.splice(slot, 1);
+      return { ...prev, imagesDataUrl: images.slice(0, 4) };
+    });
+  };
+
+  // Gabungkan gambar lama (imageDataUrl) + baru (imagesDataUrl) untuk render
+  const getAllImages = (extra: ProductExtra): string[] => {
+    const list: string[] = [];
+    if (extra.imagesDataUrl && extra.imagesDataUrl.length > 0) {
+      list.push(...extra.imagesDataUrl);
+    } else if (extra.imageDataUrl) {
+      list.push(extra.imageDataUrl);
+    }
+    return list.slice(0, 4);
   };
 
   const updateGizi = (key: keyof NilaiGizi, val: number) =>
@@ -396,14 +441,20 @@ export const KemasanPage: React.FC = () => {
                           <div className="p-4 sm:p-5 space-y-4">
                             {/* Photo + tabs header */}
                             <div className="flex flex-col sm:flex-row gap-4">
-                              {/* Product image */}
+                              {/* Product images (1–4) */}
                               <div className="shrink-0">
-                                {extra.imageDataUrl ? (
-                                  <img
-                                    src={extra.imageDataUrl}
-                                    alt={item.namaKemasan}
-                                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl object-cover border border-[#c4c8bb]/30 shadow-sm"
-                                  />
+                                {getAllImages(extra).length > 0 ? (
+                                  <div className="grid grid-cols-2 gap-1.5 w-24 sm:w-28">
+                                    {getAllImages(extra).map((img, i) => (
+                                      <img
+                                        key={i}
+                                        src={img}
+                                        alt={`${item.namaKemasan} foto ${i + 1}`}
+                                        className={`w-full rounded-lg object-cover border border-[#c4c8bb]/30 shadow-sm ${i === 0 ? 'col-span-2' : ''}`}
+                                        style={{ height: i === 0 ? '5.5rem' : '3.5rem' }}
+                                      />
+                                    ))}
+                                  </div>
                                 ) : (
                                   <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl border-2 border-dashed border-[#c4c8bb]/40 flex flex-col items-center justify-center gap-1 text-[#9CA3AF] bg-white">
                                     <Package className="w-6 h-6" />
@@ -616,39 +667,56 @@ export const KemasanPage: React.FC = () => {
           {/* ── Tab: Data Dasar ── */}
           {modalTab === 'dasar' && (
             <div className="space-y-4">
-              {/* Image upload */}
+              {/* Image upload (1–4 foto) */}
               <div>
-                <label className={labelCls}>Foto Produk (JPG / PNG)</label>
-                <div
-                  className="relative border-2 border-dashed border-[#c4c8bb]/40 rounded-xl p-4 flex flex-col items-center gap-2 cursor-pointer hover:border-[#2C4219]/40 hover:bg-[#F7F7F5] transition-all group"
-                  onClick={() => fileRef.current?.click()}
-                >
-                  {formExtra.imageDataUrl ? (
-                    <>
-                      <img src={formExtra.imageDataUrl} alt="Preview" className="w-24 h-24 rounded-xl object-cover border border-[#c4c8bb]/30" />
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setFormExtra((p) => ({ ...p, imageDataUrl: undefined })); }}
-                        className="absolute top-2 right-2 p-0.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200 cursor-pointer"
+                <label className={labelCls}>Foto Produk (JPG / PNG) — maks. 4 foto</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[0, 1, 2, 3].map((slot) => {
+                    const img = formExtra.imagesDataUrl?.[slot] ?? (slot === 0 ? formExtra.imageDataUrl : undefined);
+                    return (
+                      <div
+                        key={slot}
+                        className="relative border-2 border-dashed border-[#c4c8bb]/40 rounded-xl p-3 flex flex-col items-center gap-1.5 cursor-pointer hover:border-[#2C4219]/40 hover:bg-[#F7F7F5] transition-all group min-h-[110px] justify-center"
+                        onClick={() => fileRefs[slot].current?.click()}
                       >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                      <p className="text-[10px] text-[#9CA3AF] font-medium">Klik untuk ganti foto</p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center group-hover:bg-[#C3E28D]/50 transition-colors">
-                        <ImagePlus className="w-5 h-5" />
+                        {img ? (
+                          <>
+                            <img src={img} alt={`Preview ${slot + 1}`} className="w-20 h-20 rounded-lg object-cover border border-[#c4c8bb]/30" />
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); removeImage(slot); }}
+                              className="absolute top-1.5 right-1.5 p-0.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200 cursor-pointer"
+                              title="Hapus foto"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                            <p className="text-[9px] text-[#9CA3AF] font-medium">Klik untuk ganti</p>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-8 h-8 rounded-lg bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center group-hover:bg-[#C3E28D]/50 transition-colors">
+                              <ImagePlus className="w-4 h-4" />
+                            </div>
+                            <p className="text-[10px] font-semibold text-[#2C4219] text-center leading-tight">
+                              {slot === 0 ? 'Foto utama' : `Foto ${slot + 1}`}
+                            </p>
+                            <p className="text-[9px] text-[#9CA3AF] text-center">JPG/PNG, maks 5 MB</p>
+                          </>
+                        )}
+                        <input
+                          ref={fileRefs[slot]}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          onChange={(e) => handleImageUpload(e, slot)}
+                        />
                       </div>
-                      <p className="text-xs font-semibold text-[#2C4219]">Upload foto produk</p>
-                      <p className="text-[10px] text-[#9CA3AF]">JPG atau PNG, maks. 5 MB</p>
-                    </>
-                  )}
-                  <input ref={fileRef} type="file" accept="image/jpeg,image/png" className="hidden" onChange={handleImageUpload} />
+                    );
+                  })}
                 </div>
                 {!editId && (
                   <p className="text-[11px] font-semibold text-red-500 mt-1">
-                    * Foto produk wajib diisi saat menambah data kemasan baru
+                    * Foto utama wajib diisi saat menambah data kemasan baru (bisa tambah hingga 4 foto)
                   </p>
                 )}
               </div>

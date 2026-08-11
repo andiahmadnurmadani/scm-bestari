@@ -18,6 +18,49 @@ html {
   }
 }
 
+/* ── Tipografi: teks isi tidak tebal ────────────────────────────────────────
+   Hanya judul (h1–h6), tombol, dan elemen penting yang boleh tebal.
+   Utility Tailwind font-bold/font-semibold dinetralkan agar tidak mendominasi. */
+@layer utilities {
+  /* Heading tetap tegas (judul/sub judul) */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+  }
+  h1 { font-weight: 800; }
+
+  /* Teks isi: ringan & nyaman dibaca */
+  body,
+  p,
+  span,
+  div,
+  li,
+  td,
+  th,
+  input,
+  select,
+  textarea,
+  button,
+  label,
+  small,
+  a {
+    font-weight: 400;
+  }
+
+  /* Tombol (button) boleh tebal agar jelas interaktif */
+  button {
+    font-weight: 600;
+  }
+
+  /* Utility Tailwind dibiarkan menang (spesifik) untuk yang memang penting,
+     tapi elemen isi yang sering kebanyakan bold kita turunkan ke 500 (semi).
+     font-bold (700) & font-semibold (600) di dalam elemen isi → 500. */
+  :where(p, span, div, li, td, th, label, small, a, input, select, textarea) {
+    &.font-bold, &.font-semibold, &.font-medium, &.font-extrabold {
+      font-weight: 500;
+    }
+  }
+}
+
 .organic-shadow {
   box-shadow: 0 10px 30px -5px rgba(67, 58, 48, 0.06);
 }

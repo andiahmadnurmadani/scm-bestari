@@ -55,7 +55,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { label: 'Panen', path: '/dashboard/panen', icon: Sprout },
     { label: 'Kelola Lahan', path: '/dashboard/lahan', icon: Tractor },
     { label: 'Sarana & Peralatan', path: '/dashboard/peralatan', icon: Wrench },
-    { label: 'Kelola Produksi', path: '/dashboard/produksi', icon: Factory },
+    { label: 'Kelola Olahan', path: '/dashboard/produksi', icon: Factory },
     { label: 'Kelola Sertifikat', path: '/dashboard/sertifikat', icon: Award },
     { label: 'Kelola Data Kemasan', path: '/dashboard/kemasan', icon: Package },
     { label: 'Logistik', path: '/dashboard/logistik', icon: Truck },

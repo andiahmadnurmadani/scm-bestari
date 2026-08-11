@@ -137,6 +137,7 @@ export interface PackagingMaterial {
     akg?: Array<{ nutrisi: string; perSajian: string; akgPersen: number }>;
     riwayat?: Array<{ tanggal: string; aksi: string; keterangan: string; oleh: string }>;
     imageDataUrl?: string;
+    imagesDataUrl?: string[];
   } | null;
 }
 

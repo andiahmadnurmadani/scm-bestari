@@ -39,7 +39,7 @@ export const PublicFooter: React.FC = () => {
             </h4>
             <ul className="space-y-2 text-xs text-[#c4c8bb]">
               <li><a href="/#fitur" className="hover:text-[#C3E28D] transition-colors">Monitoring Panen</a></li>
-              <li><a href="/#fitur" className="hover:text-[#C3E28D] transition-colors">Kelola Produksi &amp; Sertifikat</a></li>
+              <li><a href="/#fitur" className="hover:text-[#C3E28D] transition-colors">Kelola Olahan &amp; Sertifikat</a></li>
               <li><a href="/#fitur" className="hover:text-[#C3E28D] transition-colors">Logistik &amp; Keuangan</a></li>
               <li><Link to="/login" className="hover:text-[#C3E28D] transition-colors">Portal Dashboard Admin</Link></li>
             </ul>

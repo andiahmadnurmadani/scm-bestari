@@ -157,12 +157,12 @@ export const ProduksiPage: React.FC = () => {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-[#2C4219] tracking-tight">Kelola Produksi Olahan Sorgum</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-[#2C4219] tracking-tight">Kelola Olahan Sorgum</h1>
         </div>
 
         <div className="w-full sm:w-auto">
           <Button onClick={handleOpenAdd} icon={<Plus className="w-3.5 h-3.5" />} variant="primary" className="w-full sm:w-auto text-xs py-1.5 px-3 justify-center">
-            Buat Batch Produksi Baru
+            Buat Batch Olahan Baru
           </Button>
         </div>
       </div>
@@ -176,7 +176,7 @@ export const ProduksiPage: React.FC = () => {
         </div>
 
         <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#8C9E5B]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">BATCH PRODUKSI AKTIF</p>
+          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">BATCH OLAHAN AKTIF</p>
           <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">{activeBatchesCount} Batch Aktif</h3>
           <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Tersimpan di Gudang A & B</p>
         </div>
@@ -197,7 +197,7 @@ export const ProduksiPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Factory className="w-3.5 h-3.5 text-[#2C4219]" />
             <h3 className="font-semibold text-[#2C4219] text-sm">
-              Tabel Data Batch Produksi
+              Tabel Data Batch Olahan
             </h3>
           </div>
 
@@ -227,7 +227,7 @@ export const ProduksiPage: React.FC = () => {
                 <th className="py-2 px-3 pl-4">KODE BATCH</th>
                 <th className="py-2 px-3">NAMA PRODUK</th>
                 <th className="py-2 px-3">KATEGORI</th>
-                <th className="py-2 px-3">TANGGAL PRODUKSI</th>
+                <th className="py-2 px-3">TANGGAL OLAHAN</th>
                 <th className="py-2 px-3">TOTAL HASIL</th>
                 <th className="py-2 px-3">BATCH RAW MAT.</th>
                 <th className="py-2 px-3">STATUS QC</th>
@@ -239,13 +239,13 @@ export const ProduksiPage: React.FC = () => {
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-[#6B7280]">
                     <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
-                    Memuat data produksi...
+                    Memuat data olahan...
                   </td>
                 </tr>
               ) : batches.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-[#6B7280]">
-                    Tidak ada batch produksi yang ditemukan.
+                    Tidak ada batch olahan yang ditemukan.
                   </td>
                 </tr>
               ) : (
@@ -347,11 +347,11 @@ export const ProduksiPage: React.FC = () => {
         )}
       </div>
 
-      {/* Modal Form Batch Produksi */}
+      {/* Modal Form Batch Olahan */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editId ? 'Edit Batch Produksi' : 'Catat Batch Produksi Baru'}
+        title={editId ? 'Edit Batch Olahan' : 'Catat Batch Olahan Baru'}
         subtitle="Input detail produk olahan sorgum dan penetapan QC"
       >
         <form onSubmit={handleSave} className="space-y-4">

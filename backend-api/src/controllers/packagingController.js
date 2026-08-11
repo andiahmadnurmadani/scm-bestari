@@ -29,6 +29,27 @@ function validatePackaging(data) {
   return null;
 }
 
+/**
+ * Normalisasi foto produk: mendukung array `imagesDataUrl` (1–4 foto).
+ * Tetap kompatibel dengan data lama `imageDataUrl` (string tunggal) → dikonversi ke array.
+ * Mengembalikan array data URL gambar yang valid, atau [] jika tidak ada.
+ */
+function normalizeImages(data) {
+  const extra = data && typeof data === 'object' ? data.extraData : null;
+  if (!extra) return [];
+
+  let raw = extra.imagesDataUrl;
+  // Backward compat: data lama pakai imageDataUrl string tunggal
+  if (!Array.isArray(raw) && typeof extra.imageDataUrl === 'string') {
+    raw = [extra.imageDataUrl];
+  }
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .filter((u) => typeof u === 'string' && u.startsWith('data:image/'))
+    .slice(0, 4); // maksimal 4 foto
+}
+
 /** Hitung status stok otomatis berdasarkan stok tersedia & minimal. */
 function computeStatusStok(stokTersedia, stokMinimal) {
   if (Number(stokTersedia) <= 0) return 'Habis';
@@ -134,12 +155,19 @@ export async function createPackaging(req, res) {
       kodeKemasan = `KMG-${String(maxSeq + 1).padStart(3, '0')}`;
     }
 
-    // Foto produk WAJIB saat menambah data kemasan baru
-    const hasFoto = data.extraData && typeof data.extraData.imageDataUrl === 'string'
-      && data.extraData.imageDataUrl.startsWith('data:image/');
-    if (!hasFoto) {
-      return res.status(400).json({ success: false, message: 'Foto produk wajib diisi saat menambah data kemasan.' });
+    // Foto produk WAJIB saat menambah data kemasan baru (minimal 1, maksimal 4)
+    const images = normalizeImages(data);
+    if (images.length === 0) {
+      return res.status(400).json({ success: false, message: 'Foto produk wajib diisi saat menambah data kemasan (minimal 1 foto).' });
     }
+
+    // Siapkan extra_data: pastikan imagesDataUrl tersimpan sebagai array
+    const extraData = {
+      ...(data.extraData || {}),
+      imageDataUrl: undefined,
+      imagesDataUrl: images,
+    };
+    delete extraData.imageDataUrl;
 
     const stokTersedia = Number(data.stokTersedia) || 0;
     const stokMinimal = Number(data.stokMinimal) || 0;
@@ -161,7 +189,7 @@ export async function createPackaging(req, res) {
         data.pemasok || '',
         Number(data.hargaPerUnitRp) || 0,
         statusStok,
-        data.extraData ? JSON.stringify(data.extraData) : null,
+        data.extraData ? JSON.stringify(extraData) : null,
       ]
     );
 
@@ -216,8 +244,16 @@ export async function updatePackaging(req, res) {
     const values = [];
     for (const [key, column] of Object.entries(fieldMap)) {
       if (data[key] !== undefined) {
+        let value = data[key];
+        if (key === 'extraData') {
+          // Update: normalisasi foto juga (jika user mengirim imagesDataUrl)
+          const images = normalizeImages(data);
+          const merged = { ...data.extraData, imagesDataUrl: images };
+          delete merged.imageDataUrl;
+          value = JSON.stringify(merged);
+        }
         sets.push(`${column} = ?`);
-        values.push(key === 'extraData' ? JSON.stringify(data[key]) : data[key]);
+        values.push(value);
       }
     }
 

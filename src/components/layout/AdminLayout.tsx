@@ -35,7 +35,7 @@ export const AdminLayout: React.FC = () => {
       panen: 'Panen',
       lahan: 'Kelola Lahan',
       peralatan: 'Sarana & Peralatan',
-      produksi: 'Kelola Produksi',
+      produksi: 'Kelola Olahan',
       sertifikat: 'Kelola Sertifikat',
       kemasan: 'Kelola Data Kemasan',
       logistik: 'Logistik',
