@@ -94,28 +94,37 @@ export async function initDatabase() {
     console.warn('⚠ Migrasi users.avatar dilewati:', alterError.message);
   }
 
-  // Seed user admin awal jika tabel users kosong
+  // Seed user admin awal — SELALU pastikan user admin demo ada
+  // (bukan hanya saat tabel kosong, agar server hosting juga bisa login
+  //  dengan admin@sorgum.com / password).
   const [uCount] = await pool.query('SELECT COUNT(*) AS total FROM users');
-  if (Number(uCount[0].total) === 0) {
+  const [adminRow] = await pool.execute(
+    'SELECT id FROM users WHERE email = ? LIMIT 1',
+    ['admin@sorgum.com']
+  );
+  if (Number(uCount[0].total) === 0 || adminRow.length === 0) {
     const adminHash = await bcrypt.hash('password', 10);
-    await pool.execute(
-      `INSERT INTO users (name, email, phone, password_hash, role, jabatan, nama_kwt, alamat, kecamatan, kabupaten, bio)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        'Admin Sorgum SCM',
-        'admin@sorgum.com',
-        '081234567890',
-        adminHash,
-        'Admin KWT',
-        'Ketua KWT',
-        'KWT Sorgum Mandiri Sejahtera',
-        'Dusun Sukamaju, Desa Sukamaju',
-        'Cisalak',
-        'Kabupaten Bogor',
-        'Pengelola sistem manajemen rantai pasok sorgum untuk Kelompok Wanita Tani.',
-      ]
-    );
-    console.log('✓ Seed user admin: admin@sorgum.com / password');
+    // Upsert: kalau belum ada → insert; kalau ada tapi beda email (tidak mungkin) → skip
+    if (adminRow.length === 0) {
+      await pool.execute(
+        `INSERT INTO users (name, email, phone, password_hash, role, jabatan, nama_kwt, alamat, kecamatan, kabupaten, bio)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          'Admin Sorgum SCM',
+          'admin@sorgum.com',
+          '081234567890',
+          adminHash,
+          'Admin KWT',
+          'Ketua KWT',
+          'KWT Sorgum Mandiri Sejahtera',
+          'Dusun Sukamaju, Desa Sukamaju',
+          'Cisalak',
+          'Kabupaten Bogor',
+          'Pengelola sistem manajemen rantai pasok sorgum untuk Kelompok Wanita Tani.',
+        ]
+      );
+      console.log('✓ Seed user admin: admin@sorgum.com / password');
+    }
   }
 
   // Auto-migrasi: tabel cms_settings (konten landing page)

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Sprout, Lock, Mail, ArrowRight, Tractor, Eye, EyeOff } from 'lucide-react';
 import { authApi } from '../../api/endpoints/authApi';
 import { useCms } from '../../context/CmsContext';
@@ -8,7 +7,6 @@ import { PublicFooter } from '../../components/layout/PublicFooter';
 import sorghumGrainImg from '../../assets/sorghum_grain.jpg';
 
 export const LoginPage: React.FC = () => {
-  const navigate = useNavigate();
   const { cms } = useCms();
   // Aplikasi single-user: kredensial diisi otomatis, user tinggal klik Masuk
   const [usernameOrEmail, setUsernameOrEmail] = useState('admin@sorgum.com');
@@ -28,7 +26,8 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
     try {
       await authApi.login({ usernameOrEmail, password });
-      navigate('/dashboard');
+      // Token tersimpan di localStorage oleh authApi → langsung ke dashboard
+      window.location.href = '/dashboard';
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Gagal masuk. Periksa kembali kredensial Anda.';
       setError(message);
