@@ -52,6 +52,13 @@ function createClient() {
 
       if (error.response) {
         if (error.response.status === 401) {
+          // Jangan logout/redirect jika ini request LOGIN (401 wajar saat kredensial salah)
+          const url = error.config?.url || '';
+          const isLoginRequest = url.includes('/auth/login') || url.includes('/auth/register');
+          if (isLoginRequest) {
+            return Promise.reject(error); // biarkan halaman login menampilkan pesan
+          }
+
           // Token tidak valid / kedaluwarsa → logout otomatis & redirect ke login
           const hadToken = !!localStorage.getItem('token');
           localStorage.removeItem('token');
