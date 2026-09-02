@@ -10,6 +10,7 @@ import authRoutes from './routes/authRoutes.js';
 import harvestRoutes from './routes/harvestRoutes.js';
 import varietyRoutes from './routes/varietyRoutes.js';
 import landRoutes from './routes/landRoutes.js';
+import plantingRoutes from './routes/plantingRoutes.js';
 import equipmentRoutes from './routes/equipmentRoutes.js';
 import productionRoutes from './routes/productionRoutes.js';
 import certificateRoutes from './routes/certificateRoutes.js';
@@ -18,6 +19,7 @@ import logisticsRoutes from './routes/logisticsRoutes.js';
 import cmsRoutes from './routes/cmsRoutes.js';
 import notificationsRoutes from './routes/notificationsRoutes.js';
 import apiKeyRoutes from './routes/apiKeyRoutes.js';
+import warehouseRoutes from './routes/warehouseRoutes.js';
 import { openApiSpec } from './openapi.js';
 import { apiReference } from '@scalar/express-api-reference';
 import { seedHarvests } from './seeders/seedHarvests.js';
@@ -54,6 +56,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/harvest', harvestRoutes);
 app.use('/api/varieties', varietyRoutes);
 app.use('/api/land', landRoutes);
+app.use('/api/plantings', plantingRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/production', productionRoutes);
 app.use('/api/certificates', certificateRoutes);
@@ -62,6 +65,7 @@ app.use('/api/logistics', logisticsRoutes);
 app.use('/api/cms', cmsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/keys', apiKeyRoutes);
+app.use('/api/warehouse', warehouseRoutes);
 
 // ── Dokumentasi API (Scalar) ─────────────────────────────────────────────────
 app.use(
@@ -89,7 +93,7 @@ app.use((err, _req, res, _next) => {
 async function startServer() {
   try {
     await initDatabase(); // Auto-create database & tabel, lalu siapkan pool
-    await seedHarvests(); // Seed data panen awal jika tabel masih kosong
+    // await seedHarvests(); // DINONAKTIFKAN sesuai permintaan user: data panen tidak boleh auto-terisi saat restart
     app.listen(PORT, () => {
       console.log('──────────────────────────────────────────────');
       console.log(`  Sorgum SCM API berjalan di:`);

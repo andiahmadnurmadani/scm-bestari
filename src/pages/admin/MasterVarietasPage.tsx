@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Trash2, Sprout, CheckCircle2, XCircle, Pencil, Upload, Image as ImageIcon, X, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Sprout, Pencil, Upload, Image as ImageIcon, X, AlertTriangle, Calendar } from 'lucide-react';
 import { varietyApi, Variety } from '../../api/endpoints/varietyApi';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
@@ -14,7 +14,7 @@ export const MasterVarietasPage: React.FC = () => {
   // Modal state (tambah/edit)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState<{ name: string; description: string; lamaPanen: string }>({ name: '', description: '', lamaPanen: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -54,7 +54,7 @@ export const MasterVarietasPage: React.FC = () => {
 
   const openCreateModal = () => {
     setEditingId(null);
-    setFormData({ name: '', description: '' });
+    setFormData({ name: '', description: '', lamaPanen: '' });
     setFormError(null);
     setImagePreview(null);
     setSelectedImage(null);
@@ -64,7 +64,7 @@ export const MasterVarietasPage: React.FC = () => {
 
   const openEditModal = (v: Variety) => {
     setEditingId(v.id);
-    setFormData({ name: v.name, description: v.description });
+    setFormData({ name: v.name, description: v.description, lamaPanen: String(v.lamaPanen ?? 100) });
     setFormError(null);
     setImagePreview(v.imageUrl || null);
     setSelectedImage(null);
@@ -109,6 +109,7 @@ export const MasterVarietasPage: React.FC = () => {
         name: formData.name.trim(),
         description: formData.description,
         imageUrl: imagePreview, // base64 atau null (jika dihapus)
+        lamaPanen: Number(formData.lamaPanen) || 100,
       };
       if (editingId) {
         await varietyApi.update(editingId, payload);
@@ -158,23 +159,18 @@ export const MasterVarietasPage: React.FC = () => {
       </div>
 
       {/* Summary Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-3xl">
         <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#1C3615]">
           <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL VARIETAS</p>
           <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5">{varieties.length}</h3>
           <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Terdaftar di master data</p>
         </div>
         <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#8C9E5B]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">DIGUNAKAN DI PANEN</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5">6+</h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Varietas aktif di data panen</p>
-        </div>
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#DEB938]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">STATUS</p>
+          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">RATA-RATA ESTIMASI PANEN</p>
           <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5">
-            {varieties.filter((v) => v.isActive).length} Aktif
+            {varieties.length ? Math.round(varieties.reduce((a, v) => a + (v.lamaPanen ?? 100), 0) / varieties.length) : 0} hari
           </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Semua varietas aktif</p>
+          <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Umur panen rata-rata varietas</p>
         </div>
       </div>
 
@@ -194,16 +190,16 @@ export const MasterVarietasPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Table */}
+        {/* Table — alignment rata tengah vertikal & deskripsi wrap */}
         <div className="overflow-x-auto custom-scrollbar px-1">
-          <table className="w-full text-left text-xs min-w-[560px]">
+          <table className="w-full text-left text-xs min-w-[640px] border-collapse">
             <thead>
               <tr className="bg-[#F7F7F5] text-[#6B7280] font-bold uppercase text-[11px] tracking-wider border-y border-[#c4c8bb]/20">
-                <th className="py-2 px-3">GAMBAR</th>
-                <th className="py-2 px-3">NAMA VARIETAS</th>
-                <th className="py-2 px-3">DESKRIPSI</th>
-                <th className="py-2 px-3 text-center">STATUS</th>
-                <th className="py-2 px-3 text-center">AKSI</th>
+                <th className="py-2.5 px-3 text-center align-middle w-[72px] whitespace-nowrap">GAMBAR</th>
+                <th className="py-2.5 px-3 align-middle whitespace-nowrap">NAMA VARIETAS</th>
+                <th className="py-2.5 px-3 align-middle min-w-[260px]">DESKRIPSI</th>
+                <th className="py-2.5 px-3 text-center align-middle w-[130px] whitespace-nowrap">ESTIMASI PANEN</th>
+                <th className="py-2.5 px-3 text-center align-middle w-[168px] whitespace-nowrap">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 font-medium text-[#221A12]">
@@ -223,8 +219,8 @@ export const MasterVarietasPage: React.FC = () => {
               ) : (
                 filtered.map((v) => (
                   <tr key={v.id} className="hover:bg-[#F7F7F5] transition-colors">
-                    <td className="py-2.5 px-3">
-                      <div className="w-11 h-11 rounded-lg overflow-hidden border border-[#c4c8bb]/30 bg-[#F7F7F5] shrink-0">
+                    <td className="py-3 px-3 align-middle text-center">
+                      <div className="w-11 h-11 rounded-lg overflow-hidden border border-[#c4c8bb]/30 bg-[#F7F7F5] shrink-0 mx-auto flex items-center justify-center">
                         {v.imageUrl ? (
                           <img
                             src={v.imageUrl}
@@ -239,31 +235,24 @@ export const MasterVarietasPage: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="py-2.5 px-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-[#172C05]">{v.name}</span>
-                      </div>
+                    <td className="py-3 px-3 align-middle">
+                      <span className="font-bold text-[#172C05] leading-snug">{v.name}</span>
                     </td>
-                    <td className="py-2.5 px-3 text-[#44483e] max-w-xs">
-                      {v.description || <span className="text-[#9CA3AF]">—</span>}
+                    <td className="py-3 px-3 align-middle text-[#44483e] min-w-[260px] max-w-[380px] whitespace-normal break-words leading-relaxed">
+                      {v.description ? <span className="inline-block">{v.description}</span> : <span className="text-[#9CA3AF]">—</span>}
                     </td>
-                    <td className="py-2.5 px-3 text-center">
-                      {v.isActive ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#D1E6A5] text-[#2C4219] text-[10px] font-bold">
-                          <CheckCircle2 className="w-3 h-3" /> Aktif
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#F3F4F6] text-[#6B7280] text-[10px] font-bold">
-                          <XCircle className="w-3 h-3" /> Nonaktif
-                        </span>
-                      )}
+                    <td className="py-3 px-3 align-middle text-center whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#fff1e5] text-[#2C4219] text-[11px] font-bold leading-none">
+                        <Calendar className="w-3 h-3" />
+                        {v.lamaPanen ?? 100} hari
+                      </span>
                     </td>
-                    <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                    <td className="py-3 px-3 align-middle text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => openEditModal(v)}
                           title="Edit Varietas"
-                          className="min-h-8 px-2.5 py-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-[#2C4219] hover:bg-[#C3E28D]/40 hover:border-[#2C4219] transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
+                          className="min-h-8 px-2.5 py-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-[#2C4219] hover:bg-[#C3E28D]/40 hover:border-[#2C4219] transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5 text-[11px] font-bold leading-none"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                           <span>Edit</span>
@@ -271,7 +260,7 @@ export const MasterVarietasPage: React.FC = () => {
                         <button
                           onClick={() => setDeleteTarget(v)}
                           title="Hapus Varietas"
-                          className="min-h-8 px-2.5 py-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
+                          className="min-h-8 px-2.5 py-1.5 rounded-lg bg-[#F7F7F5] border border-[#c4c8bb]/30 text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors cursor-pointer inline-flex items-center justify-center gap-1.5 text-[11px] font-bold leading-none"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>Hapus</span>
@@ -297,18 +286,37 @@ export const MasterVarietasPage: React.FC = () => {
         subtitle="Nama varietas akan muncul di dropdown modul Panen, Lahan, dan Produksi"
       >
         <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Nama Varietas
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Contoh: Sorgum Bioguma 1"
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
-              required
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+                Nama Varietas
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Contoh: Sorgum Bioguma 1"
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+                Estimasi Panen (Hari)
+              </label>
+              <input
+                type="number"
+                min="30"
+                max="365"
+                step="1"
+                value={formData.lamaPanen}
+                onChange={(e) => setFormData({ ...formData, lamaPanen: e.target.value })}
+                placeholder="Contoh: 100"
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+              />
+              <p className="text-[11px] text-[#6B7280] mt-1">Umur panen sorgum ini (hari sejak tanam). Dipakai untuk menghitung perkiraan panen otomatis.</p>
+            </div>
           </div>
 
           <div>

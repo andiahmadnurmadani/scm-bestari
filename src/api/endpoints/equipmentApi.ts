@@ -18,10 +18,18 @@ export interface EquipmentListResponse {
 
 export const equipmentApi = {
   /**
-   * GET /api/equipment?page=&limit=&search=
+   * GET /api/equipment?page=&limit=&search=&status=&kondisi=&perhatian=
    * Mengembalikan { data, pagination } dari backend.
+   * - perhatian=1 → hanya alat yang sedang dipakai / butuh perawatan
    */
-  getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
+  getAll: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    kondisi?: string;
+    perhatian?: 1 | 0;
+  }) => {
     const response = await axiosClient.get('/equipment', { params });
     return response.data as EquipmentListResponse;
   },

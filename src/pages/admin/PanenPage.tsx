@@ -21,23 +21,32 @@ import {
   Edit3,
   FileSpreadsheet,
   AlertTriangle,
+  MapPin,
+  Clock,
+  Layers,
+  User,
+  CalendarDays,
+  Hash,
 } from 'lucide-react';
 import { harvestApi } from '../../api/endpoints/harvestApi';
 import { varietyApi, Variety } from '../../api/endpoints/varietyApi';
 import { landApi } from '../../api/endpoints/landApi';
-import { HarvestRecord, LandPlot } from '../../types';
+import { plantingApi } from '../../api/endpoints/plantingApi';
+import { HarvestRecord, LandPlot, Planting } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { ActionButtons } from '../../components/common/ActionButtons';
 import { Toast } from '../../components/common/Toast';
 import { timestampCode } from '../../utils/kodeGenerator';
+import { useUnitSettings } from '../../context/UnitSettingsContext';
 
 const filterInputCls =
   'w-full px-2.5 py-1.5 bg-[#F7F7F5] border border-[#c4c8bb]/40 rounded-lg text-xs font-medium text-[#221A12] focus:outline-none focus:ring-2 focus:ring-[#2C4219]/30 focus:border-[#2C4219] focus:bg-white transition-all';
 
 export const PanenPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
+  const { formatBerat, beratKeKg, kgKeUnit, beratSuffix } = useUnitSettings();
   const [harvestList, setHarvestList] = useState<HarvestRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -71,6 +80,8 @@ export const PanenPage: React.FC = () => {
   // Master Data Lahan (dropdown lokasi lahan dinamis)
   const [landList, setLandList] = useState<LandPlot[]>([]);
   const [landLoading, setLandLoading] = useState(true);
+  const [activePlantings, setActivePlantings] = useState<Planting[]>([]);
+  const lahanSedangDitanam = React.useMemo(() => landList.filter(l => activePlantings.some(p => String(p.lahanId) === String(l.id))), [landList, activePlantings]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -82,6 +93,8 @@ export const PanenPage: React.FC = () => {
 
   const [formData, setFormData] = useState({
     lokasiLahan: '',
+    lahanId: '',
+    plantingId: '',
     varietas: '',
     tanggalPanen: new Date().toISOString().split('T')[0],
     tonase: '',
@@ -89,6 +102,11 @@ export const PanenPage: React.FC = () => {
     catatan: '',
   });
   const [formKodePanen, setFormKodePanen] = useState('');
+  const [plantingsForForm, setPlantingsForForm] = useState<Planting[]>([]);
+  const [selectedPlanting, setSelectedPlanting] = useState<Planting | null>(null);
+  // Opsi B: 1 panen → banyak batch stok gudang [{ jumlahKg, keterangan }]
+  const [stokBatch, setStokBatch] = useState<{ jumlahKg: string; keterangan: string }[]>([{ jumlahKg: '', keterangan: '' }]);
+  const [stokBatchError, setStokBatchError] = useState('');
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setImageError(null);
@@ -173,13 +191,48 @@ export const PanenPage: React.FC = () => {
       .finally(() => setLandLoading(false));
   }, []);
 
-  // Saat pilih lahan dari dropdown, isi otomatis varietas & penanggung jawab
-  const handleLandChange = (namaLahan: string) => {
-    const selected = landList.find((l) => l.namaLahan === namaLahan);
+  // Ambil penanaman aktif untuk filter lahan yang sedang ditanam (panen hanya dari lahan aktif)
+  useEffect(() => {
+    plantingApi.getAll({ limit: 100 }).then(res => {
+      const active = (res.data || []).filter((p: Planting) => ['Ditanam','Tumbuh','Siap Panen'].includes(p.statusTanam));
+      setActivePlantings(active);
+    }).catch(()=> setActivePlantings([]));
+  }, []);
+
+  // Saat pilih lahan dari dropdown, isi otomatis varietas & muat penanaman untuk traceability — auto-pilih penanaman aktif terbaru
+  const handleLandChange = async (lahanId: string) => {
+    const selected = landList.find((l) => l.id === lahanId);
     setFormData((prev) => ({
       ...prev,
-      lokasiLahan: namaLahan,
+      lahanId,
+      lokasiLahan: selected?.namaLahan || prev.lokasiLahan,
       varietas: selected?.varietasSorgum || prev.varietas,
+      plantingId: '',
+    }));
+    setSelectedPlanting(null);
+    if (lahanId) {
+      try {
+        const res = await plantingApi.getAll({ lahanId, limit: 50 });
+        const list: Planting[] = res.data || [];
+        setPlantingsForForm(list);
+        // auto-pilih penanaman yang siap panen / tumbuh / ditanam paling baru
+        const priority: any = { 'Siap Panen': 0, 'Tumbuh': 1, 'Ditanam': 2 };
+        const sorted = [...list].sort((a,b) => (priority[a.statusTanam] ?? 9) - (priority[b.statusTanam] ?? 9) || new Date(b.tanggalTanam).getTime() - new Date(a.tanggalTanam).getTime());
+        const auto = sorted.find(p => ['Siap Panen','Tumbuh','Ditanam'].includes(p.statusTanam)) || sorted[0];
+        if (auto) {
+          setSelectedPlanting(auto);
+          setFormData(prev => ({ ...prev, plantingId: auto.id, varietas: auto.varietas || prev.varietas }));
+        }
+      } catch { setPlantingsForForm([]); }
+    } else setPlantingsForForm([]);
+  };
+  const handlePlantingChange = (plantingId: string) => {
+    const p = plantingsForForm.find((x) => x.id === plantingId) || null;
+    setSelectedPlanting(p);
+    setFormData((prev) => ({
+      ...prev,
+      plantingId,
+      varietas: p?.varietas || prev.varietas,
     }));
   };
 
@@ -188,14 +241,20 @@ export const PanenPage: React.FC = () => {
     setEditingId(null);
     setFormData({
       lokasiLahan: '',
+      lahanId: '',
+      plantingId: '',
       varietas: '',
       tanggalPanen: new Date().toISOString().split('T')[0],
       tonase: '',
       petaniPenanggungJawab: '',
       catatan: '',
     });
+    setPlantingsForForm([]);
+    setSelectedPlanting(null);
     // Kode panen otomatis, hanya untuk tampilan (read-only)
     setFormKodePanen(timestampCode('PN-'));
+    setStokBatch([{ jumlahKg: '', keterangan: '' }]);
+    setStokBatchError('');
     setImagePreview(null);
     setSelectedImage(null);
     setImageError(null);
@@ -203,36 +262,82 @@ export const PanenPage: React.FC = () => {
   };
 
   // Buka modal untuk edit data yang ada
-  const openEditModal = (row: HarvestRecord) => {
+  const openEditModal = async (row: HarvestRecord) => {
     setEditingId(row.id);
     setFormKodePanen(row.kodePanen);
     setFormData({
       lokasiLahan: row.namaLahan,
-      varietas: row.varietas, // Dropdown dinamis berisi nama lengkap (Sorgum Bioguma 1, dst)
+      lahanId: (row as any).lahanId || '',
+      plantingId: (row as any).plantingId || '',
+      varietas: row.varietas,
       tanggalPanen: row.tanggalPanen ? row.tanggalPanen.split('T')[0] : new Date().toISOString().split('T')[0],
-      tonase: (row.jumlahHasilKg / 1000).toFixed(1),
+      tonase: String(kgKeUnit(row.jumlahHasilKg)),
       petaniPenanggungJawab: row.petaniPenanggungJawab,
       catatan: row.catatan || '',
     });
+    // muat plantings untuk lahan terkait agar dropdown penanaman terisi saat edit
+    const lahanIdForEdit = (row as any).lahanId;
+    if (lahanIdForEdit) {
+      try {
+        const res = await plantingApi.getAll({ lahanId: lahanIdForEdit, limit: 50 });
+        setPlantingsForForm(res.data || []);
+        const p = (res.data || []).find((x: Planting) => x.id === (row as any).plantingId) || null;
+        setSelectedPlanting(p);
+      } catch { setPlantingsForForm([]); }
+    } else {
+      setPlantingsForForm([]);
+      setSelectedPlanting(null);
+    }
+    // Prefill pecahan batch stok dari detail panen (stockBatches dari backend)
+    try {
+      const det = await harvestApi.getById(row.id);
+      const batches = det.data?.stockBatches || [];
+      if (batches.length > 0) {
+        setStokBatch(batches.map((b: any) => ({ jumlahKg: String(b.jumlahMasukKg), keterangan: '' })));
+      } else {
+        setStokBatch([{ jumlahKg: '', keterangan: '' }]);
+      }
+      setStokBatchError('');
+    } catch {
+      setStokBatch([{ jumlahKg: '', keterangan: '' }]);
+      setStokBatchError('');
+    }
     setImagePreview(row.fotoUrl || null);
     setSelectedImage(null);
     setImageError(null);
     setIsModalOpen(true);
   };
 
-  // Simpan (create ATAU update tergantung editingId)
+  // Simpan (create ATAU update tergantung editingId) — lineage hulu
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const totalPanenKg = beratKeKg(formData.tonase);
+    const totalStokKg = stokBatch.reduce((acc, b) => acc + (Number(b.jumlahKg) || 0), 0);
+
+    // Validasi: jika user mengisi batch, total harus sesuai hasil panen
+    const adaIsi = stokBatch.some((b) => (Number(b.jumlahKg) || 0) > 0);
+    if (adaIsi && Math.abs(totalStokKg - totalPanenKg) > 0.001) {
+      setStokBatchError(`Total batch (${totalStokKg} kg) harus sama dengan hasil panen (${totalPanenKg} kg).`);
+      return;
+    }
+    setStokBatchError('');
+
     const payload = {
       namaLahan: formData.lokasiLahan,
+      lahanId: formData.lahanId || null,
+      plantingId: formData.plantingId || null,
       varietas: formData.varietas,
       tanggalPanen: formData.tanggalPanen,
-      jumlahHasilKg: Number(formData.tonase) * 1000,
+      jumlahHasilKg: totalPanenKg,
       kualitasGrade: 'Grade A (Premium)' as const,
       petaniPenanggungJawab: formData.petaniPenanggungJawab,
       status: 'Selesai' as const,
       catatan: formData.catatan,
       fotoUrl: imagePreview || '',
+      // Opsi B: pecahan batch stok gudang (kosong → backend otomatis 1 batch penuh)
+      stokBatch: stokBatch
+        .filter((b) => (Number(b.jumlahKg) || 0) > 0)
+        .map((b) => ({ jumlahKg: Number(b.jumlahKg), keterangan: b.keterangan.trim() })),
     };
 
     if (editingId) {
@@ -268,11 +373,18 @@ export const PanenPage: React.FC = () => {
     const d = new Date(iso);
     return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   };
-
-  // Format tonase (kg → ton dengan 2 desimal)
-  const formatTonase = (kg: number) => {
-    return `${(kg / 1000).toFixed(2)} Ton`;
+  // Format konsisten hari, tanggal bulan tahun (contoh: Jumat, 24 April 2026)
+  const formatHariTanggal = (iso: string) => {
+    if (!iso) return '-';
+    const s = String(iso).slice(0, 10);
+    const parts = s.split('-');
+    let d: Date;
+    if (parts.length === 3) d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    else d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
+  const formatTonase = (kg: number) => formatBerat(kg);
 
   // Hitung jumlah filter aktif
   const countActiveFilters = () => {
@@ -743,58 +855,76 @@ export const PanenPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Table */}
+          {/* Table — header & aksi selaras */}
           <div className="overflow-x-auto custom-scrollbar px-1">
-            <table className="w-full text-left text-xs min-w-[520px]">
+            <table className="w-full text-left text-xs min-w-[720px] border-collapse">
               <thead>
                 <tr className="bg-[#F7F7F5] text-[#6B7280] font-bold uppercase text-[11px] tracking-wider border-y border-[#c4c8bb]/20">
-                  <th className="py-2 px-3">TANGGAL PANEN</th>
-                  <th className="py-2 px-3">LOKASI LAHAN</th>
-                  <th className="py-2 px-3">VARIETAS</th>
-                  <th className="py-2 px-3">BERAT HASIL</th>
-                  <th className="py-2 px-3 text-right">DETAIL</th>
-                  <th className="py-2 px-3 text-center">AKSI</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle">KODE PANEN</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle">TANGGAL PANEN</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle">LOKASI LAHAN</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle">VARIETAS</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle text-center">BERAT HASIL</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle text-center w-[92px]">DETAIL</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle text-center w-[160px]">AKSI</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#c4c8bb]/15 font-medium text-[#221A12]">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-[#6B7280]">
+                    <td colSpan={7} className="py-8 text-center text-[#6B7280]">
                       <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
                       Memuat data panen...
                     </td>
                   </tr>
                 ) : harvestList.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-[#6B7280]">
+                    <td colSpan={7} className="py-8 text-center text-[#6B7280]">
                       Tidak ada data panen yang ditemukan.
                     </td>
                   </tr>
                 ) : (
-                  harvestList.map((row) => (
+                  harvestList.map((row) => {
+                    return (
                     <tr key={row.id} className="hover:bg-[#F7F7F5] transition-colors">
-                      <td className="py-2 px-3 text-[#44483e] whitespace-nowrap">{formatTanggal(row.tanggalPanen)}</td>
-                      <td className="py-2 px-3 font-semibold text-[#172C05]">{row.namaLahan}</td>
-                      <td className="py-2 px-3">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#D1E6A5] text-[#2C4219]">
+                      <td className="py-2.5 px-3 align-middle font-bold text-[#2C4219] whitespace-nowrap">
+                        {row.kodePanen}
+                      </td>
+                      <td className="py-2.5 px-3 align-middle text-[#44483e] whitespace-nowrap text-xs">
+                        {formatTanggal(row.tanggalPanen)}
+                      </td>
+                      <td className="py-2.5 px-3 align-middle max-w-[180px]" title={row.namaLahan}>
+                        <div className="font-semibold text-[#172C05] whitespace-nowrap truncate">{row.namaLahan}</div>
+                      </td>
+                      <td className="py-2.5 px-3 align-middle whitespace-nowrap">
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-[#D1E6A5] text-[#2C4219] leading-none">
                           {row.varietas}
                         </span>
                       </td>
-                      <td className="py-2 px-3 font-bold text-[#2C4219]">
-                        {(row.jumlahHasilKg / 1000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} Ton
+                      <td className="py-2.5 px-3 align-middle text-center font-bold text-[#2C4219] whitespace-nowrap">
+                        {formatBerat(row.jumlahHasilKg)}
                       </td>
-                      <td className="py-2 px-3 text-center whitespace-nowrap">
+                      {/* Kolom DETAIL — hanya tombol Detail */}
+                      <td className="py-2.5 px-2 align-middle text-center whitespace-nowrap">
                         <ActionButtons
                           onDetail={() => setSelectedDetail(row)}
+                          detailTitle="Lihat Detail Panen"
+                          show={{ detail: true, edit: false, delete: false }}
+                        />
+                      </td>
+                      {/* Kolom AKSI — Edit & Hapus */}
+                      <td className="py-2.5 px-2 align-middle text-center whitespace-nowrap">
+                        <ActionButtons
                           onEdit={() => openEditModal(row)}
                           onDelete={() => setDeleteTarget(row)}
-                          detailTitle="Lihat Detail Panen"
                           editTitle="Edit Data Panen"
                           deleteTitle="Hapus Data Panen"
+                          show={{ detail: false, edit: true, delete: true }}
                         />
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -972,44 +1102,194 @@ export const PanenPage: React.FC = () => {
         }
       >
         <form onSubmit={handleSave} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+                Lokasi Lahan & Blok *
+              </label>
+              <select
+                value={formData.lahanId}
+                onChange={(e) => handleLandChange(e.target.value)}
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                required
+              >
+                <option value="" disabled>
+                  {landLoading ? 'Memuat data lahan...' : lahanSedangDitanam.length === 0 ? (landList.length === 0 ? '-- Belum ada lahan --' : '-- Belum ada lahan yang sedang ditanam --') : '-- Pilih Lahan --'}
+                </option>
+                {lahanSedangDitanam.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.namaLahan} ({l.kodeLahan})
+                  </option>
+                ))}
+              </select>
+              {!landLoading && landList.length === 0 && (
+                <p className="text-[11px] font-semibold text-amber-600 mt-1">
+                  Belum ada data lahan. Silakan tambah di menu Kelola Lahan terlebih dahulu.
+                </p>
+              )}
+              {!landLoading && landList.length > 0 && lahanSedangDitanam.length === 0 && (
+                <p className="text-[11px] font-semibold text-amber-600 mt-1">
+                  Belum ada lahan yang sedang ditanam. Silakan buka <b>Kelola Lahan → Detail → Catat Tanam</b>.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+                Kode Panen
+              </label>
+              <input
+                type="text"
+                value={formKodePanen}
+                readOnly
+                disabled
+                title="Kode panen dibuat otomatis oleh sistem"
+                className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold text-[#6B7280] cursor-not-allowed"
+              />
+              <p className="text-[11px] text-[#6B7280] mt-1">Kode dibuat otomatis oleh sistem.</p>
+            </div>
+          </div>
+
+          {/* Penanaman — hulu traceability */}
           <div>
             <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Lokasi Lahan & Blok
+              Penanaman Asal {formData.lahanId ? '' : '(pilih lahan dulu)'}
             </label>
             <select
-              value={formData.lokasiLahan}
-              onChange={(e) => handleLandChange(e.target.value)}
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
-              required
+              value={formData.plantingId}
+              onChange={(e) => handlePlantingChange(e.target.value)}
+              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold disabled:bg-[#F7F7F5] disabled:text-[#9CA3AF]"
+              disabled={!formData.lahanId}
             >
-              <option value="" disabled>
-                {landLoading ? 'Memuat data lahan...' : '-- Pilih Lokasi Lahan --'}
-              </option>
-              {landList.map((l) => (
-                <option key={l.id} value={l.namaLahan}>
-                  {l.namaLahan} ({l.kodeLahan})
+              <option value="">{!formData.lahanId ? '-- Pilih lahan terlebih dahulu --' : plantingsForForm.filter(p=>['Ditanam','Tumbuh','Siap Panen'].includes(p.statusTanam)).length === 0 ? '-- Tidak ada penanaman aktif --' : '-- Pilih Penanaman --'}</option>
+              {plantingsForForm.filter(p=>['Ditanam','Tumbuh','Siap Panen'].includes(p.statusTanam)).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.kodeTanam} • {formatTanggal(p.tanggalTanam)} • {p.varietas}
                 </option>
               ))}
             </select>
-            {!landLoading && landList.length === 0 && (
-              <p className="text-[11px] font-semibold text-amber-600 mt-1">
-                Belum ada data lahan. Silakan tambah di menu Kelola Lahan terlebih dahulu.
-              </p>
-            )}
-          </div>
+            {selectedPlanting && (
+              <div className="mt-2 p-3.5 bg-[#FFF8F4] border border-[#c4c8bb]/20 rounded-2xl">
+                {/* Baris 1: kode tanam + status */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#2C4219] text-[#C3E28D] text-[11px] font-bold">
+                    <Sprout className="w-3 h-3" /> {selectedPlanting.kodeTanam}
+                  </span>
+                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${selectedPlanting.statusTanam==='Siap Panen'?'bg-amber-100 text-amber-800':selectedPlanting.statusTanam==='Dipanen'?'bg-[#C3E28D] text-[#172C05]':'bg-white text-[#6B7280] border border-[#c4c8bb]/30'}`}>
+                    {selectedPlanting.statusTanam}
+                  </span>
+                </div>
 
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Kode Panen
-            </label>
-            <input
-              type="text"
-              value={formKodePanen}
-              readOnly
-              disabled
-              title="Kode panen dibuat otomatis oleh sistem"
-              className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold text-[#6B7280] cursor-not-allowed"
-            />
+                {/* Baris 2: tanggal tanam & estimasi */}
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="flex items-center gap-2 text-xs text-[#44483e]">
+                    <span className="w-7 h-7 rounded-lg bg-[#C3E28D]/50 text-[#2C4219] flex items-center justify-center shrink-0">
+                      <Calendar className="w-3.5 h-3.5" />
+                    </span>
+                    <div>
+                      <p className="text-[10px] font-bold text-[#6B7280] uppercase">Tanggal Tanam</p>
+                      <p className="font-bold text-[#172C05]">{formatHariTanggal(selectedPlanting.tanggalTanam)}</p>
+                    </div>
+                  </div>
+                  {selectedPlanting.estimasiPanen && (
+                    <div className="flex items-center gap-2 text-xs text-[#44483e]">
+                      <span className="w-7 h-7 rounded-lg bg-[#C3E28D]/50 text-[#2C4219] flex items-center justify-center shrink-0">
+                        <Clock className="w-3.5 h-3.5" />
+                      </span>
+                      <div>
+                        <p className="text-[10px] font-bold text-[#6B7280] uppercase">Estimasi Panen</p>
+                        <p className="font-bold text-[#172C05]">{formatHariTanggal(selectedPlanting.estimasiPanen)}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Baris 3: detail lahan/varietas/petugas */}
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-[#44483e] font-medium">
+                  <span className="inline-flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-[#2C4219]" />
+                    {landList.find(l=>String(l.id)===String(selectedPlanting.lahanId))?.lokasiDesa || selectedPlanting.namaLahan || '-'}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Leaf className="w-3.5 h-3.5 text-[#2C4219]" />
+                    {selectedPlanting.varietas}
+                  </span>
+                  {selectedPlanting.petugas && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-[#2C4219]" />
+                      {selectedPlanting.petugas}
+                    </span>
+                  )}
+                </div>
+
+                {/* Baris 4: hitungan lubang → biji → hasil bersih */}
+                {(() => {
+                  // Nilai tersimpan = lubang × 3 (biji). Bulatkan lubang dulu agar
+                  // tampilan konsisten: Lubang → Biji (×3) → Hasil Bersih (÷2).
+                  const lubang = Math.round((Number(selectedPlanting.jumlahLubang) || 0) / 3);
+                  const biji = lubang * 3;
+                  const hasilBersih = biji / 2;
+                  const fmt = (n: number) =>
+                    Number.isInteger(n)
+                      ? n.toLocaleString('id-ID')
+                      : n.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+                  return (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <div className="flex flex-col items-center gap-1 p-2.5 bg-white border border-[#c4c8bb]/20 rounded-xl">
+                        <Layers className="w-4 h-4 text-[#2C4219]" />
+                        <p className="text-[9px] font-bold text-[#6B7280] uppercase leading-none">Lubang</p>
+                        <p className="text-sm font-bold text-[#172C05] leading-none">{fmt(lubang)}</p>
+                      </div>
+                      <div className="flex flex-col items-center gap-1 p-2.5 bg-[#C3E28D]/30 border border-[#C3E28D]/60 rounded-xl">
+                        <Sprout className="w-4 h-4 text-[#2C4219]" />
+                        <p className="text-[9px] font-bold text-[#2C4219] uppercase leading-none">Biji (×3)</p>
+                        <p className="text-sm font-bold text-[#172C05] leading-none">{fmt(biji)}</p>
+                      </div>
+                      <div className="flex flex-col items-center gap-1 p-2.5 bg-[#fff1e5] border border-amber-200 rounded-xl">
+                        <CheckSquare className="w-4 h-4 text-[#2C4219]" />
+                        <p className="text-[9px] font-bold text-[#6B7280] uppercase leading-none">Hasil Bersih (÷2)</p>
+                        <p className="text-sm font-bold text-[#172C05] leading-none">{fmt(hasilBersih)}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Baris 5: periode tanam→panen */}
+                {formData.tanggalPanen && selectedPlanting.tanggalTanam && (
+                  <div className="mt-3 pt-3 border-t border-[#c4c8bb]/20 flex items-center gap-2 text-xs">
+                    <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Periode Tanam → Panen:</span>
+                    <span className="font-bold text-[#2C4219]">
+                      {(() => {
+                        const parse = (s: string) => {
+                          const p = String(s).slice(0,10).split('-');
+                          if (p.length===3) return new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
+                          return new Date(s);
+                        };
+                        const d1=parse(selectedPlanting.tanggalTanam); const d2=parse(formData.tanggalPanen);
+                        if(isNaN(d1.getTime())||isNaN(d2.getTime())) return '-';
+                        const diff=Math.round((d2.getTime()-d1.getTime())/(1000*60*60*24));
+                        return `${diff} hari`;
+                      })()}
+                    </span>
+                    {selectedPlanting.estimasiPanen && (() => {
+                      const parse = (s: string) => {
+                        const p = String(s).slice(0,10).split('-');
+                        if (p.length===3) return new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
+                        return new Date(s);
+                      };
+                      const est=parse(selectedPlanting.estimasiPanen!); const panen=parse(formData.tanggalPanen);
+                      if(isNaN(est.getTime())||isNaN(panen.getTime())) return null;
+                      const selisih=Math.round((panen.getTime()-est.getTime())/(1000*60*60*24));
+                      return selisih===0
+                        ? <span className="px-2 py-0.5 rounded-full bg-[#C3E28D]/40 text-[#2C4219] font-bold">Tepat estimasi</span>
+                        : selisih>0
+                          ? <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">+{selisih} hari dari estimasi</span>
+                          : <span className="px-2 py-0.5 rounded-full bg-[#C3E28D]/40 text-[#2C4219] font-bold">{Math.abs(selisih)} hari lebih cepat</span>;
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
@@ -1029,53 +1309,32 @@ export const PanenPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Varietas Sorgum
-              </label>
-              <select
-                value={formData.varietas}
-                onChange={(e) => setFormData({ ...formData, varietas: e.target.value })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
-                required
-              >
-                <option value="" disabled>
-                  {varietyLoading ? 'Memuat varietas...' : '-- Pilih Varietas Sorgum --'}
-                </option>
-                {varietyList.map((v) => (
-                  <option key={v.id} value={v.name}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Berat Hasil Panen (Ton)
+                Berat Hasil Panen ({beratSuffix})
               </label>
               <input
                 type="number"
-                step="0.1"
+                step="0.01"
                 value={formData.tonase}
                 onChange={(e) => setFormData({ ...formData, tonase: e.target.value })}
-                placeholder="Contoh: 35.5 ton"
+                placeholder={`Contoh: 35.5 ${beratSuffix}`}
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
                 required
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Penanggung Jawab Panen
-            </label>
-            <input
-              type="text"
-              value={formData.petaniPenanggungJawab}
-              onChange={(e) => setFormData({ ...formData, petaniPenanggungJawab: e.target.value })}
-              placeholder="Contoh: Ibu Hastuti"
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
-              required
-            />
+            <div>
+              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+                Penanggung Jawab Panen
+              </label>
+              <input
+                type="text"
+                value={formData.petaniPenanggungJawab}
+                onChange={(e) => setFormData({ ...formData, petaniPenanggungJawab: e.target.value })}
+                placeholder="Contoh: Ibu Hastuti"
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                required
+              />
+            </div>
           </div>
 
           <div>
@@ -1088,6 +1347,74 @@ export const PanenPage: React.FC = () => {
               placeholder="Catatan kondisi cuaca, timbangan, atau gudang"
               className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold h-20"
             />
+          </div>
+
+          {/* Masuk Gudang — Opsi B: pecah hasil panen jadi beberapa batch stok */}
+          <div className="p-4 bg-[#FFF8F4] border border-[#c4c8bb]/30 rounded-2xl">
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-[#2C4219] uppercase tracking-wide">
+                Masuk Gudang (Pisahkan Stok)
+              </label>
+              <span className="text-[10px] text-[#6B7280] font-semibold">Opsional — kosongkan jika belum masuk gudang</span>
+            </div>
+            <p className="text-[11px] text-[#6B7280] mb-3">
+              Hasil panen otomatis masuk gudang lahan ini. Boleh dipecah jadi beberapa bagian (misal: 1000 kg untuk dijual, 600 kg untuk simpan). Total harus sama dengan berat hasil panen.
+            </p>
+
+            {stokBatch.map((b, i) => (
+              <div key={i} className="flex flex-col sm:flex-row gap-2 mb-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={b.jumlahKg}
+                  onChange={(e) => {
+                    const next = [...stokBatch];
+                    next[i] = { ...next[i], jumlahKg: e.target.value };
+                    setStokBatch(next);
+                    setStokBatchError('');
+                  }}
+                  placeholder={`Jumlah (kg)`}
+                  className="w-full sm:w-48 p-2.5 bg-white border border-[#c4c8bb]/40 rounded-xl text-sm font-semibold"
+                />
+                <input
+                  type="text"
+                  value={b.keterangan}
+                  onChange={(e) => {
+                    const next = [...stokBatch];
+                    next[i] = { ...next[i], keterangan: e.target.value };
+                    setStokBatch(next);
+                  }}
+                  placeholder="Catatan (misal: untuk dijual / simpan)"
+                  className="flex-1 p-2.5 bg-white border border-[#c4c8bb]/40 rounded-xl text-sm font-semibold"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (stokBatch.length > 1) {
+                      setStokBatch(stokBatch.filter((_, idx) => idx !== i));
+                    }
+                  }}
+                  className="inline-flex items-center justify-center px-3 rounded-xl bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-colors shrink-0 cursor-pointer"
+                  title="Hapus baris"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+
+            <div className="flex items-center justify-between gap-3 mt-2">
+              <button
+                type="button"
+                onClick={() => setStokBatch([...stokBatch, { jumlahKg: '', keterangan: '' }])}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C3E28D] text-[#2C4219] text-[11px] font-bold hover:bg-[#b3d47d] transition-colors cursor-pointer"
+              >
+                + Tambah Baris
+              </button>
+              <span className={`text-[11px] font-bold ${stokBatchError ? 'text-red-600' : 'text-[#6B7280]'}`}>
+                {stokBatchError || `Total: ${stokBatch.reduce((a, x) => a + (Number(x.jumlahKg) || 0), 0)} kg`}
+              </span>
+            </div>
           </div>
 
           {/* Upload Foto Dokumentasi (JPG/PNG Only) */}
@@ -1181,84 +1508,178 @@ export const PanenPage: React.FC = () => {
           isOpen={!!selectedDetail}
           onClose={() => setSelectedDetail(null)}
           title="Detail Data Panen"
-          subtitle={`${selectedDetail.kodePanen} • ${formatTanggal(selectedDetail.tanggalPanen)}`}
+          subtitle="Ringkasan hasil panen & asal tanam"
           maxWidth="lg"
         >
           <div className="space-y-4">
-            {/* Foto seluruh lebar */}
-            <div className="w-full h-44 sm:h-52 rounded-2xl overflow-hidden border border-[#c4c8bb]/30 bg-[#F7F7F5]">
-              {selectedDetail.fotoUrl ? (
-                <img
-                  src={selectedDetail.fotoUrl}
-                  alt={`Foto Hasil Panen ${selectedDetail.namaLahan}`}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[#9CA3AF]">
-                  <ImageIcon className="w-10 h-10" />
-                  <span className="text-xs font-semibold">Belum ada foto dokumentasi</span>
+            {/* Header ringkas: foto + info utama dalam satu blok lembut */}
+            <div className="flex items-center gap-3.5 p-4 bg-[#FFF8F4] rounded-2xl border border-[#c4c8bb]/20">
+              <div className="w-16 h-16 rounded-xl overflow-hidden border border-[#c4c8bb]/30 bg-[#F7F7F5] shrink-0">
+                {selectedDetail.fotoUrl ? (
+                  <img
+                    src={selectedDetail.fotoUrl}
+                    alt={`Foto Hasil Panen ${selectedDetail.namaLahan}`}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[#9CA3AF]">
+                    <ImageIcon className="w-6 h-6" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider">Kode Panen</p>
+                <p className="text-base font-black text-[#2C4219] leading-tight truncate">{selectedDetail.kodePanen}</p>
+              </div>
+              {/* Berat menonjol di pojok kanan */}
+              <div className="ml-auto text-right shrink-0">
+                <p className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider">Berat Hasil</p>
+                <p className="text-lg font-black text-[#2C4219] leading-tight">{formatBerat(selectedDetail.jumlahHasilKg)}</p>
+              </div>
+            </div>
+
+            {/* Grid data utama — ringkas, 2 kolom, mudah dipindai */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-white rounded-xl border border-[#c4c8bb]/20 flex items-start gap-2.5">
+                <span className="w-8 h-8 rounded-lg bg-[#fff1e5] text-[#2C4219] flex items-center justify-center shrink-0">
+                  <MapPin className="w-4 h-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-wider">Lokasi Lahan</p>
+                  <p className="text-sm font-bold text-[#221A12] leading-snug break-words">{selectedDetail.namaLahan}</p>
                 </div>
-              )}
-            </div>
-
-            {/* Grid data — mirip form input */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-3 bg-[#FFF8F4] rounded-xl border border-[#c4c8bb]/20">
-                <span className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider block">
-                  Kode Panen
-                </span>
-                <span className="text-sm font-extrabold text-[#2C4219] mt-0.5 block">
-                  {selectedDetail.kodePanen}
-                </span>
               </div>
-
-              <div className="p-3 bg-[#FFF8F4] rounded-xl border border-[#c4c8bb]/20">
-                <span className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider block">
-                  Tanggal Panen
+              <div className="p-3 bg-white rounded-xl border border-[#c4c8bb]/20 flex items-start gap-2.5">
+                <span className="w-8 h-8 rounded-lg bg-[#fff1e5] text-[#2C4219] flex items-center justify-center shrink-0">
+                  <Sprout className="w-4 h-4" />
                 </span>
-                <span className="text-sm font-extrabold text-[#221A12] mt-0.5 block">
-                  {formatTanggal(selectedDetail.tanggalPanen)}
-                </span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-wider">Varietas</p>
+                  <p className="text-sm font-bold text-[#221A12] leading-snug break-words">{selectedDetail.varietas}</p>
+                </div>
               </div>
-
-              <div className="p-3 bg-[#FFF8F4] rounded-xl border border-[#c4c8bb]/20 sm:col-span-2">
-                <span className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider block">
-                  Lokasi Lahan & Blok
+              <div className="p-3 bg-white rounded-xl border border-[#c4c8bb]/20 flex items-start gap-2.5">
+                <span className="w-8 h-8 rounded-lg bg-[#fff1e5] text-[#2C4219] flex items-center justify-center shrink-0">
+                  <CalendarDays className="w-4 h-4" />
                 </span>
-                <span className="text-sm font-extrabold text-[#221A12] mt-0.5 block">
-                  {selectedDetail.namaLahan}
-                </span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-wider">Periode Tanam → Panen</p>
+                  <p className="text-sm font-bold text-[#221A12] leading-snug">
+                    {(() => {
+                      const p = (selectedDetail as any).planting;
+                      const periode = (selectedDetail as any).periodeHari;
+                      if (periode != null) return `${periode} hari`;
+                      if (p?.tanggalTanam) {
+                        const parseISO2 = (s: string) => {
+                          const parts = String(s).slice(0,10).split('-');
+                          if (parts.length===3) return new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
+                          return new Date(s);
+                        };
+                        const t1 = parseISO2(p.tanggalTanam);
+                        const t2 = parseISO2(selectedDetail.tanggalPanen);
+                        if (!isNaN(t1.getTime()) && !isNaN(t2.getTime())) {
+                          return `${Math.round((t2.getTime() - t1.getTime()) / (1000*60*60*24))} hari`;
+                        }
+                      }
+                      return '-';
+                    })()}
+                  </p>
+                </div>
               </div>
-
-              <div className="p-3 bg-[#FFF8F4] rounded-xl border border-[#c4c8bb]/20">
-                <span className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider block">
-                  Varietas Sorgum
+              <div className="p-3 bg-white rounded-xl border border-[#c4c8bb]/20 flex items-start gap-2.5">
+                <span className="w-8 h-8 rounded-lg bg-[#fff1e5] text-[#2C4219] flex items-center justify-center shrink-0">
+                  <User className="w-4 h-4" />
                 </span>
-                <span className="inline-block px-3 py-0.5 rounded-full bg-[#C3E28D] text-[#2C4219] text-xs font-bold mt-1">
-                  {selectedDetail.varietas}
-                </span>
-              </div>
-
-              <div className="p-3 bg-[#FFF8F4] rounded-xl border border-[#c4c8bb]/20">
-                <span className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider block">
-                  Berat Hasil Panen
-                </span>
-                <span className="text-sm font-black text-[#221A12] mt-0.5 block">
-                  {(selectedDetail.jumlahHasilKg / 1000).toFixed(2)}
-                  <span className="text-xs font-bold text-[#44483e]"> Ton</span>
-                </span>
-              </div>
-
-              <div className="p-3 bg-[#FFF8F4] rounded-xl border border-[#c4c8bb]/20">
-                <span className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider block">
-                  Penanggung Jawab Panen
-                </span>
-                <span className="text-sm font-extrabold text-[#221A12] mt-0.5 block">
-                  {selectedDetail.petaniPenanggungJawab || '-'}
-                </span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold text-[#9CA3AF] uppercase tracking-wider">Penanggung Jawab</p>
+                  <p className="text-sm font-bold text-[#221A12] leading-snug">{selectedDetail.petaniPenanggungJawab || '-'}</p>
+                </div>
               </div>
             </div>
+
+            {/* Informasi Asal Tanam — ringkas, mudah dibaca, tanpa pengulangan */}
+            {(selectedDetail as any).planting ? (
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-[#2C4219] uppercase tracking-wider flex items-center gap-1.5">
+                  <Sprout className="w-3.5 h-3.5" /> Informasi Asal Tanam
+                </h4>
+                {(() => {
+                  const p: any = (selectedDetail as any).planting;
+                  const l: any = (selectedDetail as any).lahan;
+                  const lubang = Number(p.jumlahLubang) || 0;
+                  const totalBiji = lubang * 3;
+                  const bersih = Math.floor(totalBiji / 2);
+                  const periode = (selectedDetail as any).periodeHari;
+                  const parseISO = (s: string) => {
+                    const parts = String(s).slice(0,10).split('-');
+                    if (parts.length===3) return new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
+                    return new Date(s);
+                  };
+                  const est = p.estimasiPanen ? parseISO(p.estimasiPanen) : null;
+                  const panen = parseISO(selectedDetail.tanggalPanen);
+                  let estimasiInfo = '';
+                  if (est && !isNaN(est.getTime()) && !isNaN(panen.getTime())) {
+                    const d = Math.round((panen.getTime() - est.getTime()) / (1000*60*60*24));
+                    estimasiInfo = d===0 ? 'Tepat estimasi' : d>0 ? `+${d} hari dari estimasi` : `${Math.abs(d)} hari lebih cepat`;
+                  }
+                  return (
+                    <>
+                      {/* Kode tanam + asal lahan + petugas */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#2C4219] text-[#C3E28D] text-[11px] font-bold">
+                          <Hash className="w-3 h-3" /> {p.kodeTanam}
+                        </span>
+                        <span className="text-xs text-[#6B7280] font-medium">
+                          {l?.namaLahan || selectedDetail.namaLahan}{l?.kodeLahan ? ` • ${l.kodeLahan}` : ''}
+                          {l?.lokasiDesa ? ` • ${l.lokasiDesa}` : ''}
+                        </span>
+                      </div>
+
+                      {/* Tanggal tanam → panen + periode */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="p-3 bg-[#FFF8F4] rounded-xl border border-[#c4c8bb]/20">
+                          <span className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider block">Tanggal Tanam</span>
+                          <span className="text-sm font-extrabold text-[#221A12] mt-0.5 block">{formatHariTanggal(p.tanggalTanam)}</span>
+                          <span className="text-[11px] text-[#6B7280] mt-0.5 block">Petugas: {p.petugas || '-'}</span>
+                        </div>
+                        <div className="p-3 bg-[#FFF8F4] rounded-xl border border-[#c4c8bb]/20">
+                          <span className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider block">Tanggal Panen</span>
+                          <span className="text-sm font-extrabold text-[#221A12] mt-0.5 block">{formatHariTanggal(selectedDetail.tanggalPanen)}</span>
+                          <span className="text-[11px] text-[#6B7280] mt-0.5 block">
+                            {estimasiInfo || (periode == null ? 'Belum ada data periode' : '')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Perhitungan benih — 3 angka jelas */}
+                      <div className="p-3.5 bg-[#2C4219] rounded-xl text-white space-y-2">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-[#C3E28D] flex items-center gap-1.5"><Leaf className="w-3.5 h-3.5" /> Perhitungan Benih</p>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="p-2.5 bg-white/10 rounded-lg border border-white/10">
+                            <p className="text-[10px] font-bold text-white/70 uppercase">Lubang</p>
+                            <p className="text-sm font-black text-white mt-1">{lubang.toLocaleString('id-ID')}</p>
+                          </div>
+                          <div className="p-2.5 bg-white/10 rounded-lg border border-white/10">
+                            <p className="text-[10px] font-bold text-white/70 uppercase">Biji (×3)</p>
+                            <p className="text-sm font-black text-[#C3E28D] mt-1">{totalBiji.toLocaleString('id-ID')}</p>
+                          </div>
+                          <div className="p-2.5 bg-[#C3E28D] rounded-lg">
+                            <p className="text-[10px] font-bold text-[#172C05] uppercase">Bersih (÷2)</p>
+                            <p className="text-sm font-black text-[#172C05] mt-1">{bersih.toLocaleString('id-ID')}</p>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-white/70 leading-relaxed text-center">1 lubang berisi 3 biji sorgum. Dari total <b className="text-white">{totalBiji.toLocaleString('id-ID')} biji</b>, sekitar 50% menjadi sorgum bersih siap olah: <b className="text-[#C3E28D]">{bersih.toLocaleString('id-ID')} biji</b>.</p>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : (selectedDetail as any).lahanId ? (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">Panen sudah terhubung ke lahan <b>{(selectedDetail as any).lahan?.namaLahan || selectedDetail.namaLahan}</b> namun belum memilih penanaman. Edit panen untuk pilih penanaman agar tanggal tanam, periode & perhitungan lubang tampil.</div>
+            ) : (
+              <div className="p-3 bg-[#F7F7F5] border border-[#c4c8bb]/20 rounded-xl text-xs text-[#6B7280]">Belum ada informasi asal tanam. Edit panen untuk pilih lahan & penanaman.</div>
+            )}
 
             {/* Catatan */}
             {selectedDetail.catatan && (

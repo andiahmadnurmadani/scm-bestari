@@ -1,17 +1,58 @@
-import React, { useEffect, useState } from 'react';
-import { Wrench, Plus, Eye, Edit3, Trash2, CheckCircle2, AlertTriangle, ShieldCheck, Upload, X, ChevronLeft, ChevronRight, Sprout, MapPin } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Wrench, Plus, Eye, Edit3, Trash2, AlertTriangle, Upload, X, MapPin, AlertCircle, PackageX, Hammer, CheckCircle2, Wrench as WrenchIcon } from 'lucide-react';
 import { equipmentApi } from '../../api/endpoints/equipmentApi';
 import { Equipment } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
+import { Toast } from '../../components/common/Toast';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { nextCode } from '../../utils/kodeGenerator';
+
+// ── Filter pill sederhana: 1 pilihan aktif, langsung memfilter tabel ──────────
+type FilterKey = 'dipakai' | 'tersedia' | 'perbaikan' | 'perawatan' | 'semua';
+
+const FILTERS: { key: FilterKey; label: string; icon?: React.ReactNode }[] = [
+  { key: 'dipakai', label: 'Sedang Dipakai', icon: <PackageX className="w-3.5 h-3.5" /> },
+  { key: 'tersedia', label: 'Tersedia', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+  { key: 'perbaikan', label: 'Butuh Perbaikan', icon: <Hammer className="w-3.5 h-3.5" /> },
+  { key: 'perawatan', label: 'Dalam Perawatan', icon: <WrenchIcon className="w-3.5 h-3.5" /> },
+  { key: 'semua', label: 'Semua Alat' },
+];
+
+function isDipakai(item: Equipment) {
+  return item.status === 'Sedang Digunakan';
+}
+
+function isTersedia(item: Equipment) {
+  return item.status === 'Tersedia';
+}
+
+function isPerbaikan(item: Equipment) {
+  return item.kondisi === 'Perlu Perbaikan' || item.kondisi === 'Rusak';
+}
+
+function isPerawatan(item: Equipment) {
+  return item.status === 'Dalam Perawatan';
+}
+
+const filterFn: Record<FilterKey, (item: Equipment) => boolean> = {
+  dipakai: isDipakai,
+  tersedia: isTersedia,
+  perbaikan: isPerbaikan,
+  perawatan: isPerawatan,
+  semua: () => true,
+};
 
 export const PeralatanPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  // Filter pill: 1 pilihan aktif, langsung memfilter tabel (client-side)
+  // Default: tampilkan peralatan yang SEDANG DIPAKAI di lapangan.
+  const [filterKey, setFilterKey] = useState<FilterKey>('dipakai');
 
   // Modal States
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -19,12 +60,6 @@ export const PeralatanPage: React.FC = () => {
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Equipment | null>(null); // Data yang akan dihapus
-
-  // Pagination State
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10); // 10 baris per halaman
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
 
   // Image Upload States
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -45,34 +80,41 @@ export const PeralatanPage: React.FC = () => {
     terakhirServis: new Date().toLocaleDateString('id-ID'),
   });
 
-  const fetchEquipment = async (targetPage = page, search = searchTerm) => {
+  // Muat SEMUA data sekali (batas 1000) lalu filter & cari di sisi klien,
+  // supaya perpindahan pill instan tanpa loading server.
+  const fetchEquipment = async (search = searchTerm) => {
     setLoading(true);
     try {
       const res = await equipmentApi.getAll({
-        page: targetPage,
-        limit,
+        page: 1,
+        limit: 1000,
         search: search || undefined,
       });
       setEquipmentList(res.data || []);
-      setTotal(res.pagination?.total || 0);
-      setTotalPages(res.pagination?.totalPages || 1);
-    } catch {
+    } catch (err: any) {
       setEquipmentList([]);
-      setTotal(0);
-      setTotalPages(1);
+      setToast({ msg: err?.response?.data?.message || 'Gagal memuat data peralatan.', type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    setPage(1); // Reset ke halaman 1 saat search berubah
+    fetchEquipment(searchTerm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
 
-  useEffect(() => {
-    fetchEquipment(page, searchTerm);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, searchTerm]);
+  // Daftar yang TAMPIL = hasil filter pill + search (client-side)
+  const filteredList = useMemo(() => {
+    const fn = filterFn[filterKey];
+    const q = searchTerm.trim().toLowerCase();
+    return equipmentList.filter((item) => {
+      if (!fn(item)) return false;
+      if (!q) return true;
+      return [item.kodeAlat, item.namaPeralatan, item.kategori, item.lokasiPenyimpanan]
+        .some((v) => String(v || '').toLowerCase().includes(q));
+    });
+  }, [equipmentList, filterKey, searchTerm]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -146,27 +188,39 @@ export const PeralatanPage: React.FC = () => {
     const finalFotoUrl = formData.fotoUrl || imagePreview || '';
     const payload = { ...formData, fotoUrl: finalFotoUrl, jumlahStok: Number(formData.jumlahStok) || 0 };
 
-    if (editId) {
-      await equipmentApi.update(editId, payload);
-    } else {
-      await equipmentApi.create(payload);
+    try {
+      if (editId) {
+        await equipmentApi.update(editId, payload);
+        setToast({ msg: 'Data peralatan berhasil diperbarui.', type: 'success' });
+      } else {
+        await equipmentApi.create(payload);
+        setToast({ msg: 'Data peralatan berhasil ditambahkan.', type: 'success' });
+      }
+      setFormModalOpen(false);
+      handleRemoveImage();
+      fetchEquipment();
+    } catch (err: any) {
+      setToast({ msg: err?.response?.data?.message || 'Gagal menyimpan data peralatan.', type: 'error' });
     }
-    setFormModalOpen(false);
-    handleRemoveImage();
-    fetchEquipment();
   };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    await equipmentApi.delete(deleteTarget.id);
-    setDeleteTarget(null);
-    fetchEquipment();
+    try {
+      await equipmentApi.delete(deleteTarget.id);
+      setToast({ msg: 'Data peralatan berhasil dihapus.', type: 'success' });
+      setDeleteTarget(null);
+      fetchEquipment();
+    } catch (err: any) {
+      setToast({ msg: err?.response?.data?.message || 'Gagal menghapus data peralatan.', type: 'error' });
+    }
   };
 
-  const goToPage = (targetPage: number) => {
-    if (targetPage < 1 || targetPage > totalPages) return;
-    setPage(targetPage);
+  const resetFilters = () => {
+    setFilterKey('dipakai');
   };
+
+  const activeLabel = FILTERS.find((f) => f.key === filterKey)?.label || 'Sedang Dipakai';
 
   return (
     <div className="space-y-5 pb-8">
@@ -193,18 +247,18 @@ export const PeralatanPage: React.FC = () => {
           <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Mesin Olah & Pascapanen</p>
         </div>
 
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#8C9E5B]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">KONDISI BAIK & SIAP OPERASI</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#DB7C26]">
+          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">SEDANG DIPAKAI</p>
           <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {equipmentList.filter((e) => e.kondisi === 'Sangat Baik' || e.kondisi === 'Baik').length} Unit Ready
+            {equipmentList.filter((e) => e.status === 'Sedang Digunakan').length} Unit Dipakai
           </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Berfungsi optimal di lapangan</p>
+          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Beroperasi aktif di lapangan</p>
         </div>
 
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#DEB938]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">PERLU PERBAIKAN / SERVIS</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#B42318]">
+          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">BUTUH PERBAIKAN / SERVIS</p>
           <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {equipmentList.filter((e) => e.kondisi === 'Perlu Perbaikan' || e.status === 'Dalam Perawatan').length} Unit Perawatan
+            {equipmentList.filter((e) => e.kondisi === 'Perlu Perbaikan' || e.kondisi === 'Rusak' || e.status === 'Dalam Perawatan').length} Unit Perawatan
           </h3>
           <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Jadwal perawatan rutin bengkel</p>
         </div>
@@ -212,13 +266,45 @@ export const PeralatanPage: React.FC = () => {
 
       {/* CRUD Equipment Table */}
       <div className="bg-white rounded-xl shadow-2xs border border-[#c4c8bb]/30 overflow-hidden">
-        <div className="p-3.5 sm:p-4 border-b border-[#c4c8bb]/20 flex items-center justify-between">
-          <h3 className="font-semibold text-[#2C4219] text-sm">
-            Daftar Inventaris Sarana Peralatan
-          </h3>
-          <span className="text-xs text-[#6B7280] font-medium">
-            Menampilkan {loading ? '...' : equipmentList.length} dari {total} unit peralatan
-          </span>
+        {/* Filter pill: 1 pilihan aktif, klik langsung memfilter */}
+        <div className="p-3.5 sm:p-4 border-b border-[#c4c8bb]/20 flex flex-col gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold text-[#2C4219] text-sm mr-1">
+              Daftar Inventaris Sarana Peralatan
+            </h3>
+            <span className="text-xs text-[#6B7280] font-medium">
+              ({loading ? '...' : filteredList.length} unit tampil)
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {FILTERS.map((f) => {
+              const active = f.key === filterKey;
+              const count = equipmentList.filter(filterFn[f.key]).length;
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => setFilterKey(f.key)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
+                    active
+                      ? 'bg-[#2C4219] text-white border-[#2C4219] shadow-sm'
+                      : 'bg-[#F7F7F5] text-[#44483e] border-[#c4c8bb]/40 hover:bg-[#efe0d2]/60 hover:border-[#2C4219]/40'
+                  }`}
+                >
+                  {f.icon}
+                  {f.label}
+                  <span
+                    className={`px-1.5 rounded-full text-[10px] font-bold ${
+                      active ? 'bg-white/20 text-white' : 'bg-[#efe0d2] text-[#2C4219]'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="overflow-x-auto custom-scrollbar">
@@ -231,25 +317,28 @@ export const PeralatanPage: React.FC = () => {
                 <th className="py-2 px-3">JUMLAH STOK</th>
                 <th className="py-2 px-3">KONDISI</th>
                 <th className="py-2 px-3">STATUS</th>
+                <th className="py-2 px-3">TEMPAT PENYIMPANAN</th>
                 <th className="py-2 px-3 pr-4 text-center">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 text-[#221A12] font-medium">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-[#6B7280]">
+                  <td colSpan={8} className="py-8 text-center text-[#6B7280]">
                     <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
                     Memuat data peralatan...
                   </td>
                 </tr>
-              ) : equipmentList.length === 0 ? (
+              ) : filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-[#6B7280]">
-                    Tidak ada data peralatan yang ditemukan.
+                  <td colSpan={8} className="py-8 text-center text-[#6B7280]">
+                    {equipmentList.length === 0
+                      ? 'Tidak ada data peralatan yang ditemukan.'
+                      : `Tidak ada peralatan pada filter "${activeLabel}".`}
                   </td>
                 </tr>
               ) : (
-              equipmentList.map((item) => (
+              filteredList.map((item) => (
                 <tr key={item.id} className="hover:bg-[#F7F7F5] transition-colors">
                   <td className="py-2 px-3 pl-4 font-bold text-[#2C4219]">{item.kodeAlat}</td>
                   <td className="py-2 px-3 font-semibold">{item.namaPeralatan}</td>
@@ -265,20 +354,26 @@ export const PeralatanPage: React.FC = () => {
                           : 'error'
                       }
                     >
-                      {item.kondisi}
+                      {item.kondisi === 'Perlu Perbaikan' ? 'Butuh Perbaikan' : item.kondisi}
                     </Badge>
                   </td>
                   <td className="py-2 px-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        item.status === 'Tersedia'
-                          ? 'bg-[#C3E28D]/50 text-[#172C05]'
-                          : item.status === 'Sedang Digunakan'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
+                    <Badge
+                      variant={
+                        item.status === 'Sedang Digunakan'
+                          ? 'info'
+                          : item.status === 'Dalam Perawatan'
+                          ? 'warning'
+                          : 'sage'
+                      }
                     >
-                      {item.status}
+                      {item.status === 'Sedang Digunakan' ? 'Sedang Dipakai' : item.status}
+                    </Badge>
+                  </td>
+                  <td className="py-2 px-3 text-[#44483e]">
+                    <span className="inline-flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-[#6B7280] shrink-0" />
+                      {item.lokasiPenyimpanan || <span className="text-[#9CA3AF]">-</span>}
                     </span>
                   </td>
                   <td className="py-2 px-3 pr-4 text-center">
@@ -317,43 +412,20 @@ export const PeralatanPage: React.FC = () => {
           </table>
         </div>
 
-        {/* Table Footer: Pagination */}
-        {!loading && total > 0 && (
-          <div className="p-3 sm:p-4 border-t border-[#c4c8bb]/20 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#6B7280]">
+        {/* Ringkasan hasil filter */}
+        {!loading && filteredList.length > 0 && (
+          <div className="p-3 sm:p-4 border-t border-[#c4c8bb]/20 flex items-center justify-between gap-2 text-xs text-[#6B7280]">
             <span className="font-medium">
-              Menampilkan {equipmentList.length === 0 ? 0 : (page - 1) * limit + 1}-
-              {Math.min(page * limit, total)} dari {total} unit
+              Menampilkan {filteredList.length} unit ({activeLabel})
             </span>
-
-            <div className="flex items-center gap-1 font-bold">
+            {filterKey !== 'dipakai' && (
               <button
-                onClick={() => goToPage(page - 1)}
-                disabled={page <= 1}
-                className="p-1 rounded-md border border-[#c4c8bb]/30 text-[#44483e] hover:bg-[#F7F7F5] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                onClick={resetFilters}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold text-[#2C4219] hover:bg-[#efe0d2]/60 border border-[#c4c8bb]/30 transition-colors cursor-pointer"
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
+                <X className="w-3 h-3" /> Kembali ke Sedang Dipakai
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-                <button
-                  key={num}
-                  onClick={() => goToPage(num)}
-                  className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs transition-colors cursor-pointer ${
-                    num === page
-                      ? 'bg-[#2C4219] text-white'
-                      : 'hover:bg-[#F7F7F5] text-[#44483e]'
-                  }`}
-                >
-                  {num}
-                </button>
-              ))}
-              <button
-                onClick={() => goToPage(page + 1)}
-                disabled={page >= totalPages}
-                className="p-1 rounded-md border border-[#c4c8bb]/30 text-[#44483e] hover:bg-[#F7F7F5] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            )}
           </div>
         )}
       </div>
@@ -413,7 +485,7 @@ export const PeralatanPage: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs text-[#74796d] font-bold uppercase">Spesifikasi Teknik</p>
+              <p className="text-xs text-[#74796d] font-bold uppercase">Deskripsi</p>
               <p className="p-3 bg-[#fff1e5] rounded-xl text-xs text-[#44483e] leading-relaxed border border-[#c4c8bb]/20">
                 {activeItem.spesifikasi}
               </p>
@@ -481,6 +553,18 @@ export const PeralatanPage: React.FC = () => {
             />
           </div>
 
+          <div>
+            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+              Deskripsi
+            </label>
+            <textarea
+              value={formData.spesifikasi}
+              onChange={(e) => setFormData({ ...formData, spesifikasi: e.target.value })}
+              placeholder="Contoh: Traktor tangan untuk pengolahan lahan, cocok untuk membajak sawah kering"
+              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm h-20"
+            />
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
@@ -506,7 +590,7 @@ export const PeralatanPage: React.FC = () => {
               >
                 <option value="Sangat Baik">Sangat Baik</option>
                 <option value="Baik">Baik</option>
-                <option value="Perlu Perbaikan">Perlu Perbaikan</option>
+                <option value="Perlu Perbaikan">Butuh Perbaikan</option>
                 <option value="Rusak">Rusak</option>
               </select>
             </div>
@@ -519,8 +603,8 @@ export const PeralatanPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
               >
+                <option value="Sedang Digunakan">Sedang Dipakai</option>
                 <option value="Tersedia">Tersedia</option>
-                <option value="Sedang Digunakan">Sedang Digunakan</option>
                 <option value="Dalam Perawatan">Dalam Perawatan</option>
               </select>
             </div>
@@ -528,13 +612,14 @@ export const PeralatanPage: React.FC = () => {
 
           <div>
             <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Spesifikasi Teknis
+              Tempat Penyimpanan
             </label>
-            <textarea
-              value={formData.spesifikasi}
-              onChange={(e) => setFormData({ ...formData, spesifikasi: e.target.value })}
-              placeholder="Contoh: Diesel 7.5 HP, kapasitas olah 2 Ha/jam"
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm h-20"
+            <input
+              type="text"
+              value={formData.lokasiPenyimpanan || ''}
+              onChange={(e) => setFormData({ ...formData, lokasiPenyimpanan: e.target.value })}
+              placeholder="Contoh: Gudang Alat Lahan A (Gubug Tani)"
+              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
             />
           </div>
 
@@ -652,6 +737,9 @@ export const PeralatanPage: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Toast notifikasi */}
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };

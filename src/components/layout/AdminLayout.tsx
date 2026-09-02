@@ -3,6 +3,7 @@ import { Outlet, useOutletContext, Link, useLocation } from 'react-router-dom';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
 import { AdminFooter } from './AdminFooter';
+import { MobileBottomNav } from './MobileBottomNav';
 
 export type AdminContextType = {
   searchTerm: string;
@@ -58,6 +59,7 @@ export const AdminLayout: React.FC = () => {
       produksi: 'Kelola Olahan',
       sertifikat: 'Kelola Sertifikat',
       kemasan: 'Kelola Data Kemasan',
+      gudang: 'Gudang',
       logistik: 'Logistik',
       profil: 'Profil Saya',
       integrasi: 'Pengaturan & Integrasi API',
@@ -104,12 +106,15 @@ export const AdminLayout: React.FC = () => {
           onSearchChange={setSearchTerm}
         />
 
-        <main className="flex-1 p-3 sm:p-4.5 lg:p-6 max-w-6xl w-full mx-auto min-w-0">
+        <main className="flex-1 p-3 sm:p-4.5 lg:p-6 max-w-6xl w-full mx-auto min-w-0 pb-28 lg:pb-6">
           {renderBreadcrumbs()}
           <Outlet context={{ searchTerm, setSearchTerm }} />
         </main>
 
         <AdminFooter />
+
+        {/* Mobile Bottom Navigation — Glassmorphism (hanya di < lg) */}
+        <MobileBottomNav />
       </div>
     </div>
   );

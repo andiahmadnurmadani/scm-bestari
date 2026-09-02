@@ -13,7 +13,8 @@ function mapRowToLand(row) {
     luasHektar: Number(row.luas_hektar),
     varietasSorgum: row.varietas_sorgum,
     statusIrigasi: row.status_irigasi,
-    jenisTanah: row.jenis_tanah,
+    jenisTanah: row.jenis_tanah || '',
+    jumlahLubang: row.jumlah_lubang != null ? Number(row.jumlah_lubang) : 0,
     pemilikKelompokTani: row.pemilik_kelompok_tani,
     statusKesiapan: row.status_kesiapan,
     statusBadge: row.status_badge || '',
@@ -37,6 +38,7 @@ function validateLand(data) {
   if (!data.fotoUrl || !String(data.fotoUrl).trim()) return 'Foto lahan wajib diisi.';
   if (data.statusIrigasi && !irigasiValues.includes(data.statusIrigasi)) return 'Status irigasi tidak valid.';
   if (data.statusKesiapan && !kesiapanValues.includes(data.statusKesiapan)) return 'Status kesiapan tidak valid.';
+  if (data.jumlahLubang != null && (isNaN(Number(data.jumlahLubang)) || Number(data.jumlahLubang) < 0)) return 'Jumlah lubang tidak valid.';
   return null;
 }
 
@@ -72,7 +74,7 @@ export async function getLands(req, res) {
     // melempar "Incorrect arguments to mysqld_stmt_execute" pada LIMIT ? OFFSET ?
     const [rows] = await pool.query(
       `SELECT id, kode_lahan, nama_lahan, lokasi_desa, kecamatan, luas_hektar,
-              varietas_sorgum, status_irigasi, jenis_tanah, pemilik_kelompok_tani,
+              varietas_sorgum, status_irigasi, jenis_tanah, jumlah_lubang, pemilik_kelompok_tani,
               status_kesiapan, status_badge, panen_lalu_ton, foto_url, latitude, longitude, created_at
        FROM lands
        ${whereClause}
@@ -105,7 +107,7 @@ export async function getLandById(req, res) {
   try {
     const [rows] = await getPool().execute(
       `SELECT id, kode_lahan, nama_lahan, lokasi_desa, kecamatan, luas_hektar,
-              varietas_sorgum, status_irigasi, jenis_tanah, pemilik_kelompok_tani,
+              varietas_sorgum, status_irigasi, jenis_tanah, jumlah_lubang, pemilik_kelompok_tani,
               status_kesiapan, status_badge, panen_lalu_ton, foto_url, latitude, longitude, created_at
        FROM lands WHERE id = ? LIMIT 1`,
       [req.params.id]
@@ -145,9 +147,9 @@ export async function createLand(req, res) {
     const [result] = await pool.execute(
       `INSERT INTO lands
         (kode_lahan, nama_lahan, lokasi_desa, kecamatan, luas_hektar, varietas_sorgum,
-         status_irigasi, jenis_tanah, pemilik_kelompok_tani, status_kesiapan,
+         status_irigasi, jenis_tanah, jumlah_lubang, pemilik_kelompok_tani, status_kesiapan,
          status_badge, panen_lalu_ton, foto_url, latitude, longitude)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         kodeLahan,
         String(data.namaLahan).trim(),
@@ -156,7 +158,8 @@ export async function createLand(req, res) {
         Number(data.luasHektar),
         String(data.varietasSorgum || '').trim(),
         data.statusIrigasi || 'Irigasi Teknis',
-        String(data.jenisTanah || '').trim(),
+        data.jenisTanah != null ? String(data.jenisTanah).trim() : null,
+        data.jumlahLubang != null ? Number(data.jumlahLubang) : 0,
         String(data.pemilikKelompokTani || '').trim(),
         data.statusKesiapan || 'Siap Tanam',
         data.statusBadge || null,
@@ -169,11 +172,25 @@ export async function createLand(req, res) {
 
     const [newRow] = await pool.execute(
       `SELECT id, kode_lahan, nama_lahan, lokasi_desa, kecamatan, luas_hektar,
-              varietas_sorgum, status_irigasi, jenis_tanah, pemilik_kelompok_tani,
+              varietas_sorgum, status_irigasi, jenis_tanah, jumlah_lubang, pemilik_kelompok_tani,
               status_kesiapan, status_badge, panen_lalu_ton, foto_url, latitude, longitude, created_at
        FROM lands WHERE id = ? LIMIT 1`,
       [result.insertId]
     );
+
+    // Auto-create gudang untuk lahan baru
+    try {
+      const [wg] = await pool.execute('SELECT id FROM warehouses WHERE lahan_id = ? LIMIT 1', [result.insertId]);
+      if (wg.length === 0) {
+        const seq = String(result.insertId).padStart(3, '0');
+        await pool.execute(
+          `INSERT INTO warehouses (kode_gudang, nama_gudang, lahan_id, lokasi)
+           VALUES (?, ?, ?, ?)`,
+          [`GDG-LHN-${seq}`, `Gudang ${String(data.namaLahan).trim()}`, result.insertId, String(data.lokasiDesa || '').trim()]
+        );
+        console.log(`✓ Gudang auto-create untuk lahan baru "${data.namaLahan}" (GDG-LHN-${seq}).`);
+      }
+    } catch (e) { console.warn('⚠ Auto-create gudang dilewati:', e.message); }
 
     return res.status(201).json({
       success: true,
@@ -217,6 +234,7 @@ export async function updateLand(req, res) {
       varietasSorgum: 'varietas_sorgum',
       statusIrigasi: 'status_irigasi',
       jenisTanah: 'jenis_tanah',
+      jumlahLubang: 'jumlah_lubang',
       pemilikKelompokTani: 'pemilik_kelompok_tani',
       statusKesiapan: 'status_kesiapan',
       statusBadge: 'status_badge',
@@ -241,7 +259,7 @@ export async function updateLand(req, res) {
 
     const [updatedRow] = await pool.execute(
       `SELECT id, kode_lahan, nama_lahan, lokasi_desa, kecamatan, luas_hektar,
-              varietas_sorgum, status_irigasi, jenis_tanah, pemilik_kelompok_tani,
+              varietas_sorgum, status_irigasi, jenis_tanah, jumlah_lubang, pemilik_kelompok_tani,
               status_kesiapan, status_badge, panen_lalu_ton, foto_url, latitude, longitude, created_at
        FROM lands WHERE id = ? LIMIT 1`,
       [id]

@@ -178,6 +178,7 @@ export async function initDatabase() {
       name VARCHAR(100) NOT NULL UNIQUE,
       description TEXT NULL,
       image_url LONGTEXT NULL,
+      lama_panen INT UNSIGNED NULL DEFAULT 100,
       is_active TINYINT(1) NOT NULL DEFAULT 1,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -204,19 +205,33 @@ export async function initDatabase() {
     console.warn('⚠ Migrasi varieties.image_url dilewati:', alterError.message);
   }
 
+  // Migrasi: pastikan kolom lama_panen ada (estimasi umur panen dalam hari)
+  try {
+    const [lpRows] = await pool.query(
+      `SELECT COUNT(*) AS total FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'varieties' AND COLUMN_NAME = 'lama_panen'`
+    );
+    if (Number(lpRows[0].total) === 0) {
+      await pool.query(`ALTER TABLE varieties ADD COLUMN lama_panen INT UNSIGNED NULL DEFAULT 100`);
+      console.log('✓ Kolom "varieties.lama_panen" ditambahkan (INT hari).');
+    }
+  } catch (alterError) {
+    console.warn('⚠ Migrasi varieties.lama_panen dilewati:', alterError.message);
+  }
+
   // Seed varietas awal jika tabel kosong
   const [vCount] = await pool.query('SELECT COUNT(*) AS total FROM varieties');
   if (Number(vCount[0].total) === 0) {
     const seedVarieties = [
-      ['Sorgum Bioguma 1', 'Varietas unggul Balitbangtan, cocok untuk pangan, umur panen ±100 hari.'],
-      ['Sorgum Bioguma 2', 'Varietas unggul dengan hasil tinggi, toleran kekeringan.'],
-      ['Sorgum Bioguma 3', 'Varietas sorgum manis untuk pangan dan bioetanol.'],
-      ['Sorgum Numbu', 'Varietas lokal adaptif, baik untuk tepung dan pakan.'],
-      ['Sorgum Kawali', 'Varietas unggul dengan biji besar, hasil melimpah.'],
-      ['Sorgum Suri 4 (Manis)', 'Sorgum manis, batangnya disadap untuk gula cair nira.'],
+      ['Sorgum Bioguma 1', 'Varietas unggul Balitbangtan, cocok untuk pangan, umur panen ±100 hari.', 100],
+      ['Sorgum Bioguma 2', 'Varietas unggul dengan hasil tinggi, toleran kekeringan.', 105],
+      ['Sorgum Bioguma 3', 'Varietas sorgum manis untuk pangan dan bioetanol.', 110],
+      ['Sorgum Numbu', 'Varietas lokal adaptif, baik untuk tepung dan pakan.', 95],
+      ['Sorgum Kawali', 'Varietas unggul dengan biji besar, hasil melimpah.', 100],
+      ['Sorgum Suri 4 (Manis)', 'Sorgum manis, batangnya disadap untuk gula cair nira.', 115],
     ];
     for (const v of seedVarieties) {
-      await pool.execute('INSERT INTO varieties (name, description) VALUES (?, ?)', v);
+      await pool.execute('INSERT INTO varieties (name, description, lama_panen) VALUES (?, ?, ?)', v);
     }
     console.log(`✓ Seed varietas: ${seedVarieties.length} baris dimasukkan.`);
   }
@@ -232,7 +247,8 @@ export async function initDatabase() {
       luas_hektar DECIMAL(8,2) NOT NULL DEFAULT 0,
       varietas_sorgum VARCHAR(100) NOT NULL,
       status_irigasi ENUM('Irigasi Teknis', 'Tadah Hujan', 'Semi Teknis') NOT NULL DEFAULT 'Irigasi Teknis',
-      jenis_tanah VARCHAR(100) NOT NULL,
+      jenis_tanah VARCHAR(100) NULL,
+      jumlah_lubang INT UNSIGNED NOT NULL DEFAULT 0,
       pemilik_kelompok_tani VARCHAR(200) NOT NULL,
       status_kesiapan ENUM('Siap Tanam', 'Masa Pertumbuhan', 'Masa Panen', 'Bera (Istirahat)') NOT NULL DEFAULT 'Siap Tanam',
       status_badge VARCHAR(30) NULL,
@@ -246,6 +262,21 @@ export async function initDatabase() {
   `);
   console.log('✓ Tabel "lands" siap.');
 
+  // Migrasi: tambah kolom jumlah_lubang jika belum ada & buat jenis_tanah nullable (dihapus dari UI)
+  try {
+    const [lubangCol] = await pool.query(
+      `SELECT COUNT(*) AS total FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'lands' AND COLUMN_NAME = 'jumlah_lubang'`
+    );
+    if (Number(lubangCol[0].total) === 0) {
+      await pool.query(`ALTER TABLE lands ADD COLUMN jumlah_lubang INT UNSIGNED NOT NULL DEFAULT 0 AFTER jenis_tanah`);
+      console.log('✓ Kolom "lands.jumlah_lubang" ditambahkan.');
+    }
+  } catch (e) {
+    console.warn('⚠ Migrasi lands.jumlah_lubang dilewati:', e.message);
+  }
+  try {
+    await pool.query(`ALTER TABLE lands MODIFY COLUMN jenis_tanah VARCHAR(100) NULL`);
+  } catch {}
   // Migrasi: pastikan kolom foto_url bertipe LONGTEXT
   try {
     await pool.query(`ALTER TABLE lands MODIFY COLUMN foto_url LONGTEXT NULL`);
@@ -277,6 +308,139 @@ export async function initDatabase() {
     }
     console.log(`✓ Seed lahan: ${seedLands.length} baris dimasukkan.`);
   }
+
+  // ── Auto-migrasi: tabel plantings (penanaman — hulu) ─────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS plantings (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      kode_tanam VARCHAR(50) NOT NULL UNIQUE,
+      lahan_id BIGINT UNSIGNED NOT NULL,
+      tanggal_tanam DATE NOT NULL,
+      estimasi_panen DATE NULL,
+      varietas VARCHAR(100) NOT NULL,
+      jumlah_lubang INT UNSIGNED NOT NULL DEFAULT 0,
+      luas_tanam DECIMAL(8,2) NULL,
+      petugas VARCHAR(200) NULL,
+      status_tanam ENUM('Ditanam','Tumbuh','Siap Panen','Gagal','Dipanen') NOT NULL DEFAULT 'Ditanam',
+      catatan TEXT NULL,
+      foto_url LONGTEXT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_lahan (lahan_id),
+      INDEX idx_tanggal (tanggal_tanam)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  console.log('✓ Tabel "plantings" siap.');
+
+  // Migrasi: tambah kolom estimasi_panen / jumlah_lubang / luas_tanam / status_tanam jika tabel lama
+  const plantingCols = [
+    ['estimasi_panen', 'DATE NULL'],
+    ['jumlah_lubang', 'INT UNSIGNED NOT NULL DEFAULT 0'],
+    ['luas_tanam', 'DECIMAL(8,2) NULL'],
+    ['petugas', 'VARCHAR(200) NULL'],
+    ['status_tanam', "ENUM('Ditanam','Tumbuh','Siap Panen','Gagal','Dipanen') NOT NULL DEFAULT 'Ditanam'"],
+    ['catatan', 'TEXT NULL'],
+    ['foto_url', 'LONGTEXT NULL'],
+  ];
+  for (const [cName, cDef] of plantingCols) {
+    try {
+      const [cRows] = await pool.query(`SELECT COUNT(*) AS total FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='plantings' AND COLUMN_NAME=?`, [cName]);
+      if (Number(cRows[0].total) === 0) {
+        await pool.query(`ALTER TABLE plantings ADD COLUMN \`${cName}\` ${cDef}`);
+        console.log(`✓ Kolom "plantings.${cName}" ditambahkan.`);
+      }
+    } catch (e) { console.warn(`⚠ Migrasi plantings.${cName} dilewati:`, e.message); }
+  }
+
+  // Seed plantings awal jika kosong — buat 1 per lahan untuk demo traceability
+  const [plCount] = await pool.query('SELECT COUNT(*) AS total FROM plantings');
+  if (Number(plCount[0].total) === 0) {
+    // ambil ids lahan untuk mapping
+    const [landRows] = await pool.query('SELECT id, kode_lahan, nama_lahan, varietas_sorgum FROM lands ORDER BY id LIMIT 6');
+    const seedPlantings = landRows.map((lr, idx) => {
+      const tgl = new Date(); tgl.setDate(tgl.getDate() - (90 + idx * 7));
+      const est = new Date(tgl); est.setDate(est.getDate() + 100);
+      return [
+        `TNM-${String(idx + 1).padStart(3, '0')}`,
+        lr.id,
+        tgl.toISOString().slice(0,10),
+        est.toISOString().slice(0,10),
+        lr.varietas_sorgum || 'Sorgum Bioguma 1',
+        800 + idx * 150,
+        (2.0 + idx * 0.3).toFixed(1),
+        `Petugas ${idx+1} - KWT`,
+        idx % 3 === 0 ? 'Siap Panen' : idx % 3 === 1 ? 'Tumbuh' : 'Ditanam',
+        `Penanaman awal lahan ${lr.nama_lahan}`,
+        null
+      ];
+    });
+    for (const p of seedPlantings) {
+      await pool.execute(`INSERT INTO plantings (kode_tanam, lahan_id, tanggal_tanam, estimasi_panen, varietas, jumlah_lubang, luas_tanam, petugas, status_tanam, catatan, foto_url) VALUES (?,?,?,?,?,?,?,?,?,?,?)`, p);
+    }
+    if (seedPlantings.length) console.log(`✓ Seed plantings: ${seedPlantings.length} baris dimasukkan.`);
+  }
+
+  // ── Migrasi lineage: harvests tambah lahan_id, planting_id, periode_hari ───────
+  for (const [col, def] of [
+    ['lahan_id', 'BIGINT UNSIGNED NULL'],
+    ['planting_id', 'BIGINT UNSIGNED NULL'],
+    ['periode_hari', 'INT NULL'],
+  ]) {
+    try {
+      const [hr] = await pool.query(`SELECT COUNT(*) AS total FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='harvests' AND COLUMN_NAME=?`, [col]);
+      if (Number(hr[0].total) === 0) {
+        await pool.query(`ALTER TABLE harvests ADD COLUMN \`${col}\` ${def}`);
+        console.log(`✓ Kolom "harvests.${col}" ditambahkan.`);
+      }
+    } catch (e) { console.warn(`⚠ Migrasi harvests.${col} dilewati:`, e.message); }
+  }
+  // indeks untuk trace cepat
+  try { await pool.query(`CREATE INDEX idx_harvest_lahan ON harvests(lahan_id)`); } catch {}
+  try { await pool.query(`CREATE INDEX idx_harvest_planting ON harvests(planting_id)`); } catch {}
+
+  // Backfill harvests yang lama: coba mapping namaLahan -> lahan_id, dan tanam terbaru pada lahan tsb -> planting_id
+  try {
+    const [unlinked] = await pool.query(`SELECT id, nama_lahan FROM harvests WHERE lahan_id IS NULL LIMIT 20`);
+    for (const h of unlinked) {
+      const [lr] = await pool.query(`SELECT id FROM lands WHERE nama_lahan=? LIMIT 1`, [h.nama_lahan]);
+      if (lr.length) {
+        const lahanId = lr[0].id;
+        const [pr] = await pool.query(`SELECT id, tanggal_tanam FROM plantings WHERE lahan_id=? ORDER BY tanggal_tanam DESC LIMIT 1`, [lahanId]);
+        const plantingId = pr.length ? pr[0].id : null;
+        await pool.execute(`UPDATE harvests SET lahan_id=?, planting_id=? WHERE id=?`, [lahanId, plantingId, h.id]);
+      }
+    }
+    // hitung periode_hari jika ada planting
+    await pool.query(`UPDATE harvests h JOIN plantings p ON h.planting_id=p.id SET h.periode_hari = DATEDIFF(h.tanggal_panen, p.tanggal_tanam) WHERE h.periode_hari IS NULL AND h.planting_id IS NOT NULL`);
+  } catch (e) { console.warn('⚠ Backfill harvest lineage dilewati:', e.message); }
+
+  // ── Migrasi lineage: production_batches tambah lahan_id, planting_id, harvest_id ─
+  // Ubah kategori ENUM → VARCHAR (supaya bisa tambah kategori baru: Gabah, dll)
+  try {
+    const [kc] = await pool.query(`SELECT COUNT(*) AS total FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='production_batches' AND COLUMN_NAME='kategori' AND DATA_TYPE='enum'`);
+    if (Number(kc[0].total) > 0) {
+      await pool.query(`ALTER TABLE production_batches MODIFY COLUMN kategori VARCHAR(100) NOT NULL DEFAULT 'Siap Konsumsi (Ready to Eat)'`);
+      console.log('✓ Kolom "production_batches.kategori" diubah ENUM → VARCHAR.');
+    }
+  } catch (e) { console.warn('⚠ Migrasi kategori production_batches dilewati:', e.message); }
+  for (const [col, def] of [
+    ['lahan_id', 'BIGINT UNSIGNED NULL'],
+    ['planting_id', 'BIGINT UNSIGNED NULL'],
+    ['harvest_id', 'BIGINT UNSIGNED NULL'],
+    ['bahan_digunakan', 'DECIMAL(12,2) NULL'],
+    ['satuan_bahan', "VARCHAR(50) NULL DEFAULT 'Kg'"],
+    ['gudang_id', 'BIGINT UNSIGNED NULL'],
+  ]) {
+    try {
+      const [pr] = await pool.query(`SELECT COUNT(*) AS total FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='production_batches' AND COLUMN_NAME=?`, [col]);
+      if (Number(pr[0].total) === 0) {
+        await pool.query(`ALTER TABLE production_batches ADD COLUMN \`${col}\` ${def}`);
+        console.log(`✓ Kolom "production_batches.${col}" ditambahkan.`);
+      }
+    } catch (e) { console.warn(`⚠ Migrasi production_batches.${col} dilewati:`, e.message); }
+  }
+  try { await pool.query(`CREATE INDEX idx_prod_harvest ON production_batches(harvest_id)`); } catch {}
+  try { await pool.query(`CREATE INDEX idx_prod_lahan ON production_batches(lahan_id)`); } catch {}
 
   // Auto-migrasi: tabel equipment (sarana & peralatan)
   await pool.query(`
@@ -336,13 +500,16 @@ export async function initDatabase() {
       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
       kode_batch VARCHAR(50) NOT NULL UNIQUE,
       nama_produk VARCHAR(200) NOT NULL,
-      kategori ENUM('Raw (Bahan Mentah)', 'Ready to Eat (Siap Konsumsi)') NOT NULL DEFAULT 'Ready to Eat (Siap Konsumsi)',
+      kategori VARCHAR(100) NOT NULL DEFAULT 'Siap Konsumsi (Ready to Eat)',
       tanggal_produksi VARCHAR(50) NULL,
       tanggal_kadaluarsa VARCHAR(50) NULL,
       jumlah_hasil INT NOT NULL DEFAULT 0,
       satuan VARCHAR(100) NOT NULL,
+      bahan_digunakan DECIMAL(12,2) NULL,
+      satuan_bahan VARCHAR(50) NULL DEFAULT 'Kg',
       nomor_batch_bahan_baku VARCHAR(100) NULL,
       operator_produksi VARCHAR(200) NULL,
+      gudang_id BIGINT UNSIGNED NULL,
       status_qc ENUM('Lolos QC', 'Pending QC', 'Revisi Batch') NOT NULL DEFAULT 'Pending QC',
       lokasi_gudang VARCHAR(200) NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -373,6 +540,68 @@ export async function initDatabase() {
     }
     console.log(`✓ Seed produksi: ${seedBatches.length} baris dimasukkan.`);
   }
+
+  // ── Auto-migrasi: tabel warehouses (gudang per lahan) ───────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS warehouses (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      kode_gudang VARCHAR(50) NOT NULL UNIQUE,
+      nama_gudang VARCHAR(200) NOT NULL,
+      lahan_id BIGINT UNSIGNED NULL,
+      lokasi VARCHAR(200) NULL,
+      kapasitas_kg DECIMAL(12,2) NULL,
+      total_stok_kg DECIMAL(12,2) NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  console.log('✓ Tabel "warehouses" siap.');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS warehouse_stock_batches (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      gudang_id BIGINT UNSIGNED NOT NULL,
+      harvest_id BIGINT UNSIGNED NULL,
+      kode_batch_stok VARCHAR(50) NOT NULL UNIQUE,
+      jumlah_masuk_kg DECIMAL(12,2) NOT NULL DEFAULT 0,
+      sisa_kg DECIMAL(12,2) NOT NULL DEFAULT 0,
+      tanggal_masuk DATE NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  console.log('✓ Tabel "warehouse_stock_batches" siap.');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS warehouse_movements (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      gudang_id BIGINT UNSIGNED NOT NULL,
+      tipe ENUM('MASUK', 'KELUAR') NOT NULL,
+      jumlah_kg DECIMAL(12,2) NOT NULL DEFAULT 0,
+      keterangan VARCHAR(255) NULL,
+      harvest_id BIGINT UNSIGNED NULL,
+      production_id BIGINT UNSIGNED NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  console.log('✓ Tabel "warehouse_movements" siap.');
+
+  // Auto-create gudang untuk lahan yang sudah ada (backfill)
+  try {
+    const [lahanRows] = await pool.query('SELECT id, kode_lahan, nama_lahan, lokasi_desa FROM lands');
+    for (const l of lahanRows) {
+      const [wg] = await pool.query('SELECT id FROM warehouses WHERE lahan_id = ? LIMIT 1', [l.id]);
+      if (wg.length === 0) {
+        const seq = String(l.id).padStart(3, '0');
+        await pool.query(
+          `INSERT INTO warehouses (kode_gudang, nama_gudang, lahan_id, lokasi)
+           VALUES (?, ?, ?, ?)`,
+          [`GDG-LHN-${seq}`, `Gudang ${l.nama_lahan}`, l.id, l.lokasi_desa || null]
+        );
+        console.log(`✓ Gudang auto-create untuk lahan "${l.nama_lahan}" (GDG-LHN-${seq}).`);
+      }
+    }
+  } catch (e) { console.warn('⚠ Backfill gudang dilewati:', e.message); }
 
   // Auto-migrasi: tabel certificates (kelola sertifikat)
   await pool.query(`

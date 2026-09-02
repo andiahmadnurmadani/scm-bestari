@@ -65,3 +65,52 @@ export async function resetCmsContent(_req, res) {
     return res.status(500).json({ success: false, message: 'Gagal reset konten CMS.' });
   }
 }
+
+// ── GET /api/cms/settings/:key ─────────────────────────────────────────────────
+// Ambil setting arbitrer (mis. app_units untuk pengaturan satuan).
+export async function getSettingByKey(req, res) {
+  try {
+    const { key } = req.params;
+    if (!key) {
+      return res.status(400).json({ success: false, message: 'Key setting wajib diisi.' });
+    }
+    const [rows] = await getPool().execute(
+      'SELECT data FROM cms_settings WHERE setting_key = ? LIMIT 1',
+      [key]
+    );
+    if (rows.length === 0) {
+      return res.status(200).json({ success: true, data: null });
+    }
+    return res.status(200).json({ success: true, data: parseJson(rows[0].data) });
+  } catch (error) {
+    console.error('[getSettingByKey] Error:', error.message);
+    return res.status(500).json({ success: false, message: 'Gagal mengambil setting.' });
+  }
+}
+
+// ── PUT /api/cms/settings/:key ─────────────────────────────────────────────────
+// Simpan setting arbitrer (mis. app_units untuk pengaturan satuan).
+export async function saveSettingByKey(req, res) {
+  try {
+    const { key } = req.params;
+    if (!key) {
+      return res.status(400).json({ success: false, message: 'Key setting wajib diisi.' });
+    }
+    const data = req.body || {};
+    if (!data || typeof data !== 'object') {
+      return res.status(400).json({ success: false, message: 'Data setting tidak valid.' });
+    }
+
+    const serialized = JSON.stringify(data);
+    await getPool().execute(
+      `INSERT INTO cms_settings (setting_key, data) VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE data = VALUES(data)`,
+      [key, serialized]
+    );
+
+    return res.status(200).json({ success: true, message: 'Setting berhasil disimpan.' });
+  } catch (error) {
+    console.error('[saveSettingByKey] Error:', error.message);
+    return res.status(500).json({ success: false, message: 'Gagal menyimpan setting.' });
+  }
+}

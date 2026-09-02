@@ -5,6 +5,7 @@ export interface Variety {
   name: string;
   description: string;
   imageUrl: string | null;
+  lamaPanen?: number;
   isActive: boolean;
   createdAt?: string;
 }
@@ -17,7 +18,7 @@ export const varietyApi = {
   },
 
   /** POST /api/varieties — tambah varietas baru */
-  create: async (data: { name: string; description?: string; imageUrl?: string | null }) => {
+  create: async (data: { name: string; description?: string; imageUrl?: string | null; lamaPanen?: number }) => {
     const response = await axiosClient.post('/varieties', data);
     return response.data;
   },
@@ -25,7 +26,7 @@ export const varietyApi = {
   /** PUT /api/varieties/:id — update varietas */
   update: async (
     id: string,
-    data: Partial<{ name: string; description: string; isActive: boolean; imageUrl: string | null }>
+    data: Partial<{ name: string; description: string; isActive: boolean; imageUrl: string | null; lamaPanen: number }>
   ) => {
     const response = await axiosClient.put(`/varieties/${id}`, data);
     return response.data;

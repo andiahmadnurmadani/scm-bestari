@@ -38,6 +38,12 @@ function validateEquipment(data) {
 
 /**
  * GET /api/equipment?page=1&limit=10&search=...
+ * Filter tambahan:
+ *  - status=<enum>       mis. 'Sedang Digunakan' | 'Dalam Perawatan' | 'Diarsipkan'
+ *  - kondisi=<enum>      mis. 'Perlu Perbaikan' | 'Rusak'
+ *  - perhatian=1         hanya alat yang SEDANG DIPAKAI atau BUTUH PERHATIAN
+ *                        (status Sedang Digunakan/Dalam Perawatan ATAU kondisi
+ *                         Perlu Perbaikan/Rusak) — dipakai halaman Sarana & Peralatan
  * Mengembalikan { data, pagination }
  */
 export async function getEquipmentList(req, res) {
@@ -45,13 +51,33 @@ export async function getEquipmentList(req, res) {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
     const search = String(req.query.search || '').trim();
+    const status = String(req.query.status || '').trim();
+    const kondisi = String(req.query.kondisi || '').trim();
+    const perhatian = String(req.query.perhatian || '').trim();
     const offset = (page - 1) * limit;
 
-    const whereClause = search
-      ? `WHERE kode_alat LIKE ? OR nama_peralatan LIKE ? OR kategori LIKE ? OR lokasi_penyimpanan LIKE ?`
-      : '';
-    const searchPattern = `%${search}%`;
-    const params = search ? [searchPattern, searchPattern, searchPattern, searchPattern] : [];
+    const conditions = [];
+    const params = [];
+
+    if (search) {
+      conditions.push(`(kode_alat LIKE ? OR nama_peralatan LIKE ? OR kategori LIKE ? OR lokasi_penyimpanan LIKE ?)`);
+      const sp = `%${search}%`;
+      params.push(sp, sp, sp, sp);
+    }
+    if (status) {
+      conditions.push(`status = ?`);
+      params.push(status);
+    }
+    if (kondisi) {
+      conditions.push(`kondisi = ?`);
+      params.push(kondisi);
+    }
+    // Mode "Perlu Perhatian": sembunyikan alat yang baik & tidak dipakai
+    if (perhatian === '1') {
+      conditions.push(`(status IN ('Sedang Digunakan', 'Dalam Perawatan') OR kondisi IN ('Perlu Perbaikan', 'Rusak'))`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const pool = getPool();
 

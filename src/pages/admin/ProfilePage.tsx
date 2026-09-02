@@ -20,11 +20,25 @@ import {
   Trash2,
   Plus,
   ExternalLink,
+  Scale,
+  Ruler,
+  CheckCircle2,
+  Weight,
+  Square,
 } from 'lucide-react';
 import { authApi } from '../../api/endpoints/authApi';
 import { apiKeyApi, ApiKey, ApiKeyCreated } from '../../api/endpoints/apiKeyApi';
 import { getApiBaseUrl, setApiBaseUrl, resetApiBaseUrl, getDocsUrl } from '../../utils/apiConfig';
 import { Toast } from '../../components/common/Toast';
+import {
+  useUnitSettings,
+  BeratUnit,
+  LuasUnit,
+  BERAT_LABEL,
+  LUAS_LABEL,
+  BERAT_KE_KG,
+  LUAS_KE_HEKTAR,
+} from '../../context/UnitSettingsContext';
 
 // ---------- Types ----------
 interface ProfileData {
@@ -110,6 +124,25 @@ export const ProfilePage: React.FC = () => {
   const [apiUrlInput, setApiUrlInput] = useState(getApiBaseUrl());
   const [testingUrl, setTestingUrl] = useState(false);
   const [urlTestResult, setUrlTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  // ── State Satuan (tab Pengaturan) ──
+  const { units, saveUnits: persistUnits } = useUnitSettings();
+  const [unitsBerat, setUnitsBerat] = useState<BeratUnit>(units.berat);
+  const [unitsLuas, setUnitsLuas] = useState<LuasUnit>(units.luas);
+  const [unitsSaving, setUnitsSaving] = useState(false);
+  const [unitsToast, setUnitsToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const handleSaveUnits = async () => {
+    setUnitsSaving(true);
+    try {
+      await persistUnits({ berat: unitsBerat, luas: unitsLuas });
+      setUnitsToast({ msg: 'Pengaturan satuan berhasil disimpan.', type: 'success' });
+    } catch (err: any) {
+      setUnitsToast({ msg: err?.message || 'Gagal menyimpan pengaturan satuan.', type: 'error' });
+    } finally {
+      setUnitsSaving(false);
+    }
+  };
 
   // Muat profil dari backend saat halaman dibuka
   useEffect(() => {
@@ -615,6 +648,98 @@ export const ProfilePage: React.FC = () => {
       {/* ===== TAB PENGATURAN (API Key) ===== */}
       {activeTab === 'pengaturan' && (
         <div className="space-y-4">
+          {/* Satuan Berat & Luas */}
+          <SectionCard title="Satuan Berat & Luas" icon={<Scale className="w-4 h-4" />}>
+            <div className="space-y-4">
+              <p className="text-[11px] text-[#6B7280] leading-relaxed">
+                Pilih satuan untuk menampilkan berat hasil panen & luas lahan di seluruh aplikasi.
+                Data tetap tersimpan sebagai Kg & Hektar — tampilan menyesuaikan otomatis.
+              </p>
+
+              {/* Berat */}
+              <div>
+                <p className="text-[10px] font-bold text-[#172C05] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Weight className="w-3.5 h-3.5 text-[#2C4219]" /> Satuan Berat
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {(Object.keys(BERAT_KE_KG) as BeratUnit[]).map((key) => {
+                    const active = unitsBerat === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setUnitsBerat(key)}
+                        className={`relative flex flex-col items-center gap-1 p-3 rounded-xl border-2 text-center transition-all cursor-pointer ${
+                          active
+                            ? 'border-[#2C4219] bg-[#C3E28D]/30 shadow-sm'
+                            : 'border-[#c4c8bb]/30 bg-white hover:border-[#8C9E5B] hover:bg-[#F7F7F5]'
+                        }`}
+                      >
+                        {active && <CheckCircle2 className="absolute top-1.5 right-1.5 w-3.5 h-3.5 text-[#2C4219]" />}
+                        <span className={`text-sm font-bold ${active ? 'text-[#172C05]' : 'text-[#44483e]'}`}>
+                          {BERAT_LABEL[key]}
+                        </span>
+                        <span className="text-[9px] text-[#6B7280] font-medium leading-tight">
+                          {key === 'ton' ? '1.000 kg = 1 Ton' : key === 'kuintal' ? '100 kg = 1 Kuintal' : key === 'kg' ? '1 kg' : '1.000 g = 1 kg'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-[#9CA3AF] mt-1.5">
+                  Contoh: 1.000 kg = {(1000 / BERAT_KE_KG[unitsBerat]).toLocaleString('id-ID', { maximumFractionDigits: 2 })} {BERAT_LABEL[unitsBerat]}
+                </p>
+              </div>
+
+              {/* Luas */}
+              <div>
+                <p className="text-[10px] font-bold text-[#172C05] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Ruler className="w-3.5 h-3.5 text-[#2C4219]" /> Satuan Luas
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {(Object.keys(LUAS_KE_HEKTAR) as LuasUnit[]).map((key) => {
+                    const active = unitsLuas === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setUnitsLuas(key)}
+                        className={`relative flex flex-col items-center gap-1 p-3 rounded-xl border-2 text-center transition-all cursor-pointer ${
+                          active
+                            ? 'border-[#2C4219] bg-[#C3E28D]/30 shadow-sm'
+                            : 'border-[#c4c8bb]/30 bg-white hover:border-[#8C9E5B] hover:bg-[#F7F7F5]'
+                        }`}
+                      >
+                        {active && <CheckCircle2 className="absolute top-1.5 right-1.5 w-3.5 h-3.5 text-[#2C4219]" />}
+                        <span className={`text-sm font-bold ${active ? 'text-[#172C05]' : 'text-[#44483e]'}`}>
+                          {LUAS_LABEL[key]}
+                        </span>
+                        <span className="text-[9px] text-[#6B7280] font-medium leading-tight">
+                          {key === 'hektar' ? '10.000 m² = 1 Ha' : key === 'm2' ? '1 m²' : key === 'are' ? '100 m² = 1 Are' : '100 Ha = 1 Km²'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-[#9CA3AF] mt-1.5">
+                  Contoh: 1 hektar = {(1 / LUAS_KE_HEKTAR[unitsLuas]).toLocaleString('id-ID', { maximumFractionDigits: 0 })} {LUAS_LABEL[unitsLuas]}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleSaveUnits}
+                  disabled={unitsSaving}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2C4219] text-white font-bold text-xs hover:bg-[#213213] shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  <Save className={`w-3.5 h-3.5 ${unitsSaving ? 'animate-pulse' : ''}`} />
+                  {unitsSaving ? 'Menyimpan...' : 'Simpan Satuan'}
+                </button>
+              </div>
+            </div>
+          </SectionCard>
+
           {/* URL API */}
           <SectionCard title="URL API Backend" icon={<RefreshCw className="w-4 h-4" />}>
             <div className="space-y-3">
@@ -799,6 +924,9 @@ export const ProfilePage: React.FC = () => {
       <Toast message={passwordSuccess} type="success" onClose={() => setPasswordSuccess('')} />
       {keysToast && (
         <Toast message={keysToast.msg} type={keysToast.type} onClose={() => setKeysToast(null)} />
+      )}
+      {unitsToast && (
+        <Toast message={unitsToast.msg} type={unitsToast.type} onClose={() => setUnitsToast(null)} />
       )}
     </div>
   );

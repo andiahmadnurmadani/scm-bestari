@@ -37,4 +37,24 @@ export const cmsApi = {
       throw new Error(extractErrorMessage(error, 'Gagal reset konten CMS.'));
     }
   },
+
+  /** GET /api/cms/settings/:key — ambil setting arbitrer (mis. app_units). */
+  getSetting: async (key: string) => {
+    try {
+      const response = await axiosClient.get(`/cms/settings/${key}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, `Gagal mengambil setting ${key}.`));
+    }
+  },
+
+  /** PUT /api/cms/settings/:key — simpan setting arbitrer (mis. app_units). */
+  saveSetting: async (key: string, data: unknown) => {
+    try {
+      const response = await axiosClient.put(`/cms/settings/${key}`, data);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, `Gagal menyimpan setting ${key}.`));
+    }
+  },
 };

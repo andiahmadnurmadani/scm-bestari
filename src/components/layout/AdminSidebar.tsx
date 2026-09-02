@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -8,6 +8,7 @@ import {
   Factory,
   Award,
   Package,
+  Warehouse,
   Truck,
   Database,
   HelpCircle,
@@ -45,6 +46,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const [helpModalOpen, setHelpModalOpen] = useState(false);
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
 
+  // Izinkan MobileBottomNav memicu modal bantuan via event 'open-help-modal' (fallback)
+  useEffect(() => {
+    const handler = () => setHelpModalOpen(true);
+    window.addEventListener('open-help-modal' as any, handler);
+    return () => window.removeEventListener('open-help-modal' as any, handler);
+  }, []);
+
   const handleLogoutClick = () => {
     setConfirmLogoutOpen(true);
   };
@@ -64,6 +72,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { label: 'Kelola Olahan', path: '/dashboard/produksi', icon: Factory },
     { label: 'Kelola Sertifikat', path: '/dashboard/sertifikat', icon: Award },
     { label: 'Kelola Data Kemasan', path: '/dashboard/kemasan', icon: Package },
+    { label: 'Gudang', path: '/dashboard/gudang', icon: Warehouse },
     { label: 'Logistik', path: '/dashboard/logistik', icon: Truck },
     { label: 'Varietas Sorgum', path: '/dashboard/master/varietas', icon: Database },
   ];

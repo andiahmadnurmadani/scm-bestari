@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Bell, Settings, Menu, LogOut, User as UserIcon, CheckCheck } from 'lucide-react';
+import { Search, Bell, Settings, Menu, LogOut, User as UserIcon, CheckCheck, Sprout } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/endpoints/authApi';
 import { notificationsApi, AppNotification } from '../../api/endpoints/notificationsApi';
 import { Modal } from '../common/Modal';
+import { useCms } from '../../context/CmsContext';
 
 interface AdminHeaderProps {
   onMenuClick?: () => void;
@@ -17,6 +18,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onSearchChange,
 }) => {
   const navigate = useNavigate();
+  const { cms } = useCms();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
@@ -85,12 +87,27 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   return (
     <header className="sticky top-0 z-30 bg-[#FFF8F4] border-b border-[#c4c8bb]/20 shadow-2xs px-3 sm:px-6 py-1.5">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
-        {/* Left: Mobile menu toggle & Search input */}
+        {/* Left: Brand (mobile) & Search input */}
         <div className="flex items-center gap-2 flex-1 max-w-lg">
+          {/* Mobile: tampilkan logo kecil sebagai pengganti hamburger — navigasi utama sudah di bottom bar */}
+          {cms.logo ? (
+            <img
+              src={cms.logo}
+              alt={cms.siteName || 'Logo'}
+              className="lg:hidden w-9 h-9 rounded-xl object-cover ring-1 ring-[#c4c8bb]/30 shrink-0 shadow-2xs"
+            />
+          ) : (
+            <div className="lg:hidden w-9 h-9 rounded-xl bg-[#2C4219] flex items-center justify-center shrink-0 shadow-2xs">
+              <Sprout className="w-[18px] h-[18px] text-[#C3E28D]" />
+            </div>
+          )}
+          {/* Fallback toggle tetap ada tapi disembunyikan — bottom nav menggantikan drawer di mobile */}
           <button
             onClick={onMenuClick}
-            className="lg:hidden p-2.5 rounded-xl bg-white border border-[#c4c8bb]/30 text-[#2C4219] hover:bg-[#efe0d2]/40 transition-colors shrink-0 min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer"
+            className="hidden p-2.5 rounded-xl bg-white border border-[#c4c8bb]/30 text-[#2C4219] hover:bg-[#efe0d2]/40 transition-colors shrink-0 min-w-[40px] min-h-[40px] items-center justify-center cursor-pointer"
             aria-label="Toggle Navigation Menu"
+            tabIndex={-1}
+            aria-hidden="true"
           >
             <Menu className="w-5 h-5" />
           </button>

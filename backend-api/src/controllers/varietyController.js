@@ -8,6 +8,7 @@ function mapRowToVariety(row) {
     name: row.name,
     description: row.description || '',
     imageUrl: row.image_url || null,
+    lamaPanen: row.lama_panen != null ? Number(row.lama_panen) : 100,
     isActive: Boolean(row.is_active),
     createdAt: row.created_at,
   };
@@ -19,7 +20,7 @@ export async function getVarieties(req, res) {
   try {
     const pool = getPool();
     const [rows] = await pool.query(
-      'SELECT id, name, description, image_url, is_active, created_at FROM varieties ORDER BY id DESC'
+      'SELECT id, name, description, image_url, lama_panen, is_active, created_at FROM varieties ORDER BY id DESC'
     );
     return res.status(200).json({
       success: true,
@@ -35,18 +36,18 @@ export async function getVarieties(req, res) {
 
 export async function createVariety(req, res) {
   try {
-    const { name, description, imageUrl } = req.body || {};
+    const { name, description, imageUrl, lamaPanen } = req.body || {};
     if (!name || !String(name).trim()) {
       return res.status(400).json({ success: false, message: 'Nama varietas wajib diisi.' });
     }
 
     const [result] = await getPool().execute(
-      'INSERT INTO varieties (name, description, image_url) VALUES (?, ?, ?)',
-      [String(name).trim(), description || '', imageUrl || null]
+      'INSERT INTO varieties (name, description, image_url, lama_panen) VALUES (?, ?, ?, ?)',
+      [String(name).trim(), description || '', imageUrl || null, lamaPanen != null ? Number(lamaPanen) : 100]
     );
 
     const [newRow] = await getPool().execute(
-      'SELECT id, name, description, image_url, is_active, created_at FROM varieties WHERE id = ? LIMIT 1',
+      'SELECT id, name, description, image_url, lama_panen, is_active, created_at FROM varieties WHERE id = ? LIMIT 1',
       [result.insertId]
     );
 
@@ -69,7 +70,7 @@ export async function createVariety(req, res) {
 export async function updateVariety(req, res) {
   try {
     const { id } = req.params;
-    const { name, description, isActive, imageUrl } = req.body || {};
+    const { name, description, isActive, imageUrl, lamaPanen } = req.body || {};
 
     const pool = getPool();
     const [existing] = await pool.execute('SELECT id FROM varieties WHERE id = ? LIMIT 1', [id]);
@@ -99,13 +100,17 @@ export async function updateVariety(req, res) {
       sets.push('image_url = ?');
       values.push(imageUrl);
     }
+    if (lamaPanen !== undefined) {
+      sets.push('lama_panen = ?');
+      values.push(Number(lamaPanen) || 100);
+    }
 
     if (sets.length > 0) {
       await pool.execute(`UPDATE varieties SET ${sets.join(', ')} WHERE id = ?`, [...values, id]);
     }
 
     const [updatedRow] = await pool.execute(
-      'SELECT id, name, description, image_url, is_active, created_at FROM varieties WHERE id = ? LIMIT 1',
+      'SELECT id, name, description, image_url, lama_panen, is_active, created_at FROM varieties WHERE id = ? LIMIT 1',
       [id]
     );
 

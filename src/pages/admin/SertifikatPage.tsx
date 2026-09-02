@@ -324,16 +324,16 @@ export const SertifikatPage: React.FC = () => {
         </div>
 
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse text-xs min-w-[820px]">
+          <table className="w-full text-left border-collapse text-xs min-w-[760px]">
             <thead>
               <tr className="bg-[#F7F7F5] text-[#6B7280] font-bold uppercase text-[11px] tracking-wider border-b border-[#c4c8bb]/20">
-                <th className="py-2 px-3 pl-4">KODE DOKUMEN</th>
-                <th className="py-2 px-3">NAMA SERTIFIKAT</th>
-                <th className="py-2 px-3">PENERBIT / LEMBAGA</th>
-                <th className="py-2 px-3">BERKAS / FILE</th>
-                <th className="py-2 px-3">EXP.</th>
-                <th className="py-2 px-3">STATUS</th>
-                <th className="py-2 px-3 pr-4 text-center">AKSI</th>
+                <th className="py-2.5 px-3 pl-4">KODE</th>
+                <th className="py-2.5 px-3">NAMA SERTIFIKAT</th>
+                <th className="py-2.5 px-3">PENERBIT / LEMBAGA</th>
+                <th className="py-2.5 px-3">BERKAS / FILE</th>
+                <th className="py-2.5 px-3">BERLAKU HINGGA</th>
+                <th className="py-2.5 px-3">STATUS</th>
+                <th className="py-2.5 px-3 pr-4 text-center">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 text-[#221A12] font-medium">
@@ -353,9 +353,9 @@ export const SertifikatPage: React.FC = () => {
               ) : (
               certificates.map((item) => (
                 <tr key={item.id} className="hover:bg-[#F7F7F5] transition-colors">
-                  <td className="py-2.5 px-3 pl-4 font-bold text-[#2C4219]">{item.kodeDokumen}</td>
-                  <td className="py-2.5 px-3 font-semibold">{item.namaSertifikat}</td>
-                  <td className="py-2.5 px-3 text-[#44483e] font-medium">{item.penerbitSertifikat}</td>
+                  <td className="py-2.5 px-3 pl-4 font-bold text-[#2C4219] whitespace-nowrap">{item.kodeDokumen}</td>
+                  <td className="py-2.5 px-3 font-semibold text-[#172C05] max-w-[220px]">{item.namaSertifikat}</td>
+                  <td className="py-2.5 px-3 text-[#44483e] font-medium max-w-[180px]">{item.penerbitSertifikat || '-'}</td>
                   <td className="py-2.5 px-3">
                     {item.fileUrl || item.fileName ? (
                       <button
@@ -372,7 +372,7 @@ export const SertifikatPage: React.FC = () => {
                             <ImageIcon className="w-3.5 h-3.5 text-blue-600" /> Gambar
                           </span>
                         )}
-                        <span className="text-[#44483e] font-normal truncate max-w-[100px]">
+                        <span className="text-[#44483e] font-normal truncate max-w-[90px]">
                           {item.fileName || 'Sertifikat.pdf'}
                         </span>
                       </button>
@@ -380,14 +380,14 @@ export const SertifikatPage: React.FC = () => {
                       <span className="text-[#9CA3AF] italic text-[11px]">Belum ada file</span>
                     )}
                   </td>
-                  <td className="py-2.5 px-3 text-[#6B7280] font-semibold">{item.tanggalKadaluarsa}</td>
+                  <td className="py-2.5 px-3 text-[#6B7280] font-semibold whitespace-nowrap">{item.tanggalKadaluarsa || '-'}</td>
                   <td className="py-2.5 px-3">
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${
                         item.status === 'AKTIF'
-                          ? 'bg-[#C3E28D]/50 text-[#172C05] border border-[#b4cf98]'
+                          ? 'bg-[#C3E28D] text-[#172C05] border border-[#b4cf98]'
                           : item.status === 'PROSES'
-                          ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                          ? 'bg-[#fff1e5] text-[#8C5A2B] border border-[#e8cba8]'
                           : 'bg-red-100 text-red-800 border border-red-300'
                       }`}
                     >
@@ -401,7 +401,7 @@ export const SertifikatPage: React.FC = () => {
                         className="min-h-8 px-2.5 py-1.5 text-[#2C4219] hover:bg-[#efe0d2] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Preview Sertifikat & Download"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-3.5 h-3.5" />
                         <span>Preview</span>
                       </button>
                       <button
@@ -409,7 +409,7 @@ export const SertifikatPage: React.FC = () => {
                         className="min-h-8 px-2.5 py-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Edit Sertifikat"
                       >
-                        <Edit3 className="w-4 h-4" />
+                        <Edit3 className="w-3.5 h-3.5" />
                         <span>Edit</span>
                       </button>
                       <button
@@ -417,7 +417,7 @@ export const SertifikatPage: React.FC = () => {
                         className="min-h-8 px-2.5 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Hapus Sertifikat"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                         <span>Hapus</span>
                       </button>
                     </div>

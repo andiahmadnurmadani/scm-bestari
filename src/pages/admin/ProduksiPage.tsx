@@ -1,20 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { Factory, Plus, Filter, Search, Edit3, Trash2, CheckCircle, Package, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Factory, Plus, Edit3, Trash2, ChevronLeft, ChevronRight, User, MapPin, Sprout } from 'lucide-react';
 import { productionApi } from '../../api/endpoints/productionApi';
 import { ProductionBatch } from '../../types';
 import { Button } from '../../components/common/Button';
-import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { nextCode } from '../../utils/kodeGenerator';
 import { harvestApi } from '../../api/endpoints/harvestApi';
 import { HarvestRecord } from '../../types';
+import { useUnitSettings } from '../../context/UnitSettingsContext';
+import { warehouseApi } from '../../api/endpoints/warehouseApi';
+import { WarehouseOption } from '../../types';
 
 export const ProduksiPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
   const [batches, setBatches] = useState<ProductionBatch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeCategoryTab, setActiveCategoryTab] = useState<'Semua' | 'Raw (Bahan Mentah)' | 'Ready to Eat (Siap Konsumsi)'>('Semua');
+  const [activeCategoryTab, setActiveCategoryTab] = useState<string>('Semua');
+  const { formatBerat } = useUnitSettings();
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,7 +32,8 @@ export const ProduksiPage: React.FC = () => {
 
   // Bahan baku dropdown: hasil panen + raw bahan mentah
   const [harvestList, setHarvestList] = useState<HarvestRecord[]>([]);
-  const [bahanBakuType, setBahanBakuType] = useState<'panen' | 'raw'>('panen');
+  const [selectedHarvestTrace, setSelectedHarvestTrace] = useState<HarvestRecord | null>(null);
+  const [lokasiDipilih, setLokasiDipilih] = useState('');
 
   const [formData, setFormData] = useState<
     Partial<ProductionBatch> & { jumlahHasil?: string }
@@ -41,11 +45,17 @@ export const ProduksiPage: React.FC = () => {
     tanggalKadaluarsa: '',
     jumlahHasil: '',
     satuan: 'Pouch',
+    bahanDigunakan: null as any,
+    satuanBahan: 'Kg',
     nomorBatchBahanBaku: '',
+    harvestId: null as any,
     operatorProduksi: '',
-    statusQC: 'Lolos QC',
     lokasiGudang: '',
+    gudangId: null as any,
   });
+
+  // Daftar gudang untuk pilihan bahan baku (FIFO)
+  const [warehouseOptions, setWarehouseOptions] = useState<WarehouseOption[]>([]);
 
   const fetchProduction = async (targetPage = page, search = searchTerm, cat = activeCategoryTab) => {
     setLoading(true);
@@ -88,11 +98,21 @@ export const ProduksiPage: React.FC = () => {
       }
     };
     fetchHarvests();
+    // Muat opsi gudang (untuk bahan baku FIFO)
+    const fetchWarehouses = async () => {
+      try {
+        const res = await warehouseApi.getOptions();
+        setWarehouseOptions(res.data || []);
+      } catch {
+        setWarehouseOptions([]);
+      }
+    };
+    fetchWarehouses();
   }, []);
 
   const handleOpenAdd = () => {
     setEditId(null);
-    setBahanBakuType('panen');
+    setSelectedHarvestTrace(null);
     setFormData({
       kodeBatch: nextCode('PRD-', batches, 3),
       namaProduk: '',
@@ -101,30 +121,76 @@ export const ProduksiPage: React.FC = () => {
       tanggalKadaluarsa: '',
       jumlahHasil: '',
       satuan: 'Pouch',
+      bahanDigunakan: null as any,
+      satuanBahan: 'Kg',
       nomorBatchBahanBaku: '',
+      harvestId: null as any,
       operatorProduksi: '',
-      statusQC: 'Lolos QC',
       lokasiGudang: '',
+      gudangId: null as any,
     });
+    setLokasiDipilih('');
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (item: ProductionBatch) => {
     setEditId(item.id);
+    setSelectedHarvestTrace(null);
+    // coba cari harvest trace untuk ditampilkan
+    const hid = (item as any).harvestId;
+    if (hid) {
+      const hr = harvestList.find((h) => h.id === String(hid)) || null;
+      setSelectedHarvestTrace(hr as any);
+    }
     setFormData({
       ...item,
       jumlahHasil: String(item.jumlahHasil ?? ''),
+      bahanDigunakan: item.bahanDigunakan != null ? String(item.bahanDigunakan) : '',
+      satuanBahan: item.satuanBahan || 'Kg',
+      harvestId: (item as any).harvestId || null,
+      gudangId: (item as any).gudangId || null,
     });
-    // Deteksi jenis bahan baku dari kode: PN-* = hasil panen, PRD-* = raw mentah
-    setBahanBakuType(item.nomorBatchBahanBaku?.startsWith('PN-') ? 'panen' : 'raw');
+    const hr = (item as any).harvestId ? harvestList.find((h) => h.id === String((item as any).harvestId)) || null : null;
+    setSelectedHarvestTrace(hr as any);
+    setLokasiDipilih(hr ? String((hr as any).lahanId || (hr as any).lahan?.id || '') : '');
     setIsModalOpen(true);
   };
+  const handleHarvestTraceChange = (harvestId: string) => {
+    const hr = harvestList.find((h) => h.id === harvestId) || null;
+    setSelectedHarvestTrace(hr as any);
+    if (hr) setLokasiDipilih(String((hr as any).lahanId || (hr as any).lahan?.id || ''));
+    setFormData((prev) => ({ ...prev, harvestId: harvestId || (null as any), nomorBatchBahanBaku: hr ? hr.kodePanen : prev.nomorBatchBahanBaku }));
+  };
+
+  // Daftar lahan unik dari hasil panen (untuk input Lokasi)
+  const lokasiOptions = Array.from(
+    new Map(
+      harvestList.map((h: any) => [String(h.lahanId || h.lahan?.id || h.namaLahan), {
+        id: String(h.lahanId || h.lahan?.id || h.namaLahan),
+        nama: h.lahan?.namaLahan || h.namaLahan,
+        desa: h.lahan?.lokasiDesa || '',
+      }])
+    ).values()
+  );
+
+  const handleLokasiChange = (lokasiId: string) => {
+    setLokasiDipilih(lokasiId);
+    setSelectedHarvestTrace(null);
+    setFormData((prev) => ({ ...prev, harvestId: null as any, nomorBatchBahanBaku: '' }));
+  };
+
+  // Hasil panen yang sesuai dengan lokasi terpilih
+  const panenByLokasi = lokasiDipilih
+    ? harvestList.filter((h: any) => String(h.lahanId || h.lahan?.id || h.namaLahan) === lokasiDipilih)
+    : [];
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
       ...formData,
       jumlahHasil: Number(formData.jumlahHasil) || 0,
+      bahanDigunakan: formData.bahanDigunakan != null && String(formData.bahanDigunakan).trim() !== '' ? Number(formData.bahanDigunakan) : null,
+      gudangId: formData.gudangId ? String(formData.gudangId) : null,
     };
     if (editId) {
       await productionApi.update(editId, payload);
@@ -149,7 +215,6 @@ export const ProduksiPage: React.FC = () => {
 
   // Top 3 Stat Cards Calculations
   const totalProdukOlahan = batches.length;
-  const activeBatchesCount = batches.filter((b) => b.statusQC === 'Lolos QC' || b.statusQC === 'Pending QC').length;
   const totalVolumeHasil = batches.reduce((acc, curr) => acc + curr.jumlahHasil, 0);
 
   return (
@@ -176,9 +241,9 @@ export const ProduksiPage: React.FC = () => {
         </div>
 
         <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#8C9E5B]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">BATCH OLAHAN AKTIF</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">{activeBatchesCount} Batch Aktif</h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Tersimpan di Gudang A & B</p>
+          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL BATCH OLAHAN</p>
+          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">{totalProdukOlahan} Batch</h3>
+          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Siap Konsumsi & Bahan Mentah</p>
         </div>
 
         <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#DEB938]">
@@ -203,7 +268,7 @@ export const ProduksiPage: React.FC = () => {
 
           {/* Filter tabs: Raw vs Ready to Eat */}
           <div className="flex items-center gap-1.5 bg-[#F7F7F5] p-1 rounded-lg border border-[#c4c8bb]/30 overflow-x-auto max-w-full custom-scrollbar">
-            {(['Semua', 'Raw (Bahan Mentah)', 'Ready to Eat (Siap Konsumsi)'] as const).map((tab) => (
+            {(['Semua', 'Ready to Eat (Siap Konsumsi)', 'Raw (Bahan Mentah)', 'Lainnya']).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveCategoryTab(tab)}
@@ -221,17 +286,17 @@ export const ProduksiPage: React.FC = () => {
 
         {/* Full-width CRUD Table */}
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse text-xs min-w-[720px]">
+          <table className="w-full text-left border-collapse text-xs min-w-[680px]">
             <thead>
               <tr className="bg-[#F7F7F5] text-[#6B7280] font-bold uppercase text-[11px] tracking-wider border-b border-[#c4c8bb]/20">
-                <th className="py-2 px-3 pl-4">KODE BATCH</th>
-                <th className="py-2 px-3">NAMA PRODUK</th>
-                <th className="py-2 px-3">KATEGORI</th>
-                <th className="py-2 px-3">TANGGAL OLAHAN</th>
-                <th className="py-2 px-3">TOTAL HASIL</th>
-                <th className="py-2 px-3">BATCH RAW MAT.</th>
-                <th className="py-2 px-3">STATUS QC</th>
-                <th className="py-2 px-3 pr-4 text-center">AKSI</th>
+                <th className="py-2.5 px-3 pl-4">KODE</th>
+                <th className="py-2.5 px-3">NAMA PRODUK OLAHAN</th>
+                <th className="py-2.5 px-3">KATEGORI</th>
+                <th className="py-2.5 px-3">JUMLAH HASIL</th>
+                <th className="py-2.5 px-3">BAHAN DIGUNAKAN</th>
+                <th className="py-2.5 px-3">ASAL PANEN</th>
+                <th className="py-2.5 px-3">PENANGGUNG JAWAB</th>
+                <th className="py-2.5 px-3 pr-4 text-center">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 text-[#221A12] font-medium">
@@ -251,38 +316,55 @@ export const ProduksiPage: React.FC = () => {
               ) : (
               batches.map((item) => (
                 <tr key={item.id} className="hover:bg-[#F7F7F5] transition-colors">
-                  <td className="py-2 px-3 pl-4 font-bold text-[#2C4219]">{item.kodeBatch}</td>
-                  <td className="py-2 px-3 font-semibold">{item.namaProduk}</td>
-                  <td className="py-2 px-3">
+                  <td className="py-2.5 px-3 pl-4 font-bold text-[#2C4219] whitespace-nowrap">{item.kodeBatch}</td>
+                  <td className="py-2.5 px-3 font-semibold text-[#172C05]">{item.namaProduk}</td>
+                  <td className="py-2.5 px-3">
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      className={`inline-block px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
                         item.kategori.includes('Ready to Eat')
-                          ? 'bg-[#C3E28D]/50 text-[#172C05]'
-                          : 'bg-amber-100 text-amber-800'
+                          ? 'bg-[#C3E28D] text-[#172C05]'
+                          : item.kategori.includes('Raw')
+                          ? 'bg-[#fff1e5] text-[#8C5A2B]'
+                          : 'bg-[#F7F7F5] text-[#44483e]'
                       }`}
                     >
-                      {item.kategori}
+                      {item.kategori.includes('Ready to Eat')
+                        ? 'Siap Konsumsi'
+                        : item.kategori.includes('Raw')
+                        ? 'Bahan Mentah'
+                        : item.kategori}
                     </span>
                   </td>
-                  <td className="py-2 px-3 whitespace-nowrap text-[#6B7280]">{item.tanggalProduksi}</td>
-                  <td className="py-2 px-3 font-bold">
+                  <td className="py-2.5 px-3 font-bold whitespace-nowrap">
                     {item.jumlahHasil.toLocaleString('id-ID')} {item.satuan}
                   </td>
-                  <td className="py-2 px-3 font-mono text-xs text-[#44483e]">{item.nomorBatchBahanBaku}</td>
-                  <td className="py-2 px-3">
-                    <Badge
-                      variant={
-                        item.statusQC === 'Lolos QC'
-                          ? 'success'
-                          : item.statusQC === 'Pending QC'
-                          ? 'warning'
-                          : 'error'
-                      }
-                    >
-                      {item.statusQC}
-                    </Badge>
+                  <td className="py-2.5 px-3 whitespace-nowrap text-[#44483e]">
+                    {item.bahanDigunakan != null
+                      ? `${Number(item.bahanDigunakan).toLocaleString('id-ID')} ${item.satuanBahan || 'Kg'}`
+                      : <span className="text-[#9CA3AF]">-</span>}
                   </td>
-                  <td className="py-2 px-3 pr-4 text-center">
+                  <td className="py-2.5 px-3">
+                    {(item as any).harvest ? (
+                      <div className="space-y-0.5">
+                        <span className="inline-flex items-center gap-1 font-bold text-[#2C4219] text-[11px]">
+                          <Sprout className="w-3 h-3" /> {(item as any).harvest.kodePanen}
+                        </span>
+                        <div className="text-[10px] text-[#6B7280] flex items-center gap-1">
+                          <MapPin className="w-2.5 h-2.5 shrink-0" />
+                          {(item as any).lahan?.namaLahan || (item as any).harvest.namaLahan || '-'}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-[#9CA3AF]">-</span>
+                    )}
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <span className="inline-flex items-center gap-1 text-[#44483e]">
+                      <User className="w-3 h-3 text-[#6B7280] shrink-0" />
+                      {item.operatorProduksi || '-'}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-3 pr-4 text-center">
                     <div className="flex items-center justify-center gap-1.5">
                       <button
                         onClick={() => handleOpenEdit(item)}
@@ -352,20 +434,20 @@ export const ProduksiPage: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editId ? 'Edit Batch Olahan' : 'Catat Batch Olahan Baru'}
-        subtitle="Input detail produk olahan sorgum dan penetapan QC"
+        subtitle="Catat produk olahan sorgum beserta asal panennya"
       >
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Kode Batch
+                Kode Olahan
               </label>
               <input
                 type="text"
                 value={formData.kodeBatch}
                 readOnly
                 disabled
-                title="Kode dibuat otomatis oleh sistem (auto-increment)"
+                title="Kode dibuat otomatis oleh sistem"
                 className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm text-[#2C4219] font-bold cursor-not-allowed"
               />
             </div>
@@ -378,8 +460,9 @@ export const ProduksiPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, kategori: e.target.value as any })}
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
               >
-                <option value="Ready to Eat (Siap Konsumsi)">Ready to Eat (Siap Konsumsi)</option>
-                <option value="Raw (Bahan Mentah)">Raw (Bahan Mentah)</option>
+                <option value="Ready to Eat (Siap Konsumsi)">Siap Konsumsi (Ready to Eat)</option>
+                <option value="Raw (Bahan Mentah)">Bahan Mentah (Raw)</option>
+                <option value="Lainnya">Lainnya</option>
               </select>
             </div>
           </div>
@@ -392,19 +475,20 @@ export const ProduksiPage: React.FC = () => {
               type="text"
               value={formData.namaProduk}
               onChange={(e) => setFormData({ ...formData, namaProduk: e.target.value })}
-              placeholder="Contoh: Tepung Sorgum Bioguma White 500g"
+              placeholder="Contoh: Tepung Sorgum Bioguma 500g"
               className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
               required
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
                 Jumlah Hasil
               </label>
               <input
                 type="number"
+                min="0"
                 value={formData.jumlahHasil}
                 onChange={(e) => setFormData({ ...formData, jumlahHasil: e.target.value })}
                 placeholder="Contoh: 1000"
@@ -414,99 +498,163 @@ export const ProduksiPage: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Satuan
-              </label>
-              <input
-                type="text"
-                value={formData.satuan}
-                onChange={(e) => setFormData({ ...formData, satuan: e.target.value })}
-                placeholder="Contoh: Pouch / Kg / Botol"
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Status QC
+                Satuan Hasil
               </label>
               <select
-                value={formData.statusQC}
-                onChange={(e) => setFormData({ ...formData, statusQC: e.target.value as any })}
+                value={formData.satuan}
+                onChange={(e) => setFormData({ ...formData, satuan: e.target.value })}
                 className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+                required
               >
-                <option value="Lolos QC">Lolos QC</option>
-                <option value="Pending QC">Pending QC</option>
-                <option value="Revisi Batch">Revisi Batch</option>
+                <option value="Pouch">Pouch</option>
+                <option value="Kg">Kg</option>
+                <option value="Botol">Botol</option>
+                <option value="Box">Box</option>
+                <option value="Toples">Toples</option>
+                <option value="Kemasan">Kemasan</option>
               </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Jenis Bahan Baku
-              </label>
-              <select
-                value={bahanBakuType}
-                onChange={(e) => {
-                  const t = e.target.value as 'panen' | 'raw';
-                  setBahanBakuType(t);
-                  setFormData({ ...formData, nomorBatchBahanBaku: '' });
-                }}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              >
-                <option value="panen">Hasil Panen (Sorgum Segar)</option>
-                <option value="raw">Raw Bahan Mentah (Batch Produksi)</option>
-              </select>
+          {/* Bahan yang Digunakan — jumlah & satuan bahan baku */}
+          <div className="p-3.5 bg-[#F7F7F5] border border-[#c4c8bb]/20 rounded-xl">
+            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-2">
+              Bahan yang Digunakan
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs font-bold text-[#74796d] uppercase mb-1">
+                  Jumlah Bahan
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.bahanDigunakan != null ? String(formData.bahanDigunakan) : ''}
+                  onChange={(e) => setFormData({ ...formData, bahanDigunakan: e.target.value })}
+                  placeholder="Contoh: 50"
+                  className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#74796d] uppercase mb-1">
+                  Satuan Bahan
+                </label>
+                <select
+                  value={formData.satuanBahan || 'Kg'}
+                  onChange={(e) => setFormData({ ...formData, satuanBahan: e.target.value })}
+                  className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm"
+                >
+                  <option value="Kg">Kg</option>
+                  <option value="Gram">Gram</option>
+                  <option value="Liter">Liter</option>
+                  <option value="Botol">Botol</option>
+                  <option value="Karung">Karung</option>
+                  <option value="Sak">Sak</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-[#74796d] uppercase mb-1">
+                  Gudang Asal Bahan
+                </label>
+                <select
+                  value={formData.gudangId ? String(formData.gudangId) : ''}
+                  onChange={(e) => setFormData({ ...formData, gudangId: e.target.value || (null as any) })}
+                  className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                >
+                  <option value="">-- Pilih Gudang --</option>
+                  {warehouseOptions.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.namaGudang} ({w.kodeGudang}) — {w.totalStokKg > 0 ? `${w.totalStokKg} kg tersedia` : 'kosong'}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-[#9CA3AF] mt-1">
+                  Bahan diambil dari gudang pilihan secara FIFO (stok paling lama dipakai duluan).
+                </p>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                {bahanBakuType === 'panen' ? 'Pilih Hasil Panen' : 'Pilih Raw Bahan Mentah'}
-              </label>
-              <select
-                value={formData.nomorBatchBahanBaku}
-                onChange={(e) => setFormData({ ...formData, nomorBatchBahanBaku: e.target.value })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
-              >
-                <option value="" disabled>
-                  {bahanBakuType === 'panen'
-                    ? harvestList.length === 0
-                      ? 'Belum ada hasil panen'
-                      : 'Pilih kode panen...'
-                    : batches.filter((b) => b.kategori === 'Raw (Bahan Mentah)').length === 0
-                    ? 'Belum ada raw bahan mentah'
-                    : 'Pilih batch raw...'}
-                </option>
-                {bahanBakuType === 'panen'
-                  ? harvestList.map((h) => (
-                      <option key={h.id} value={h.kodePanen}>
-                        {h.kodePanen} — {h.namaLahan} ({h.varietas})
-                      </option>
-                    ))
-                  : batches
-                      .filter((b) => b.kategori === 'Raw (Bahan Mentah)')
-                      .map((b) => (
-                        <option key={b.id} value={b.kodeBatch}>
-                          {b.kodeBatch} — {b.namaProduk}
-                        </option>
-                      ))}
-              </select>
+          </div>
+
+          {/* Asal Panen — 2 input: Lokasi & Panen */}
+          <div className="p-3.5 bg-[#F7F7F5] border border-[#c4c8bb]/20 rounded-xl space-y-3">
+            <label className="block text-xs font-bold text-[#2C4219] uppercase">
+              Asal Panen
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs font-bold text-[#74796d] uppercase mb-1">
+                  Lokasi (Lahan)
+                </label>
+                <select
+                  value={lokasiDipilih}
+                  onChange={(e) => handleLokasiChange(e.target.value)}
+                  className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                >
+                  <option value="">
+                    {lokasiOptions.length === 0 ? 'Belum ada lahan' : '-- Pilih Lokasi --'}
+                  </option>
+                  {lokasiOptions.map((l: any) => (
+                    <option key={l.id} value={l.id}>
+                      {l.nama}{l.desa ? ` (${l.desa})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#74796d] uppercase mb-1">
+                  Panen
+                </label>
+                <select
+                  value={String((formData as any).harvestId || '')}
+                  onChange={(e) => handleHarvestTraceChange(e.target.value)}
+                  disabled={!lokasiDipilih}
+                  className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">
+                    {!lokasiDipilih
+                      ? 'Pilih Lokasi dulu'
+                      : panenByLokasi.length === 0
+                      ? 'Belum ada panen di lokasi ini'
+                      : '-- Pilih Panen --'}
+                  </option>
+                  {panenByLokasi.map((h: any) => (
+                    <option key={h.id} value={h.id}>
+                      {h.kodePanen} • {h.tanggalPanen} • {h.varietas}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Operator / Tim Produksi KWT
-              </label>
-              <input
-                type="text"
-                value={formData.operatorProduksi}
-                onChange={(e) => setFormData({ ...formData, operatorProduksi: e.target.value })}
-                placeholder="Contoh: Tim KWT Asri"
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
-              />
-            </div>
+            {selectedHarvestTrace && (
+              <div className="p-3 bg-white rounded-lg border border-[#c4c8bb]/20 text-xs space-y-1">
+                <p className="font-bold text-[#2C4219]">
+                  Lokasi: {(selectedHarvestTrace as any).lahan?.namaLahan || (selectedHarvestTrace as any).namaLahan || '-'}
+                </p>
+                <p className="text-[#6B7280] font-medium">
+                  Panen: {selectedHarvestTrace.kodePanen} • {selectedHarvestTrace.tanggalPanen} • Varietas {selectedHarvestTrace.varietas}
+                </p>
+                <p className="text-[#6B7280]">
+                  Berat: {formatBerat(selectedHarvestTrace.jumlahHasilKg)}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
+              Penanggung Jawab Produksi
+            </label>
+            <input
+              type="text"
+              value={formData.operatorProduksi}
+              onChange={(e) => setFormData({ ...formData, operatorProduksi: e.target.value })}
+              placeholder="Contoh: Ibu Hastuti / Tim KWT Asri"
+              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+              required
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[#c4c8bb]/20">

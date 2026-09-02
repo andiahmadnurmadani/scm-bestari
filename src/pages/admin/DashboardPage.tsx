@@ -20,6 +20,7 @@ import { packagingApi } from '../../api/endpoints/packagingApi';
 import { logisticsApi } from '../../api/endpoints/logisticsApi';
 import { certificatesApi } from '../../api/endpoints/certificatesApi';
 import { HarvestRecord, LandPlot, ProductionBatch } from '../../types';
+import { useUnitSettings } from '../../context/UnitSettingsContext';
 
 type TimeFilterType = 'Bulanan' | 'Triwulan' | 'Tahunan';
 
@@ -105,6 +106,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 
 export const DashboardPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
+  const { formatBerat, beratSuffix } = useUnitSettings();
   const [timeFilter, setTimeFilter] = useState<TimeFilterType>('Bulanan');
   const [activeDonutIdx, setActiveDonutIdx] = useState<number | null>(null);
 
@@ -202,8 +204,8 @@ export const DashboardPage: React.FC = () => {
 
     const maxTonase = Math.max(...items.map((i) => i.tonase), 1);
     const totalTon = items.reduce((acc, i) => acc + i.tonase, 0);
-    return { items, maxTonase, totalLabel: `${Math.round(totalTon)} Ton` };
-  }, [harvests, timeFilter]);
+    return { items, maxTonase, totalLabel: `${Math.round(totalTon)} ${beratSuffix}` };
+  }, [harvests, timeFilter, beratSuffix]);
 
   const currentChart = chartData;
 
@@ -271,7 +273,7 @@ export const DashboardPage: React.FC = () => {
       item.tanggalPanen.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const fmtTon = (kg: number) => `${Math.round((kg / 1000) * 10) / 10} Ton`;
+  const fmtTon = (kg: number) => formatBerat(kg);
 
   return (
     <div className="space-y-5 pb-8">
@@ -334,7 +336,7 @@ export const DashboardPage: React.FC = () => {
                 Grafik Hasil Panen Lahan
               </h2>
               <p className="text-[11px] text-[#6B7280] font-medium">
-                {timeFilter === 'Bulanan' ? 'Jumlah panen per bulan (dalam Ton)' : timeFilter === 'Triwulan' ? 'Jumlah panen per triwulan (dalam Ton)' : 'Jumlah panen per tahun (dalam Ton)'}
+                {timeFilter === 'Bulanan' ? `Jumlah panen per bulan (dalam ${beratSuffix})` : timeFilter === 'Triwulan' ? `Jumlah panen per triwulan (dalam ${beratSuffix})` : `Jumlah panen per tahun (dalam ${beratSuffix})`}
               </p>
             </div>
 
@@ -379,7 +381,7 @@ export const DashboardPage: React.FC = () => {
                     <div className="w-full flex items-end justify-center h-full relative">
                       {isHighest && (
                         <div className="absolute -top-8 bg-[#2C4219] text-[#C3E28D] text-[10px] font-black px-2 py-0.5 rounded-md whitespace-nowrap shadow-xs animate-bounce z-10">
-                          Puncak ({item.tonase.toLocaleString('id-ID')} Ton)
+                          Puncak ({formatBerat(item.tonase * 1000)})
                         </div>
                       )}
                       <div
@@ -392,7 +394,7 @@ export const DashboardPage: React.FC = () => {
                       >
                         {/* Hover Tooltip */}
                         <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 bg-[#221A12] text-white text-[11px] font-bold py-1 px-2.5 rounded-lg whitespace-nowrap z-20 transition-opacity shadow-lg">
-                          {item.tonase.toLocaleString('id-ID')} Ton
+                          {formatBerat(item.tonase * 1000)}
                         </div>
                       </div>
                     </div>
