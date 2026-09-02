@@ -19,9 +19,14 @@ import {
   ChevronRight,
   Sparkles,
   BookOpen,
+  Layers,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { authApi } from '../../api/endpoints/authApi';
 import { Modal } from '../common/Modal';
+import { useAppMode } from '../../context/AppModeContext';
+import { useTheme } from '../../context/ThemeContext';
 
 // ── Primary: tampil langsung di bar (4 item) ────────────────────────────────
 const primaryNav = [
@@ -48,6 +53,8 @@ const utilityNav = [
 export const MobileBottomNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { setMode } = useAppMode();
+  const { isDark, toggleTheme } = useTheme();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -81,6 +88,12 @@ export const MobileBottomNav: React.FC = () => {
     setConfirmLogoutOpen(false);
     setSheetOpen(false);
     navigate('/login');
+  };
+
+  const handleSwitchToLite = () => {
+    setSheetOpen(false);
+    setMode('lite');
+    navigate('/lite');
   };
 
   return (
@@ -197,7 +210,7 @@ export const MobileBottomNav: React.FC = () => {
         />
       )}
 
-      {/* ── Bottom Sheet — Glassmorphism ───────────────────────────────── */}
+      {/* ── Bottom Sheet — Glassmorphism & High-Contrast Dark ─────────────── */}
       <div
         id="mobile-lainnya-sheet"
         role="dialog"
@@ -210,32 +223,27 @@ export const MobileBottomNav: React.FC = () => {
       >
         {/* Sheet card */}
         <div
-          className="mx-auto w-full max-w-[640px] flex flex-col rounded-t-[28px] border-t border-white/60 shadow-[0_-12px_40px_rgba(44,66,25,0.16),0_-2px_12px_rgba(44,66,25,0.08)] overflow-hidden max-h-[78vh]"
-          style={{
-            background: 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,248,244,0.94) 100%)',
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-          }}
+          className="mx-auto w-full max-w-[640px] flex flex-col rounded-t-[28px] border-t border-[#ECE7DF] dark:border-[#2E3A42] bg-[#FFF9F5] dark:bg-[#182126] shadow-[0_-12px_40px_rgba(0,0,0,0.25)] overflow-hidden max-h-[78vh]"
         >
           {/* Handle bar */}
           <div className="flex justify-center pt-3 pb-2 shrink-0">
-            <div className="w-10 h-1.5 rounded-full bg-[#c4c8bb]/60" />
+            <div className="w-10 h-1.5 rounded-full bg-[#c4c8bb]/60 dark:bg-[#3E4B56]" />
           </div>
 
           {/* Sheet header */}
-          <div className="px-5 pb-4 flex items-start justify-between gap-3 shrink-0 border-b border-[#c4c8bb]/15">
+          <div className="px-5 pb-4 flex items-start justify-between gap-3 shrink-0 border-b border-[#c4c8bb]/20 dark:border-[#2E3A42]">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#2C4219] to-[#3d5a25] flex items-center justify-center shadow-md shrink-0">
                 <Sparkles className="w-5 h-5 text-[#C3E28D]" />
               </div>
               <div>
-                <h2 className="text-[15px] font-extrabold text-[#172C05] leading-none">Menu Lainnya</h2>
-                <p className="text-[11px] font-medium text-[#6B7280] mt-1">Akses cepat semua fitur Sorgum SCM</p>
+                <h2 className="text-[15px] font-extrabold text-[#172C05] dark:text-white leading-none">Menu Lainnya</h2>
+                <p className="text-[11px] font-medium text-[#6B7280] dark:text-[#94A3B8] mt-1">Akses cepat semua fitur Sorgum SCM</p>
               </div>
             </div>
             <button
               onClick={() => setSheetOpen(false)}
-              className="w-9 h-9 rounded-full bg-[#F7F7F5] hover:bg-[#efe0d2] border border-[#c4c8bb]/20 flex items-center justify-center text-[#44483e] hover:text-[#2C4219] transition-colors shrink-0 cursor-pointer"
+              className="w-9 h-9 rounded-full bg-[#F7F7F5] dark:bg-[#242D34] hover:bg-[#efe0d2] dark:hover:bg-[#2A343B] border border-[#c4c8bb]/20 dark:border-[#33414B] flex items-center justify-center text-[#44483e] dark:text-white transition-colors shrink-0 cursor-pointer"
               aria-label="Tutup menu"
             >
               <X className="w-5 h-5" />
@@ -246,7 +254,7 @@ export const MobileBottomNav: React.FC = () => {
           <div className="overflow-y-auto custom-scrollbar flex-1 px-4 sm:px-5 py-4 space-y-5">
             {/* Secondary grid */}
             <div>
-              <p className="text-[10px] font-bold tracking-widest uppercase text-[#6B7280] mb-3 px-1">
+              <p className="text-[10px] font-bold tracking-widest uppercase text-[#6B7280] dark:text-[#A3E635] mb-3 px-1">
                 Kelola Data Utama
               </p>
               <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
@@ -261,23 +269,23 @@ export const MobileBottomNav: React.FC = () => {
                       onClick={() => setSheetOpen(false)}
                       className={`group relative flex flex-col items-center gap-2 p-3.5 sm:p-4 rounded-2xl border text-center transition-all duration-200 active:scale-[0.97] ${
                         active
-                          ? 'bg-[#2C4219] border-[#2C4219] text-white shadow-[0_4px_16px_rgba(44,66,25,0.25)]'
-                          : 'bg-white border-[#c4c8bb]/20 hover:border-[#2C4219]/20 hover:shadow-md hover:bg-[#fff8f4] text-[#221A12]'
+                          ? 'bg-[#2C4219] dark:bg-[#65A60B] border-[#2C4219] dark:border-[#65A60B] text-white shadow-md'
+                          : 'bg-white dark:bg-[#242D34] border-[#c4c8bb]/30 dark:border-[#33414B] hover:border-[#2C4219]/30 hover:bg-[#fff8f4] dark:hover:bg-[#2A343B] text-[#221A12] dark:text-white'
                       }`}
                     >
                       <span
                         className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors shrink-0 ${
                           active
                             ? 'bg-white/15 text-white'
-                            : 'bg-[#F7F7F5] group-hover:bg-[#C3E28D]/20 text-[#2C4219]'
+                            : 'bg-[#F7F7F5] dark:bg-[#1A2126] group-hover:bg-[#C3E28D]/20 text-[#2C4219] dark:text-[#A3E635]'
                         }`}
                       >
                         <Icon className="w-6 h-6" strokeWidth={active ? 2 : 1.8} />
                       </span>
-                      <span className={`text-xs font-bold leading-tight ${active ? 'text-white' : 'text-[#172C05]'}`}>
+                      <span className={`text-xs font-bold leading-tight ${active ? 'text-white' : 'text-[#172C05] dark:text-white'}`}>
                         {item.label}
                       </span>
-                      <span className={`text-[10px] leading-tight ${active ? 'text-white/70' : 'text-[#9CA3AF]'}`}>
+                      <span className={`text-[10px] leading-tight ${active ? 'text-white/70' : 'text-[#9CA3AF] dark:text-[#94A3B8]'}`}>
                         {item.sub}
                       </span>
                       {active && (
@@ -291,7 +299,7 @@ export const MobileBottomNav: React.FC = () => {
 
             {/* Utility section */}
             <div>
-              <p className="text-[10px] font-bold tracking-widest uppercase text-[#6B7280] mb-3 px-1">
+              <p className="text-[10px] font-bold tracking-widest uppercase text-[#6B7280] dark:text-[#A3E635] mb-3 px-1">
                 Akun & Pengaturan
               </p>
               <div className="grid grid-cols-2 gap-2.5">
@@ -305,39 +313,58 @@ export const MobileBottomNav: React.FC = () => {
                       onClick={() => setSheetOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all active:scale-[0.98] ${
                         active
-                          ? 'bg-[#2C4219] border-[#2C4219] text-white shadow-md'
-                          : 'bg-white border-[#c4c8bb]/20 hover:bg-[#fff8f4] hover:border-[#2C4219]/20 text-[#221A12]'
+                          ? 'bg-[#2C4219] dark:bg-[#65A60B] border-[#2C4219] dark:border-[#65A60B] text-white shadow-md'
+                          : 'bg-white dark:bg-[#242D34] border-[#c4c8bb]/30 dark:border-[#33414B] hover:bg-[#fff8f4] dark:hover:bg-[#2A343B] text-[#221A12] dark:text-white'
                       }`}
                     >
                       <span
                         className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                          active ? 'bg-white/15' : 'bg-[#FFF8F4] text-[#2C4219]'
+                          active ? 'bg-white/15' : 'bg-[#FFF8F4] dark:bg-[#1A2126] text-[#2C4219] dark:text-[#A3E635]'
                         }`}
                       >
                         <Icon className="w-[18px] h-[18px]" />
                       </span>
-                      <span className={`text-xs font-bold ${active ? 'text-white' : 'text-[#172C05]'}`}>
+                      <span className={`text-xs font-bold ${active ? 'text-white' : 'text-[#172C05] dark:text-white'}`}>
                         {item.label}
                       </span>
                       <ChevronRight
-                        className={`w-4 h-4 ml-auto ${active ? 'text-white/60' : 'text-[#9CA3AF]'}`}
+                        className={`w-4 h-4 ml-auto ${active ? 'text-white/60' : 'text-[#9CA3AF] dark:text-[#94A3B8]'}`}
                       />
                     </NavLink>
                   );
                 })}
+                {/* Theme Mode Toggle */}
+                <button
+                  onClick={() => {
+                    toggleTheme();
+                    setSheetOpen(false);
+                  }}
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border bg-white dark:bg-[#242D34] border-[#c4c8bb]/30 dark:border-[#33414B] hover:bg-[#fff8f4] dark:hover:bg-[#2A343B] text-[#221A12] dark:text-white transition-all active:scale-[0.98] cursor-pointer text-left"
+                >
+                  <span className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-[#1A2126] flex items-center justify-center shrink-0 text-indigo-700 dark:text-[#A3E635]">
+                    {isDark ? <Sun className="w-[18px] h-[18px] text-amber-400" /> : <Moon className="w-[18px] h-[18px] text-indigo-600" />}
+                  </span>
+                  <span className="text-xs font-bold text-[#172C05] dark:text-white">
+                    {isDark ? 'Mode Terang' : 'Mode Malam'}
+                  </span>
+                  <ChevronRight className="w-4 h-4 ml-auto text-[#9CA3AF] dark:text-[#94A3B8]" />
+                </button>
+
                 {/* Bantuan */}
                 <button
                   onClick={() => {
                     setSheetOpen(false);
                     setHelpOpen(true);
                   }}
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border bg-white border-[#c4c8bb]/20 hover:bg-[#fff8f4] hover:border-[#2C4219]/20 text-[#221A12] transition-all active:scale-[0.98] cursor-pointer text-left"
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border bg-white dark:bg-[#242D34] border-[#c4c8bb]/30 dark:border-[#33414B] hover:bg-[#fff8f4] dark:hover:bg-[#2A343B] text-[#221A12] dark:text-white transition-all active:scale-[0.98] cursor-pointer text-left"
                 >
-                  <span className="w-9 h-9 rounded-xl bg-[#FFF8F4] flex items-center justify-center shrink-0 text-[#2C4219]">
+                  <span className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-[#1A2126] flex items-center justify-center shrink-0 text-amber-700 dark:text-[#A3E635]">
                     <HelpCircle className="w-[18px] h-[18px]" />
                   </span>
-                  <span className="text-xs font-bold text-[#172C05]">Bantuan</span>
-                  <ChevronRight className="w-4 h-4 ml-auto text-[#9CA3AF]" />
+                  <span className="text-xs font-bold text-[#172C05] dark:text-white">
+                    Bantuan
+                  </span>
+                  <ChevronRight className="w-4 h-4 ml-auto text-[#9CA3AF] dark:text-[#94A3B8]" />
                 </button>
               </div>
             </div>
@@ -361,6 +388,21 @@ export const MobileBottomNav: React.FC = () => {
                 Chat
               </a>
             </div>
+
+            {/* Switch to Lite Mode */}
+            <button
+              onClick={handleSwitchToLite}
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-[#C3E28D]/20 border border-[#2C4219]/20 text-[#172C05] hover:bg-[#C3E28D]/40 transition-colors cursor-pointer active:scale-[0.98]"
+            >
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] flex items-center justify-center shrink-0">
+                <Layers className="w-[18px] h-[18px] text-[#C3E28D]" />
+              </span>
+              <div className="text-left">
+                <p className="text-xs font-bold text-[#172C05]">Beralih ke Lite Mode</p>
+                <p className="text-[10px] text-[#6B7280]">Tampilan lebih sederhana</p>
+              </div>
+              <ChevronRight className="w-4 h-4 ml-auto text-[#9CA3AF]" />
+            </button>
 
             {/* Logout */}
             <button

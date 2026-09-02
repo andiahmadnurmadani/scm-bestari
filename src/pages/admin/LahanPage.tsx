@@ -388,15 +388,15 @@ export const LahanPage: React.FC = () => {
   const getBadgeStyle = (badge?: string, statusKesiapan?: string) => {
     const val = (badge || statusKesiapan || '').toUpperCase();
     if (val.includes('AKTIF') || val.includes('SIAP')) {
-      return 'bg-[#D1E6A5] text-[#2C4219] border-transparent';
+      return 'bg-[#EBF7EE] text-[#1B5E20] border border-[#C8E6C9] dark:bg-[#254228] dark:text-[#98E6AB] dark:border-[#365B3A]';
     }
     if (val.includes('PERSIAPAN') || val.includes('TUMBUH')) {
-      return 'bg-[#FEF3C7] text-[#92400E] border-transparent';
+      return 'bg-[#FFF8E1] text-[#B78103] border border-[#FFE082] dark:bg-[#3D3216] dark:text-[#FDE047] dark:border-[#635222]';
     }
     if (val.includes('PEMBESARAN') || val.includes('PANEN')) {
-      return 'bg-[#FEE2E2] text-[#991B1B] border-transparent';
+      return 'bg-[#FFEBEE] text-[#C62828] border border-[#FFCDD2] dark:bg-[#3F1D1D] dark:text-[#FCA5A5] dark:border-[#662E2E]';
     }
-    return 'bg-gray-100 text-gray-700 border-gray-200';
+    return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-[#242D34] dark:text-[#CBD5E1] dark:border-[#33414B]';
   };
   const formatHariTanggal = (iso?: string | null) => {
     if (!iso) return '-';
@@ -431,7 +431,7 @@ export const LahanPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-[#221A12] tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-semibold text-[#2C4219] tracking-tight">
             Kelola Lahan
           </h1>
         </div>

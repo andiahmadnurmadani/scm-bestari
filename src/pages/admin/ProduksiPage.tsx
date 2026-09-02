@@ -267,15 +267,15 @@ export const ProduksiPage: React.FC = () => {
           </div>
 
           {/* Filter tabs: Raw vs Ready to Eat */}
-          <div className="flex items-center gap-1.5 bg-[#F7F7F5] p-1 rounded-lg border border-[#c4c8bb]/30 overflow-x-auto max-w-full custom-scrollbar">
+          <div className="flex items-center gap-1.5 bg-[#F7F7F5] dark:bg-[#242D34] p-1 rounded-lg border border-[#c4c8bb]/30 dark:border-[#33414B] overflow-x-auto max-w-full custom-scrollbar">
             {(['Semua', 'Ready to Eat (Siap Konsumsi)', 'Raw (Bahan Mentah)', 'Lainnya']).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveCategoryTab(tab)}
                 className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   activeCategoryTab === tab
-                    ? 'bg-[#C3E28D] text-[#172C05] shadow-2xs'
-                    : 'text-[#44483e] hover:text-[#172C05]'
+                    ? 'bg-[#2C4219] dark:bg-[#345527] text-white shadow-2xs'
+                    : 'text-[#44483e] dark:text-[#CBD5E1] hover:text-[#172C05] dark:hover:text-white'
                 }`}
               >
                 {tab}
@@ -320,12 +320,12 @@ export const ProduksiPage: React.FC = () => {
                   <td className="py-2.5 px-3 font-semibold text-[#172C05]">{item.namaProduk}</td>
                   <td className="py-2.5 px-3">
                     <span
-                      className={`inline-block px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
+                      className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
                         item.kategori.includes('Ready to Eat')
-                          ? 'bg-[#C3E28D] text-[#172C05]'
+                          ? 'bg-[#EBF7EE] text-[#1B5E20] border border-[#C8E6C9] dark:bg-[#254228] dark:text-[#98E6AB] dark:border-[#365B3A]'
                           : item.kategori.includes('Raw')
-                          ? 'bg-[#fff1e5] text-[#8C5A2B]'
-                          : 'bg-[#F7F7F5] text-[#44483e]'
+                          ? 'bg-[#fff1e5] text-[#8C5A2B] border border-[#efe0d2] dark:bg-[#2D3740] dark:text-[#E2E8F0] dark:border-[#3E4B56]'
+                          : 'bg-[#F7F7F5] text-[#44483e] border border-[#ECE7DF] dark:bg-[#242D34] dark:text-[#CBD5E1] dark:border-[#33414B]'
                       }`}
                     >
                       {item.kategori.includes('Ready to Eat')

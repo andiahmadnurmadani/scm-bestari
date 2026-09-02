@@ -161,14 +161,11 @@ export const GudangPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-3 sm:p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-[#172C05]">Gudang Sorgum</h1>
-          <p className="text-xs text-[#6B7280] mt-0.5">
-            Penyimpanan hasil panen per lahan — stok dipakai urut masuk (FIFO)
-          </p>
+          <h1 className="text-xl sm:text-2xl font-semibold text-[#2C4219] tracking-tight">Gudang Sorgum</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={openAdd} icon={<Plus className="w-3.5 h-3.5" />} variant="primary" className="text-xs py-1.5 px-3">
@@ -177,19 +174,22 @@ export const GudangPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Stat ringkas */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4">
+      {/* Stat ringkas (Model Card disamakan dengan Panen & Produksi) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#1C3615]">
           <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">JUMLAH GUDANG</p>
-          <h3 className="text-lg font-bold text-[#221A12] mt-1">{warehouses.length} Gudang</h3>
+          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">{warehouses.length} Gudang</h3>
+          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Gudang penyimpanan aktif</p>
         </div>
-        <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#8C9E5B]">
           <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL STOK SORGUM</p>
-          <h3 className="text-lg font-bold text-[#2C4219] mt-1">{formatBerat(totalStokSemua)}</h3>
+          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">{formatBerat(totalStokSemua)}</h3>
+          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Stok hasil panen tersimpan</p>
         </div>
-        <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#DEB938]">
           <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">SISTEM PENYIMPANAN</p>
-          <h3 className="text-lg font-bold text-[#221A12] mt-1">FIFO (First In, First Out)</h3>
+          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">FIFO (First In, First Out)</h3>
+          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Rotasi otomatis stok awal</p>
         </div>
       </div>
 
@@ -287,7 +287,7 @@ export const GudangPage: React.FC = () => {
 
       {/* Modal Form Gudang */}
       <Modal isOpen={formModalOpen} onClose={() => setFormModalOpen(false)} title={editId ? 'Edit Gudang' : 'Tambah Gudang'}>
-        <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-[#172C05] mb-1">Nama Gudang <span className="text-red-500">*</span></label>
             <input
@@ -337,7 +337,7 @@ export const GudangPage: React.FC = () => {
         onClose={() => setStockModalOpen(false)}
         title={stockType === 'MASUK' ? 'Stok Masuk ke Gudang' : 'Stok Keluar dari Gudang'}
       >
-        <form onSubmit={handleStockSubmit} className="p-3 sm:p-6 space-y-4">
+        <form onSubmit={handleStockSubmit} className="space-y-4">
           <p className="text-xs text-[#6B7280] bg-[#F7F7F5] rounded-lg p-2.5">
             {stockType === 'MASUK'
               ? 'Catat stok sorgum masuk (misal hasil panen atau beli dari luar).'
@@ -377,7 +377,7 @@ export const GudangPage: React.FC = () => {
         title={detailWarehouse ? `${detailWarehouse.namaGudang} — ${detailWarehouse.kodeGudang}` : 'Detail Gudang'}
       >
         {detailWarehouse && (
-          <div className="p-3 sm:p-6 space-y-4">
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-[#F7F7F5] rounded-xl p-3">
                 <p className="text-[10px] font-bold text-[#6B7280] uppercase">Total Stok</p>
@@ -442,12 +442,12 @@ export const GudangPage: React.FC = () => {
 
       {/* Modal Konfirmasi Hapus */}
       <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Hapus Gudang">
-        <div className="p-3 sm:p-6">
+        <div className="space-y-4">
           <p className="text-sm text-[#221A12]">
             Yakin ingin menghapus gudang <b>{deleteTarget?.namaGudang}</b>?<br />
             <span className="text-xs text-[#6B7280]">Gudang yang masih punya stok tidak bisa dihapus.</span>
           </p>
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1 justify-center">Batal</Button>
             <Button type="button" variant="danger" onClick={confirmDelete} className="flex-1 justify-center">Ya, Hapus</Button>
           </div>

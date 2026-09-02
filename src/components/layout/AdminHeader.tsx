@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Bell, Settings, Menu, LogOut, User as UserIcon, CheckCheck, Sprout } from 'lucide-react';
+import { Search, Bell, Settings, Menu, LogOut, User as UserIcon, CheckCheck, Sprout, Layers, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/endpoints/authApi';
 import { notificationsApi, AppNotification } from '../../api/endpoints/notificationsApi';
 import { Modal } from '../common/Modal';
 import { useCms } from '../../context/CmsContext';
+import { useAppMode } from '../../context/AppModeContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface AdminHeaderProps {
   onMenuClick?: () => void;
@@ -19,6 +21,8 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const { cms } = useCms();
+  const { setMode } = useAppMode();
+  const { isDark, toggleTheme } = useTheme();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
@@ -84,6 +88,11 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
     navigate('/login');
   };
 
+  const handleSwitchToLite = () => {
+    setMode('lite');
+    navigate('/lite');
+  };
+
   return (
     <header className="sticky top-0 z-30 bg-[#FFF8F4] border-b border-[#c4c8bb]/20 shadow-2xs px-3 sm:px-6 py-1.5">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
@@ -129,6 +138,19 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
         {/* Right: Notifications, Settings, Profile Badge */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Theme Mode Toggle (Terang / Malam) */}
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-full hover:bg-[#efe0d2] transition-colors relative cursor-pointer text-[#44483e] min-w-[34px] min-h-[34px] flex items-center justify-center border border-[#c4c8bb]/30"
+            title={isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Malam'}
+          >
+            {isDark ? (
+              <Sun className="w-4 h-4 text-amber-500" />
+            ) : (
+              <Moon className="w-4 h-4 text-indigo-600" />
+            )}
+          </button>
+
           {/* Notification Bell */}
           <div className="relative">
             <button
@@ -196,6 +218,16 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             )}
           </div>
 
+          {/* Tombol Lite Mode */}
+          <button
+            onClick={handleSwitchToLite}
+            title="Beralih ke Lite Mode — tampilan sederhana"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#C3E28D]/60 hover:bg-[#C3E28D] text-[#172C05] text-[11px] font-extrabold transition-all cursor-pointer border border-[#2C4219]/20"
+          >
+            <Layers className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Lite</span>
+          </button>
+
           {/* Settings gear */}
           <Link
             to="/dashboard/cms"
@@ -215,9 +247,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             >
               <div className="text-right hidden md:block">
                 <p className="text-xs font-bold text-[#221A12] leading-none">{userName}</p>
-                <p className="text-[9px] font-bold text-[#44483e] uppercase tracking-wider mt-0.5">
-                  {userRole}
-                </p>
               </div>
               {userAvatar ? (
                 <img

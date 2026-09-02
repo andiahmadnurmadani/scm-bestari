@@ -377,7 +377,7 @@ export const ProfilePage: React.FC = () => {
     <div className="space-y-5">
       {/* Page header */}
       <div>
-        <h1 className="text-lg sm:text-xl font-bold text-[#172C05] flex items-center gap-2">
+        <h1 className="text-lg sm:text-xl font-bold text-[#2C4219] flex items-center gap-2">
           <span className="w-7 h-7 rounded-lg bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center">
             <User className="w-4 h-4" />
           </span>

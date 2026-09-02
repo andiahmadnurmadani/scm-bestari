@@ -64,9 +64,16 @@ export const AdminLayout: React.FC = () => {
       profil: 'Profil Saya',
       integrasi: 'Pengaturan & Integrasi API',
       cms: 'Manajemen Konten Website',
+      master: 'Varietas Sorgum',
+      varietas: 'Varietas Sorgum',
     };
 
-    const currentLabel = labels[paths[1]] || paths[1];
+    // Ambil segmen terakhir untuk menentukan label aktif
+    const lastPath = paths[paths.length - 1];
+    const currentLabel =
+      labels[lastPath] ||
+      labels[paths[1]] ||
+      lastPath.charAt(0).toUpperCase() + lastPath.slice(1);
 
     return (
       <nav className="flex items-center gap-1.5 text-[11px] font-medium text-[#6B7280] mb-3 select-none">

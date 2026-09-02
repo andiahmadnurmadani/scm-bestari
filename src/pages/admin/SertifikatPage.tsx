@@ -385,10 +385,10 @@ export const SertifikatPage: React.FC = () => {
                     <span
                       className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide ${
                         item.status === 'AKTIF'
-                          ? 'bg-[#C3E28D] text-[#172C05] border border-[#b4cf98]'
+                          ? 'bg-[#EBF7EE] text-[#1B5E20] border border-[#C8E6C9] dark:bg-[#254228] dark:text-[#98E6AB] dark:border-[#365B3A]'
                           : item.status === 'PROSES'
-                          ? 'bg-[#fff1e5] text-[#8C5A2B] border border-[#e8cba8]'
-                          : 'bg-red-100 text-red-800 border border-red-300'
+                          ? 'bg-[#FFF8E1] text-[#B78103] border border-[#FFE082] dark:bg-[#3D3216] dark:text-[#FDE047] dark:border-[#635222]'
+                          : 'bg-[#FFEBEE] text-[#C62828] border border-[#FFCDD2] dark:bg-[#3F1D1D] dark:text-[#FCA5A5] dark:border-[#662E2E]'
                       }`}
                     >
                       {item.status}

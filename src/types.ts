@@ -131,6 +131,7 @@ export interface ProductionBatch {
   plantingId?: string | null;
   harvestId?: string | null;
   gudangId?: string | null;
+  fotoUrl?: string;
   lahan?: { id: string; kodeLahan: string; namaLahan: string } | null;
   planting?: Planting | null;
   harvest?: HarvestRecord | null;

@@ -246,7 +246,7 @@ export const CmsPage: React.FC = () => {
       {/* Page header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold text-[#172C05] flex items-center gap-2">
+          <h1 className="text-lg sm:text-xl font-bold text-[#2C4219] flex items-center gap-2">
             <span className="w-7 h-7 rounded-lg bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center">
               <LayoutDashboard className="w-4 h-4" />
             </span>

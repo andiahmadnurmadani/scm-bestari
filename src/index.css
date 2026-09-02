@@ -18,22 +18,13 @@ html {
   }
 }
 
-/* ── Tipografi: hierarki jelas & nyaman dibaca ─────────────────────────────
-   - Judul (h1–h6) & elemen berkelas font-bold: TEGAS (700/800)
-   - Sub-judul (font-semibold): 600
-   - Teks isi: ringan (400) agar kontras dengan judul.
-   Utility Tailwind (font-bold/semibold/medium) dibiarkan bekerja normal
-   supaya ada perbedaan jelas antara judul, sub-judul, dan isi. */
+/* ── Tipografi: hierarki jelas & nyaman dibaca ───────────────────────────── */
 @layer utilities {
-  /* Heading tetap tegas (judul/sub judul) */
   h1, h2, h3, h4, h5, h6 {
     font-weight: 700;
   }
   h1 { font-weight: 800; }
 
-  /* Teks isi default: ringan & nyaman dibaca.
-     Catatan: utility Tailwind (font-bold dll) tetap menang atas aturan ini
-     karena lebih spesifik — hierarki judul/isi terjaga. */
   body,
   p,
   span,
@@ -50,7 +41,6 @@ html {
     font-weight: 400;
   }
 
-  /* Tombol boleh tebal agar jelas interaktif */
   button {
     font-weight: 600;
   }
@@ -88,9 +78,6 @@ html {
 
 /* ── Print: hanya struk nota yang dicetak ─────────────────────────────── */
 @media print {
-  /* 1) Semua konten disembunyikan DAN tingginya dicuitkan jadi 0,
-        sehingga tidak ada ruang sisa → dokumen cetak tidak melebar
-        ke halaman kosong berikutnya. */
   body * {
     visibility: hidden;
     height: 0 !important;
@@ -98,24 +85,22 @@ html {
     overflow: hidden !important;
   }
 
-  /* 2) Modal (fixed) & isinya: boleh overflow terlihat agar struk
-        tidak terpotong oleh scroll area modal. */
   .fixed,
   .fixed * {
     overflow: visible !important;
   }
 
-  /* 3) Struk nota: tampil penuh, tinggi otomatis.
-        position:fixed → selalu mulai dari pojok kiri-atas halaman
-        (tidak terpotong & tidak tergantung posisi parent). */
   #print-struk,
-  #print-struk * {
+  #print-struk *,
+  #print-label-qr,
+  #print-label-qr * {
     visibility: visible;
     height: auto !important;
     min-height: auto !important;
     overflow: visible !important;
   }
-  #print-struk {
+  #print-struk,
+  #print-label-qr {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -134,4 +119,311 @@ html {
   }
 }
 
+/* ── NIGHT MODE (SOFT FOREST CHARCOAL - CALM & SOOTHING ON THE EYES) ──────── */
+html.dark {
+  color-scheme: dark;
+}
 
+html.dark body {
+  background-color: #121619 !important;
+  color: #E2E8F0 !important;
+}
+
+/* Headers, Footers, Navbars, Sidebars */
+html.dark header,
+html.dark footer,
+html.dark nav {
+  background-color: #161B1E !important;
+  border-color: #262F35 !important;
+}
+
+html.dark aside {
+  background-color: #161B1E !important;
+  border-color: #262F35 !important;
+}
+
+/* Sidebar Links & Icons */
+html.dark aside a,
+html.dark aside button,
+html.dark aside span,
+html.dark aside p {
+  color: #CBD5E1 !important;
+}
+
+html.dark aside svg {
+  color: #9EC298 !important;
+}
+
+html.dark aside a:hover,
+html.dark aside button:hover {
+  background-color: #222B30 !important;
+  color: #FFFFFF !important;
+}
+
+/* Active menu item in sidebar (SOFT MATTE FOREST GREEN - NOT NEON) */
+html.dark aside a.active,
+html.dark aside .active-pill,
+html.dark aside [class*="bg-[#C3E28D]"],
+html.dark aside [class*="bg-[#65A60B]"] {
+  background-color: #345527 !important;
+  color: #FFFFFF !important;
+  border-color: #446E34 !important;
+}
+
+html.dark main {
+  background-color: #121619 !important;
+}
+
+/* ── OVERRIDE ALL LIGHT BACKGROUND COLORS IN NIGHT MODE ──────────── */
+html.dark .bg-white,
+html.dark [class*="bg-white"],
+html.dark [class*="bg-[#FBF9F5]"],
+html.dark [class*="bg-[#FFF8F4]"],
+html.dark [class*="bg-[#FFF8F2]"],
+html.dark [class*="bg-[#FAF8F4]"],
+html.dark [class*="bg-[#FCFAF6]"],
+html.dark [class*="bg-[#F7F7F5]"],
+html.dark [class*="bg-[#F5F5F3]"],
+html.dark [class*="bg-[#F4EFEB]"],
+html.dark [class*="bg-[#F5EFE9]"],
+html.dark [class*="bg-[#fff1e5]"],
+html.dark [class*="bg-[#efe0d2]"],
+html.dark [class*="bg-[#F5F5F0]"],
+html.dark [class*="bg-[#EFEFEA]"],
+html.dark [class*="bg-[#ECE7DF]"],
+html.dark .bg-gray-50,
+html.dark .bg-gray-100,
+html.dark .bg-gray-200,
+html.dark .bg-slate-50 {
+  background-color: #1C2328 !important;
+  color: #E2E8F0 !important;
+  border-color: #2E3A42 !important;
+}
+
+/* Inner Detail Boxes inside Cards & Tables */
+html.dark div[class*="bg-[#FAF8F4]"],
+html.dark div[class*="bg-[#FFF8F2]"],
+html.dark div[class*="bg-[#fff1e5]"],
+html.dark div[class*="bg-[#F5F5F3]"],
+html.dark div[class*="bg-[#F7F7F5]"],
+html.dark div[class*="bg-gray-100"] {
+  background-color: #242D34 !important;
+  color: #E2E8F0 !important;
+  border-color: #33414B !important;
+}
+
+/* Primary CTA Buttons (SOFT MATTE FOREST GREEN - NOT NEON) */
+html.dark button[class*="bg-[#2C4219]"],
+html.dark button[class*="bg-[#1C3615]"],
+html.dark button[class*="bg-[#65A60B]"],
+html.dark .bg-\[\#2C4219\],
+html.dark .bg-\[\#1C3615\] {
+  background-color: #345527 !important;
+  color: #FFFFFF !important;
+  border-color: #446E34 !important;
+}
+html.dark button[class*="bg-[#2C4219]"]:hover,
+html.dark button[class*="bg-[#1C3615]"]:hover {
+  background-color: #416B31 !important;
+}
+
+/* ── BADGE COMPONENT & LIGHT PASTEL PILL OVERRIDES IN NIGHT MODE ───── */
+/* info variant */
+html.dark [class*="bg-[#e0f2fe]"],
+html.dark [class*="bg-[#E3F2FD]"],
+html.dark [class*="bg-sky-"],
+html.dark [class*="bg-blue-100"],
+html.dark .bg-blue-50 {
+  background-color: #1E3A5F !important;
+  color: #93C5FD !important;
+  border-color: #2B5283 !important;
+}
+
+/* success variant */
+html.dark [class*="bg-[#cfecb3]"],
+html.dark [class*="bg-[#E8F5E9]"],
+html.dark [class*="bg-[#EBF7EE]"],
+html.dark [class*="bg-[#D1E6A5]"],
+html.dark [class*="bg-emerald-100"],
+html.dark [class*="bg-emerald-50"],
+html.dark .bg-green-50 {
+  background-color: #254228 !important;
+  color: #98E6AB !important;
+  border-color: #365B3A !important;
+}
+
+/* warning variant */
+html.dark [class*="bg-[#ffe083]"],
+html.dark [class*="bg-[#FFF8E1]"],
+html.dark [class*="bg-[#FEF3C7]"],
+html.dark [class*="bg-amber-100"],
+html.dark .bg-amber-50 {
+  background-color: #3D3216 !important;
+  color: #FDE047 !important;
+  border-color: #635222 !important;
+}
+
+/* error variant */
+html.dark [class*="bg-[#ffdad6]"],
+html.dark [class*="bg-[#FFEBEE]"],
+html.dark [class*="bg-[#FEE2E2]"],
+html.dark [class*="bg-red-100"],
+html.dark .bg-red-50 {
+  background-color: #3F1D1D !important;
+  color: #FCA5A5 !important;
+  border-color: #662E2E !important;
+}
+
+/* sage / neutral variant */
+html.dark [class*="bg-[#efe0d2]"],
+html.dark [class*="bg-[#C3E28D]/40"],
+html.dark [class*="bg-[#fff1e5]"],
+html.dark [class*="bg-[#F3F4F6]"],
+html.dark [class*="bg-gray-100"] {
+  background-color: #2D3740 !important;
+  color: #FFFFFF !important;
+  border-color: #3E4B56 !important;
+}
+
+/* Force badge children inside html.dark to inherit bright badge text color */
+html.dark [class*="bg-[#e0f2fe]"] *,
+html.dark [class*="bg-[#cfecb3]"] *,
+html.dark [class*="bg-[#ffe083]"] *,
+html.dark [class*="bg-[#ffdad6]"] *,
+html.dark [class*="bg-[#efe0d2]"] *,
+html.dark [class*="bg-[#D1E6A5]"] *,
+html.dark [class*="bg-emerald-100"] *,
+html.dark [class*="bg-[#FEF3C7]"] *,
+html.dark [class*="bg-amber-100"] *,
+html.dark [class*="bg-[#FEE2E2]"] *,
+html.dark [class*="bg-red-100"] *,
+html.dark [class*="bg-[#fff1e5]"] * {
+  color: inherit !important;
+}
+
+/* ── UNIVERSAL HIGH-CONTRAST TEXT & LABEL OVERRIDES ───────────────── */
+
+/* 1. All Headings, Titles & Main Values -> Crisp Bright White (#FFFFFF) */
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6,
+html.dark strong,
+html.dark b,
+html.dark [class*="text-[#172C05]"],
+html.dark [class*="text-[#221A12]"],
+html.dark [class*="text-[#2C4219]"],
+html.dark [class*="text-[#171717]"],
+html.dark [class*="text-gray-900"],
+html.dark [class*="text-gray-800"],
+html.dark [class*="text-gray-700"],
+html.dark [class*="text-[#2D3328]"] {
+  color: #FFFFFF !important;
+}
+
+/* 2. Stat Card Top Labels & Table Column Headers -> SOFT ELEGANT SAGE SLATE (NO NEON GLOW) */
+html.dark [class*="text-[#44483e]"],
+html.dark [class*="text-[#8A9084]"],
+html.dark [class*="text-[#6B7280]"],
+html.dark [class*="text-[#74796d]"],
+html.dark th {
+  color: #A7C49E !important;
+}
+
+/* 3. All Paragraphs, Subtitles, Helper Text, Percentages -> Crisp Light Slate (#CBD5E1) */
+html.dark p,
+html.dark span,
+html.dark label,
+html.dark td,
+html.dark [class*="text-[#70766B]"],
+html.dark [class*="text-[#6E7368]"],
+html.dark [class*="text-[#9E988F]"],
+html.dark [class*="text-[#5F6658]"],
+html.dark [class*="text-gray-600"],
+html.dark [class*="text-gray-500"],
+html.dark [class*="text-gray-400"],
+html.dark [class*="text-slate-600"],
+html.dark [class*="text-slate-500"],
+html.dark [class*="text-emerald-700"],
+html.dark [class*="text-emerald-800"] {
+  color: #CBD5E1 !important;
+}
+
+/* 4. Filter Buttons in Peralatan & Admin Pages */
+html.dark button[class*="bg-[#F7F7F5]"] {
+  background-color: #242D34 !important;
+  color: #E2E8F0 !important;
+  border-color: #33414B !important;
+}
+
+/* 5. Action Buttons in Tables & Cards */
+/* Detail Button */
+html.dark button[class*="text-[#2C4219]"],
+html.dark button[class*="hover:bg-[#efe0d2]"] {
+  color: #86EFAC !important;
+}
+/* Edit Button */
+html.dark button[class*="text-amber-700"],
+html.dark button[class*="hover:bg-amber-50"] {
+  color: #FDE047 !important;
+}
+/* Delete Button */
+html.dark button[class*="text-red-600"],
+html.dark button[class*="hover:bg-red-50"] {
+  color: #FCA5A5 !important;
+}
+
+/* 6. Table Rows */
+html.dark table {
+  color: #E2E8F0 !important;
+}
+
+html.dark tr,
+html.dark tr[class*="bg-[#F7F7F5]"] {
+  background-color: #1C2328 !important;
+}
+
+html.dark tr:hover,
+html.dark tr[class*="hover:bg-[#F7F7F5]"]:hover {
+  background-color: #242D34 !important;
+}
+
+html.dark th {
+  background-color: #242D34 !important;
+  color: #A7C49E !important;
+  border-color: #33414B !important;
+  font-weight: 700 !important;
+}
+
+html.dark td {
+  border-color: #2E3A42 !important;
+}
+
+/* 7. Form Inputs & Select Dropdowns */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #1A2126 !important;
+  border-color: #33414B !important;
+  color: #FFFFFF !important;
+}
+
+html.dark option {
+  background-color: #161B1E !important;
+  color: #FFFFFF !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+/* 8. Modals */
+html.dark .fixed .bg-white,
+html.dark .fixed [class*="bg-white"] {
+  background-color: #1C2328 !important;
+  color: #E2E8F0 !important;
+  border-color: #33414B !important;
+}
