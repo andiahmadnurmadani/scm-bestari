@@ -28,6 +28,9 @@ function mapRowToPlanting(row) {
     catatan: row.catatan || '',
     fotoUrl: row.foto_url || null,
     createdAt: row.created_at,
+    // agregat dari tabel harvests (ratoon sorgum)
+    jumlahPanen: row.jumlah_panen != null ? Number(row.jumlah_panen) : 0,
+    panenKeTerakhir: row.panen_ke_terakhir != null ? Number(row.panen_ke_terakhir) : null,
   };
 }
 
@@ -71,7 +74,9 @@ export async function getPlantings(req, res) {
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
     const [rows] = await pool.query(
-      `SELECT p.id, p.kode_tanam, p.lahan_id, l.kode_lahan, l.nama_lahan, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas, p.jumlah_lubang, p.luas_tanam, p.petugas, p.status_tanam, p.catatan, p.foto_url, p.created_at
+      `SELECT p.id, p.kode_tanam, p.lahan_id, l.kode_lahan, l.nama_lahan, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas, p.jumlah_lubang, p.luas_tanam, p.petugas, p.status_tanam, p.catatan, p.foto_url, p.created_at,
+              (SELECT COUNT(*) FROM harvests h WHERE h.planting_id = p.id) AS jumlah_panen,
+              (SELECT MAX(h.panen_ke) FROM harvests h WHERE h.planting_id = p.id) AS panen_ke_terakhir
        FROM plantings p LEFT JOIN lands l ON p.lahan_id=l.id
        ${whereClause}
        ORDER BY p.tanggal_tanam DESC, p.id DESC
@@ -88,7 +93,9 @@ export async function getPlantings(req, res) {
 export async function getPlantingById(req, res) {
   try {
     const [rows] = await getPool().execute(
-      `SELECT p.id, p.kode_tanam, p.lahan_id, l.kode_lahan, l.nama_lahan, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas, p.jumlah_lubang, p.luas_tanam, p.petugas, p.status_tanam, p.catatan, p.foto_url, p.created_at
+      `SELECT p.id, p.kode_tanam, p.lahan_id, l.kode_lahan, l.nama_lahan, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas, p.jumlah_lubang, p.luas_tanam, p.petugas, p.status_tanam, p.catatan, p.foto_url, p.created_at,
+              (SELECT COUNT(*) FROM harvests h WHERE h.planting_id = p.id) AS jumlah_panen,
+              (SELECT MAX(h.panen_ke) FROM harvests h WHERE h.planting_id = p.id) AS panen_ke_terakhir
        FROM plantings p LEFT JOIN lands l ON p.lahan_id=l.id WHERE p.id=? LIMIT 1`, [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ success: false, message: 'Data penanaman tidak ditemukan.' });
@@ -133,7 +140,10 @@ export async function createPlanting(req, res) {
        VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
       [kodeTanam, data.lahanId, data.tanggalTanam, data.estimasiPanen || null, String(data.varietas).trim(), Number(data.jumlahLubang)||0, luasTanam ? Number(luasTanam) : null, String(data.petugas||'').trim(), data.statusTanam||'Ditanam', data.catatan||'', data.fotoUrl||null]
     );
-    const [newRow] = await pool.execute(`SELECT p.id, p.kode_tanam, p.lahan_id, l.kode_lahan, l.nama_lahan, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas, p.jumlah_lubang, p.luas_tanam, p.petugas, p.status_tanam, p.catatan, p.foto_url, p.created_at FROM plantings p LEFT JOIN lands l ON p.lahan_id=l.id WHERE p.id=? LIMIT 1`, [result.insertId]);
+    const [newRow] = await pool.execute(`SELECT p.id, p.kode_tanam, p.lahan_id, l.kode_lahan, l.nama_lahan, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas, p.jumlah_lubang, p.luas_tanam, p.petugas, p.status_tanam, p.catatan, p.foto_url, p.created_at,
+      (SELECT COUNT(*) FROM harvests h WHERE h.planting_id = p.id) AS jumlah_panen,
+      (SELECT MAX(h.panen_ke) FROM harvests h WHERE h.planting_id = p.id) AS panen_ke_terakhir
+      FROM plantings p LEFT JOIN lands l ON p.lahan_id=l.id WHERE p.id=? LIMIT 1`, [result.insertId]);
     return res.status(201).json({ success: true, message: 'Data penanaman berhasil ditambahkan.', data: mapRowToPlanting(newRow[0]) });
   } catch (e) {
     console.error('[createPlanting] Error:', e.message);
@@ -161,7 +171,10 @@ export async function updatePlanting(req, res) {
     const sets=[]; const values=[];
     for (const [k,col] of Object.entries(fieldMap)) if (data[k] !== undefined) { sets.push(`${col}=?`); values.push(data[k]===''?null:data[k]); }
     if (sets.length) await pool.execute(`UPDATE plantings SET ${sets.join(', ')} WHERE id=?`, [...values, id]);
-    const [updatedRow] = await pool.execute(`SELECT p.id, p.kode_tanam, p.lahan_id, l.kode_lahan, l.nama_lahan, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas, p.jumlah_lubang, p.luas_tanam, p.petugas, p.status_tanam, p.catatan, p.foto_url, p.created_at FROM plantings p LEFT JOIN lands l ON p.lahan_id=l.id WHERE p.id=? LIMIT 1`, [id]);
+    const [updatedRow] = await pool.execute(`SELECT p.id, p.kode_tanam, p.lahan_id, l.kode_lahan, l.nama_lahan, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas, p.jumlah_lubang, p.luas_tanam, p.petugas, p.status_tanam, p.catatan, p.foto_url, p.created_at,
+      (SELECT COUNT(*) FROM harvests h WHERE h.planting_id = p.id) AS jumlah_panen,
+      (SELECT MAX(h.panen_ke) FROM harvests h WHERE h.planting_id = p.id) AS panen_ke_terakhir
+      FROM plantings p LEFT JOIN lands l ON p.lahan_id=l.id WHERE p.id=? LIMIT 1`, [id]);
     return res.status(200).json({ success: true, message: 'Data penanaman berhasil diperbarui.', data: mapRowToPlanting(updatedRow[0]) });
   } catch (e) {
     console.error('[updatePlanting] Error:', e.message);

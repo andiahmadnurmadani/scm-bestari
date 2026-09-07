@@ -633,222 +633,244 @@ export const SertifikatPage: React.FC = () => {
         isOpen={formModalOpen}
         onClose={() => setFormModalOpen(false)}
         title={editId ? 'Edit Dokumen Sertifikat' : 'Unggah Sertifikat Legalitas Baru'}
-        subtitle="Kelola arsip sertifikat Halal, P-IRT, dan Uji Laboratorium (PDF, JPG, PNG)"
+        subtitle={editId ? 'Perbarui data dokumen sertifikat' : 'Lengkapi data dokumen sertifikat'}
+        maxWidth="6xl"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setFormModalOpen(false)} className="px-6 py-3 text-sm">Batal</Button>
+            <Button type="submit" form="sertifikat-form" variant="primary" loading={saving} className="px-8 py-3 text-sm">
+              {editId ? 'Simpan Perubahan' : 'Simpan Dokumen'}
+            </Button>
+          </>
+        }
       >
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Kode Dokumen
-              </label>
-              <input
-                type="text"
-                value={formData.kodeDokumen}
-                readOnly
-                disabled
-                title="Kode dibuat otomatis oleh sistem (auto-increment)"
-                className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold text-[#2C4219] cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Jenis Dokumen
-              </label>
-              <select
-                value={formData.jenisDokumen}
-                onChange={(e) => setFormData({ ...formData, jenisDokumen: e.target.value as any })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
-              >
-                <option value="Sertifikat Halal">Sertifikat Halal</option>
-                <option value="Izin P-IRT">Izin P-IRT</option>
-                <option value="Uji Lab Nutrisi">Uji Lab Nutrisi</option>
-                <option value="Sertifikat Organik">Sertifikat Organik</option>
-                <option value="Lainnya">Lainnya</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Nama Sertifikat / Legalitas
-            </label>
-            <input
-              type="text"
-              value={formData.namaSertifikat}
-              onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
-              placeholder="Contoh: Sertifikat Halal Olahan Sorgum BPJPH"
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Lembaga Penerbit
-              </label>
-              <input
-                type="text"
-                value={formData.penerbitSertifikat}
-                onChange={(e) => setFormData({ ...formData, penerbitSertifikat: e.target.value })}
-                placeholder="Contoh: BPJPH Kemenag RI"
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Nomor Sertifikat / Registrasi
-              </label>
-              <input
-                type="text"
-                value={formData.nomorSertifikat}
-                onChange={(e) => setFormData({ ...formData, nomorSertifikat: e.target.value })}
-                placeholder="Contoh: ID311100012345"
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-mono"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Dedicated File Upload Section (PDF, JPG, PNG) */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-[#2C4219] uppercase">
-              Unggah Berkas Sertifikat (PDF, JPG, PNG)
-            </label>
-
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/png,image/jpeg"
-              className="hidden"
-            />
-
-            {formData.fileUrl || formData.fileName ? (
-              <div className="p-3.5 bg-white border-2 border-[#2C4219]/30 rounded-xl flex items-center justify-between gap-3 shadow-2xs">
-                <div className="flex items-center gap-3 truncate">
-                  <div className="w-10 h-10 rounded-lg bg-[#fff1e5] border border-[#c4c8bb]/40 flex items-center justify-center shrink-0">
-                    {formData.fileType === 'pdf' ? (
-                      <FileText className="w-5 h-5 text-red-600" />
-                    ) : (
-                      <ImageIcon className="w-5 h-5 text-blue-600" />
-                    )}
-                  </div>
-                  <div className="truncate">
-                    <p className="text-xs font-bold text-[#2C4219] truncate">
-                      {formData.fileName || 'Berkas_Sertifikat'}
-                    </p>
-                    <p className="text-[11px] text-[#6B7280]">
-                      Format: {formData.fileType === 'pdf' ? 'Dokumen PDF' : 'Gambar (JPG/PNG)'} • Tersimpan
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="px-2.5 py-1 rounded-lg bg-[#F7F7F5] hover:bg-[#efe0d2] text-[#2C4219] text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    Ganti
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRemoveFile}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                    title="Hapus Berkas"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+        <form onSubmit={handleSave} className="space-y-6" id="sertifikat-form">
+          {/* ── Bagian 1: Informasi Sertifikat ─────────────────────────── */}
+          <div className="p-5 sm:p-6 bg-[#FFF8F4] border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">1</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Informasi Sertifikat</h3>
               </div>
-            ) : (
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`p-6 border-2 border-dashed rounded-xl text-center transition-all cursor-pointer ${
-                  isDragging
-                    ? 'border-[#2C4219] bg-[#C3E28D]/20 scale-[1.01]'
-                    : 'border-[#c4c8bb]/50 bg-[#fff8f4] hover:bg-[#efe0d2]/40 hover:border-[#2C4219]/50'
-                }`}
-              >
-                <div className="w-10 h-10 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center mx-auto mb-2">
-                  <Upload className="w-5 h-5" />
-                </div>
-                <p className="text-xs font-bold text-[#2C4219]">
-                  Klik untuk unggah atau seret file dokumen ke sini
-                </p>
-                <p className="text-[11px] text-[#6B7280] mt-1">
-                  Mendukung format berkas <span className="font-bold text-[#221A12]">PDF, JPG, atau PNG</span> (Maksimal 10 MB)
-                </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Kode Dokumen</label>
+                <input
+                  type="text"
+                  value={formData.kodeDokumen}
+                  readOnly
+                  disabled
+                  placeholder={formData.kodeDokumen ? '' : 'Otomatis — SRT-001'}
+                  title="Kode dibuat otomatis oleh sistem (auto-increment)"
+                  className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold text-[#6B7280] cursor-not-allowed"
+                />
               </div>
-            )}
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Jenis Dokumen</label>
+                <select
+                  value={formData.jenisDokumen}
+                  onChange={(e) => setFormData({ ...formData, jenisDokumen: e.target.value as any })}
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold cursor-pointer"
+                >
+                  <option value="Sertifikat Halal">Sertifikat Halal</option>
+                  <option value="Izin P-IRT">Izin P-IRT</option>
+                  <option value="Uji Lab Nutrisi">Uji Lab Nutrisi</option>
+                  <option value="Sertifikat Organik">Sertifikat Organik</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Nama Sertifikat / Legalitas <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.namaSertifikat}
+                  onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
+                  placeholder="Contoh: Sertifikat Halal Olahan Sorgum BPJPH"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  required
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          {/* ── Bagian 2: Lembaga Penerbit & Nomor ────────────────────── */}
+          <div className="p-5 sm:p-6 bg-white border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">2</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Lembaga Penerbit & Nomor</h3>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Lembaga Penerbit <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.penerbitSertifikat}
+                  onChange={(e) => setFormData({ ...formData, penerbitSertifikat: e.target.value })}
+                  placeholder="Contoh: BPJPH Kemenag RI"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Nomor Sertifikat / Registrasi <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.nomorSertifikat}
+                  onChange={(e) => setFormData({ ...formData, nomorSertifikat: e.target.value })}
+                  placeholder="Contoh: ID311100012345"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold font-mono"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Bagian 3: Berkas & Masa Berlaku ────────────────────────── */}
+          <div className="p-5 sm:p-6 bg-white border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">3</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Berkas & Masa Berlaku</h3>
+              </div>
+            </div>
+
             <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Tanggal Terbit
+              <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                Berkas Sertifikat <span className="text-red-500">*</span> <span className="text-[11px] font-medium text-[#9CA3AF]">(PDF / JPG / PNG)</span>
               </label>
+
               <input
-                type="date"
-                value={toDateInputValue(formData.tanggalTerbit)}
-                onChange={(e) => setFormData({ ...formData, tanggalTerbit: e.target.value })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/png,image/jpeg"
+                className="hidden"
+              />
+
+              {formData.fileUrl || formData.fileName ? (
+                <div className="p-3 bg-[#FFF8F4] border border-[#c4c8bb]/40 rounded-xl flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 truncate">
+                    <div className="w-10 h-10 rounded-lg bg-white border border-[#c4c8bb]/40 flex items-center justify-center shrink-0">
+                      {formData.fileType === 'pdf' ? (
+                        <FileText className="w-5 h-5 text-red-600" />
+                      ) : (
+                        <ImageIcon className="w-5 h-5 text-blue-600" />
+                      )}
+                    </div>
+                    <div className="truncate">
+                      <p className="text-xs font-bold text-[#2C4219] truncate">
+                        {formData.fileName || 'Berkas_Sertifikat'}
+                      </p>
+                      <p className="text-[11px] text-[#6B7280]">
+                        {formData.fileType === 'pdf' ? 'Dokumen PDF' : 'Gambar (JPG/PNG)'} • Tersimpan
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-2.5 py-1 rounded-lg bg-[#F7F7F5] hover:bg-[#efe0d2] text-[#2C4219] text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Ganti
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemoveFile}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      title="Hapus Berkas"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`p-5 border-2 border-dashed rounded-xl text-center transition-all cursor-pointer ${
+                    isDragging
+                      ? 'border-[#2C4219] bg-[#C3E28D]/20 scale-[1.01]'
+                      : 'border-[#c4c8bb]/50 bg-[#fff8f4] hover:bg-[#efe0d2]/40 hover:border-[#2C4219]/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center shrink-0">
+                      <Upload className="w-5 h-5" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-[#2C4219]">Klik untuk unggah atau seret file ke sini</p>
+                      <p className="text-[11px] text-[#6B7280] mt-0.5">PDF, JPG, atau PNG (Maks. 10 MB)</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Tanggal Terbit <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={toDateInputValue(formData.tanggalTerbit)}
+                  onChange={(e) => setFormData({ ...formData, tanggalTerbit: e.target.value })}
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Tanggal Berlaku Sampai <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={toDateInputValue(formData.tanggalKadaluarsa)}
+                  onChange={(e) => setFormData({ ...formData, tanggalKadaluarsa: e.target.value })}
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold cursor-pointer"
+                >
+                  <option value="AKTIF">AKTIF</option>
+                  <option value="PROSES">PROSES</option>
+                  <option value="KADALUARSA">KADALUARSA</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Keterangan Lingkup Pangan</label>
+              <textarea
+                value={formData.keterangan}
+                onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold h-20 resize-none"
+                placeholder="Detail tambahan kualifikasi atau cakupan produk..."
               />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Tanggal Exp.
-              </label>
-              <input
-                type="date"
-                value={toDateInputValue(formData.tanggalKadaluarsa)}
-                onChange={(e) => setFormData({ ...formData, tanggalKadaluarsa: e.target.value })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Status
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-bold"
-              >
-                <option value="AKTIF">AKTIF</option>
-                <option value="PROSES">PROSES</option>
-                <option value="KADALUARSA">KADALUARSA</option>
-              </select>
-            </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Keterangan Lingkup Pangan
-            </label>
-            <textarea
-              value={formData.keterangan}
-              onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm h-20"
-              placeholder="Detail tambahan kualifikasi atau cakupan produk..."
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#c4c8bb]/20">
-            <Button type="button" variant="outline" onClick={() => setFormModalOpen(false)}>
-              Batal
-            </Button>
-            <Button type="submit" variant="primary" loading={saving}>
-              {editId ? 'Perbarui Dokumen' : 'Simpan Dokumen'}
-            </Button>
-          </div>
         </form>
       </Modal>
 

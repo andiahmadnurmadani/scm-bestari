@@ -504,200 +504,223 @@ export const PeralatanPage: React.FC = () => {
         isOpen={formModalOpen}
         onClose={() => setFormModalOpen(false)}
         title={editId ? 'Edit Data Peralatan' : 'Tambah Peralatan Mesin Baru'}
-        subtitle="Input data spesifikasi teknis dan stok alat"
+        subtitle={editId ? 'Perbarui data alat & mesin' : 'Lengkapi data alat & mesin'}
+        maxWidth="6xl"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setFormModalOpen(false)} className="px-6 py-3 text-sm">Batal</Button>
+            <Button type="submit" form="peralatan-form" variant="primary" className="px-8 py-3 text-sm">
+              {editId ? 'Simpan Perubahan' : 'Simpan Peralatan'}
+            </Button>
+          </>
+        }
       >
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Kode Alat
-              </label>
-              <input
-                type="text"
-                value={formData.kodeAlat}
-                readOnly
-                disabled
-                title="Kode dibuat otomatis oleh sistem (auto-increment)"
-                className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm text-[#2C4219] font-bold cursor-not-allowed"
-              />
+        <form onSubmit={handleSave} className="space-y-6" id="peralatan-form">
+          {/* ── Bagian 1: Informasi Alat ───────────────────────────────── */}
+          <div className="p-5 sm:p-6 bg-[#FFF8F4] border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">1</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Informasi Alat</h3>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Kategori
-              </label>
-              <select
-                value={formData.kategori}
-                onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              >
-                <option value="Mesin Olah Tanah">Mesin Olah Tanah</option>
-                <option value="Pascapanen">Pascapanen</option>
-                <option value="Pengolahan Produk">Pengolahan Produk</option>
-                <option value="Pengeringan">Pengeringan</option>
-                <option value="Pengemasan">Pengemasan</option>
-              </select>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Kode Alat</label>
+                <input
+                  type="text"
+                  value={formData.kodeAlat}
+                  readOnly
+                  disabled
+                  placeholder={formData.kodeAlat ? '' : 'Otomatis — contoh: ALAT-001'}
+                  title="Kode dibuat otomatis oleh sistem (auto-increment)"
+                  className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold text-[#6B7280] cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Kategori</label>
+                <select
+                  value={formData.kategori}
+                  onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold cursor-pointer"
+                >
+                  <option value="Mesin Olah Tanah">Mesin Olah Tanah</option>
+                  <option value="Pascapanen">Pascapanen</option>
+                  <option value="Pengolahan Produk">Pengolahan Produk</option>
+                  <option value="Pengeringan">Pengeringan</option>
+                  <option value="Pengemasan">Pengemasan</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Nama Peralatan <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.namaPeralatan}
+                  onChange={(e) => setFormData({ ...formData, namaPeralatan: e.target.value })}
+                  placeholder="Contoh: Hand Tractor Quick G1000 Kubota"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  required
+                />
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Nama Peralatan
-            </label>
-            <input
-              type="text"
-              value={formData.namaPeralatan}
-              onChange={(e) => setFormData({ ...formData, namaPeralatan: e.target.value })}
-              placeholder="Contoh: Hand Tractor Quick G1000 Kubota"
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Deskripsi
-            </label>
-            <textarea
-              value={formData.spesifikasi}
-              onChange={(e) => setFormData({ ...formData, spesifikasi: e.target.value })}
-              placeholder="Contoh: Traktor tangan untuk pengolahan lahan, cocok untuk membajak sawah kering"
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm h-20"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Stok (Unit)
-              </label>
-              <input
-                type="number"
-                value={formData.jumlahStok}
-                onChange={(e) => setFormData({ ...formData, jumlahStok: e.target.value })}
-                placeholder="Contoh: 3"
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
-              />
+          {/* ── Bagian 2: Kondisi & Stok ───────────────────────────────── */}
+          <div className="p-5 sm:p-6 bg-white border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">2</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Kondisi & Stok</h3>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Kondisi
-              </label>
-              <select
-                value={formData.kondisi}
-                onChange={(e) => setFormData({ ...formData, kondisi: e.target.value as any })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              >
-                <option value="Sangat Baik">Sangat Baik</option>
-                <option value="Baik">Baik</option>
-                <option value="Perlu Perbaikan">Butuh Perbaikan</option>
-                <option value="Rusak">Rusak</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Status
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              >
-                <option value="Sedang Digunakan">Sedang Dipakai</option>
-                <option value="Tersedia">Tersedia</option>
-                <option value="Dalam Perawatan">Dalam Perawatan</option>
-              </select>
-            </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Tempat Penyimpanan
-            </label>
-            <input
-              type="text"
-              value={formData.lokasiPenyimpanan || ''}
-              onChange={(e) => setFormData({ ...formData, lokasiPenyimpanan: e.target.value })}
-              placeholder="Contoh: Gudang Alat Lahan A (Gubug Tani)"
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Jumlah Stok (Unit) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.jumlahStok}
+                  onChange={(e) => setFormData({ ...formData, jumlahStok: e.target.value })}
+                  placeholder="Contoh: 3"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Kondisi</label>
+                <select
+                  value={formData.kondisi}
+                  onChange={(e) => setFormData({ ...formData, kondisi: e.target.value as any })}
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold cursor-pointer"
+                >
+                  <option value="Sangat Baik">Sangat Baik</option>
+                  <option value="Baik">Baik</option>
+                  <option value="Perlu Perbaikan">Butuh Perbaikan</option>
+                  <option value="Rusak">Rusak</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold cursor-pointer"
+                >
+                  <option value="Sedang Digunakan">Sedang Dipakai</option>
+                  <option value="Tersedia">Tersedia</option>
+                  <option value="Dalam Perawatan">Dalam Perawatan</option>
+                </select>
+              </div>
+              <div className="sm:col-span-3">
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Tempat Penyimpanan</label>
+                <input
+                  type="text"
+                  value={formData.lokasiPenyimpanan || ''}
+                  onChange={(e) => setFormData({ ...formData, lokasiPenyimpanan: e.target.value })}
+                  placeholder="Contoh: Gudang Alat Lahan A (Gubug Tani)"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Upload Foto Peralatan (JPG/PNG Only) */}
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Foto Peralatan (Khusus JPG / PNG)
-            </label>
-
-            {imagePreview ? (
-              <div className="relative p-3 bg-[#FFF8F4] border border-[#c4c8bb]/40 rounded-xl flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <img
-                    src={imagePreview}
-                    alt="Foto Peralatan"
-                    referrerPolicy="no-referrer"
-                    className="w-14 h-14 object-cover rounded-lg border border-[#c4c8bb]/40 shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-[#221A12] truncate">
-                      {selectedImage?.name || 'Foto Peralatan Terpilih'}
-                    </p>
-                    <p className="text-[10px] text-[#74796d] font-semibold">
-                      {selectedImage ? `${(selectedImage.size / 1024).toFixed(1)} KB • ` : ''}Format JPG/PNG
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('peralatan-foto-input')?.click()}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#2C4219] text-white text-[11px] font-bold hover:bg-[#213213] transition-colors shrink-0 cursor-pointer"
-                  title="Ganti foto peralatan"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  Edit
-                </button>
+          {/* ── Bagian 3: Detail & Foto ────────────────────────────────── */}
+          <div className="p-5 sm:p-6 bg-white border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">3</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Detail & Foto</h3>
               </div>
-            ) : (
-              <label
-                htmlFor="peralatan-foto-input"
-                className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-[#c4c8bb]/50 hover:border-[#2C4219] bg-[#fff1e5]/60 hover:bg-[#FFF8F4] rounded-2xl cursor-pointer transition-all text-center"
-              >
-                <div className="w-10 h-10 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center mb-2">
-                  <Upload className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-bold text-[#2C4219]">
-                  Klik untuk unggah foto peralatan atau seret ke sini
-                </span>
-                <span className="text-[11px] text-[#74796d] font-semibold mt-0.5">
-                  Format yang didukung: <strong className="text-[#2C4219]">.JPG, .JPEG, .PNG</strong> (Maks. 5 MB)
-                </span>
-              </label>
-            )}
+            </div>
 
-            {/* Input file selalu ada di DOM agar tombol Edit bisa memicunya */}
-            <input
-              id="peralatan-foto-input"
-              type="file"
-              accept="image/png, image/jpeg, image/jpg"
-              onChange={handleImageChange}
-              className="hidden"
-            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Deskripsi Alat</label>
+                <textarea
+                  value={formData.spesifikasi}
+                  onChange={(e) => setFormData({ ...formData, spesifikasi: e.target.value })}
+                  placeholder="Contoh: Traktor tangan untuk pengolahan lahan, cocok untuk membajak sawah kering"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold h-24 resize-none"
+                />
+              </div>
 
-            {imageError && (
-              <p className="text-xs font-bold text-red-600 mt-1.5 flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {imageError}
-              </p>
-            )}
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Foto Peralatan <span className="text-[11px] font-medium text-[#9CA3AF]">(JPG / PNG)</span>
+                </label>
+
+                {imagePreview ? (
+                  <div className="relative p-3 bg-[#FFF8F4] border border-[#c4c8bb]/40 rounded-xl flex items-center justify-between gap-3 h-24">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <img
+                        src={imagePreview}
+                        alt="Foto Peralatan"
+                        referrerPolicy="no-referrer"
+                        className="w-14 h-14 object-cover rounded-lg border border-[#c4c8bb]/40 shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-[#221A12] truncate">
+                          {selectedImage?.name || 'Foto Peralatan Terpilih'}
+                        </p>
+                        <p className="text-[10px] text-[#74796d] font-semibold">
+                          {selectedImage ? `${(selectedImage.size / 1024).toFixed(1)} KB` : ''} • Format JPG/PNG
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('peralatan-foto-input')?.click()}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#2C4219] text-white text-[11px] font-bold hover:bg-[#213213] transition-colors shrink-0 cursor-pointer"
+                      title="Ganti foto peralatan"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="peralatan-foto-input"
+                    className="flex items-center justify-center gap-3 p-4 border-2 border-dashed border-[#c4c8bb]/50 hover:border-[#2C4219] bg-[#fff1e5]/60 hover:bg-[#FFF8F4] rounded-2xl cursor-pointer transition-all text-center h-24"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center shrink-0">
+                      <Upload className="w-4 h-4" />
+                    </div>
+                    <div className="text-left">
+                      <span className="text-xs font-bold text-[#2C4219] block">
+                        Klik untuk unggah foto
+                      </span>
+                      <span className="text-[11px] text-[#74796d] font-semibold">
+                        .JPG, .JPEG, .PNG (Maks. 5 MB)
+                      </span>
+                    </div>
+                  </label>
+                )}
+
+                {/* Input file selalu ada di DOM agar tombol Edit bisa memicunya */}
+                <input
+                  id="peralatan-foto-input"
+                  type="file"
+                  accept="image/png, image/jpeg, image/jpg"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+
+                {imageError && (
+                  <p className="text-xs font-bold text-red-600 mt-1.5 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {imageError}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#c4c8bb]/20">
-            <Button type="button" variant="outline" onClick={() => setFormModalOpen(false)}>
-              Batal
-            </Button>
-            <Button type="submit" variant="primary">
-              {editId ? 'Perbarui Alat' : 'Simpan Peralatan'}
-            </Button>
-          </div>
         </form>
       </Modal>
 

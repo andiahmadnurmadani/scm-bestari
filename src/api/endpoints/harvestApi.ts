@@ -21,6 +21,8 @@ export interface HarvestFilterParams {
   limit?: number;
   search?: string;
   lahan?: string;
+  lahanId?: string;
+  plantingId?: string;
   varietas?: string;
   tanggalAwal?: string;
   tanggalAkhir?: string;

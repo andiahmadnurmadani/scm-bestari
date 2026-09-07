@@ -15,14 +15,14 @@ import { Toast } from '../../components/common/Toast';
 // ── Extended types ─────────────────────────────────────────────────────────────
 
 interface NilaiGizi {
-  energiKkal: number;
-  lemakTotalG: number;
-  lemakJenuhG: number;
-  karbohidratG: number;
-  seratG: number;
-  proteinG: number;
-  natriumMg: number;
-  gulaTotalG: number;
+  energiKkal: string;
+  lemakTotalG: string;
+  lemakJenuhG: string;
+  karbohidratG: string;
+  seratG: string;
+  proteinG: string;
+  natriumMg: string;
+  gulaTotalG: string;
 }
 
 interface AkgRow {
@@ -50,8 +50,8 @@ interface ProductExtra {
 // ── Default values ────────────────────────────────────────────────────────────
 
 const defaultNilaiGizi: NilaiGizi = {
-  energiKkal: 0, lemakTotalG: 0, lemakJenuhG: 0,
-  karbohidratG: 0, seratG: 0, proteinG: 0, natriumMg: 0, gulaTotalG: 0,
+  energiKkal: '', lemakTotalG: '', lemakJenuhG: '',
+  karbohidratG: '', seratG: '', proteinG: '', natriumMg: '', gulaTotalG: '',
 };
 
 const defaultAkg: AkgRow[] = [
@@ -76,9 +76,23 @@ const getExtra = (item?: { extraData?: PackagingMaterial['extraData'] } | null):
       imageDataUrl: undefined,
     };
   }
+  // Konversi nilai gizi dari API (number) ke string agar input bisa kosong
+  const toGiziString = (g: NilaiGizi | undefined): NilaiGizi => {
+    if (!g) return { ...defaultNilaiGizi };
+    return {
+      energiKkal: g.energiKkal != null && g.energiKkal !== '' ? String(g.energiKkal) : '',
+      lemakTotalG: g.lemakTotalG != null && g.lemakTotalG !== '' ? String(g.lemakTotalG) : '',
+      lemakJenuhG: g.lemakJenuhG != null && g.lemakJenuhG !== '' ? String(g.lemakJenuhG) : '',
+      karbohidratG: g.karbohidratG != null && g.karbohidratG !== '' ? String(g.karbohidratG) : '',
+      seratG: g.seratG != null && g.seratG !== '' ? String(g.seratG) : '',
+      proteinG: g.proteinG != null && g.proteinG !== '' ? String(g.proteinG) : '',
+      natriumMg: g.natriumMg != null && g.natriumMg !== '' ? String(g.natriumMg) : '',
+      gulaTotalG: g.gulaTotalG != null && g.gulaTotalG !== '' ? String(g.gulaTotalG) : '',
+    };
+  };
   return {
     komposisi: e.komposisi || '',
-    nilaiGizi: { ...defaultNilaiGizi, ...(e.nilaiGizi || {}) },
+    nilaiGizi: toGiziString(e.nilaiGizi as unknown as NilaiGizi | undefined),
     akg: e.akg && e.akg.length > 0 ? e.akg.map((r) => ({ ...r })) : defaultAkg.map((r) => ({ ...r })),
     riwayat: e.riwayat || [],
     imageDataUrl: e.imageDataUrl,
@@ -88,8 +102,8 @@ const getExtra = (item?: { extraData?: PackagingMaterial['extraData'] } | null):
 
 // ── Helper components ─────────────────────────────────────────────────────────
 
-const inputCls = 'w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#2C4219]/20';
-const labelCls = 'block text-[10px] font-bold text-[#2C4219] uppercase tracking-wider mb-1';
+const inputCls = 'w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#2C4219]/20';
+const labelCls = 'block text-sm font-bold text-[#2C4219] mb-1.5';
 
 const AkgBar: React.FC<{ persen: number }> = ({ persen }) => (
   <div className="w-full bg-[#F7F7F5] rounded-full h-1.5 mt-1">
@@ -214,7 +228,9 @@ export const KemasanPage: React.FC = () => {
       hargaPerUnitRp: Number(formData.hargaPerUnitRp) || 0,
       extraData: {
         komposisi: formExtra.komposisi,
-        nilaiGizi: formExtra.nilaiGizi,
+        nilaiGizi: (Object.fromEntries(
+          Object.entries(formExtra.nilaiGizi).map(([k, v]) => [k, v === '' ? 0 : Number(v) || 0])
+        ) as unknown) as NilaiGizi,
         akg: formExtra.akg,
         riwayat: [newRiwayat, ...(formExtra.riwayat ?? [])],
         imageDataUrl: formExtra.imageDataUrl,
@@ -297,7 +313,7 @@ export const KemasanPage: React.FC = () => {
     return list.slice(0, 4);
   };
 
-  const updateGizi = (key: keyof NilaiGizi, val: number) =>
+  const updateGizi = (key: keyof NilaiGizi, val: string) =>
     setFormExtra((prev) => ({ ...prev, nilaiGizi: { ...prev.nilaiGizi, [key]: val } }));
 
   const updateAkg = (idx: number, field: keyof AkgRow, val: string | number) =>
@@ -516,14 +532,14 @@ export const KemasanPage: React.FC = () => {
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y divide-[#c4c8bb]/15 text-center">
                                   {[
-                                    { label: 'Energi', val: `${extra.nilaiGizi.energiKkal} kkal`, color: 'text-orange-600' },
-                                    { label: 'Protein', val: `${extra.nilaiGizi.proteinG} g`, color: 'text-blue-600' },
-                                    { label: 'Lemak Total', val: `${extra.nilaiGizi.lemakTotalG} g`, color: 'text-amber-600' },
-                                    { label: 'Lemak Jenuh', val: `${extra.nilaiGizi.lemakJenuhG} g`, color: 'text-red-500' },
-                                    { label: 'Karbohidrat', val: `${extra.nilaiGizi.karbohidratG} g`, color: 'text-purple-600' },
-                                    { label: 'Serat', val: `${extra.nilaiGizi.seratG} g`, color: 'text-emerald-600' },
-                                    { label: 'Natrium', val: `${extra.nilaiGizi.natriumMg} mg`, color: 'text-[#2C4219]' },
-                                    { label: 'Gula Total', val: `${extra.nilaiGizi.gulaTotalG} g`, color: 'text-pink-500' },
+                                    { label: 'Energi', val: `${extra.nilaiGizi.energiKkal || 0} kkal`, color: 'text-orange-600' },
+                                    { label: 'Protein', val: `${extra.nilaiGizi.proteinG || 0} g`, color: 'text-blue-600' },
+                                    { label: 'Lemak Total', val: `${extra.nilaiGizi.lemakTotalG || 0} g`, color: 'text-amber-600' },
+                                    { label: 'Lemak Jenuh', val: `${extra.nilaiGizi.lemakJenuhG || 0} g`, color: 'text-red-500' },
+                                    { label: 'Karbohidrat', val: `${extra.nilaiGizi.karbohidratG || 0} g`, color: 'text-purple-600' },
+                                    { label: 'Serat', val: `${extra.nilaiGizi.seratG || 0} g`, color: 'text-emerald-600' },
+                                    { label: 'Natrium', val: `${extra.nilaiGizi.natriumMg || 0} mg`, color: 'text-[#2C4219]' },
+                                    { label: 'Gula Total', val: `${extra.nilaiGizi.gulaTotalG || 0} g`, color: 'text-pink-500' },
                                   ].map((n) => (
                                     <div key={n.label} className="p-3 space-y-0.5">
                                       <p className={`text-sm font-extrabold ${n.color}`}>{n.val}</p>
@@ -640,9 +656,18 @@ export const KemasanPage: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editId ? 'Edit Data Kemasan' : 'Tambah Material Kemasan Baru'}
-        subtitle="Lengkapi informasi kemasan, nilai gizi, dan AKG produk"
+        subtitle={editId ? 'Perbarui data kemasan, nilai gizi, dan AKG produk' : 'Lengkapi data kemasan, nilai gizi, dan AKG produk'}
+        maxWidth="6xl"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-sm">Batal</Button>
+            <Button type="submit" form="kemasan-form" variant="primary" icon={<Upload className="w-3.5 h-3.5" />} className="px-8 py-3 text-sm">
+              {editId ? 'Perbarui Data' : 'Simpan Kemasan'}
+            </Button>
+          </>
+        }
       >
-        <form onSubmit={handleSave} className="space-y-0">
+        <form onSubmit={handleSave} className="space-y-0" id="kemasan-form">
           {/* Modal sub-tabs */}
           <div className="flex gap-1 border-b border-[#c4c8bb]/20 mb-4 -mt-1">
             {([
@@ -655,7 +680,7 @@ export const KemasanPage: React.FC = () => {
                 key={t.key}
                 type="button"
                 onClick={() => setModalTab(t.key)}
-                className={`px-3 py-2 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                className={`px-3.5 py-2.5 text-sm font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                   modalTab === t.key ? 'border-[#2C4219] text-[#2C4219]' : 'border-transparent text-[#6B7280] hover:text-[#2C4219]'
                 }`}
               >
@@ -721,8 +746,8 @@ export const KemasanPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                <div className="min-w-0">
                   <label className={labelCls}>Kode Kemasan</label>
                   <input
                     type="text"
@@ -733,7 +758,7 @@ export const KemasanPage: React.FC = () => {
                     className={`${inputCls} bg-[#F7F7F5] text-[#2C4219] cursor-not-allowed`}
                   />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className={labelCls}>Kategori</label>
                   <select value={formData.kategori} onChange={(e) => setFormData({ ...formData, kategori: e.target.value as any })} className={inputCls}>
                     <option>Standing Pouch</option>
@@ -750,16 +775,16 @@ export const KemasanPage: React.FC = () => {
                 <input type="text" value={formData.namaKemasan} onChange={(e) => setFormData({ ...formData, namaKemasan: e.target.value })} placeholder="Contoh: Standing Pouch Alufoil 500g" className={inputCls} required />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+                <div className="min-w-0">
                   <label className={labelCls}>Stok Tersedia</label>
                   <input type="number" value={formData.stokTersedia} onChange={(e) => setFormData({ ...formData, stokTersedia: e.target.value })} placeholder="Contoh: 2000" className={inputCls} required />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className={labelCls}>Stok Minimal</label>
                   <input type="number" value={formData.stokMinimal} onChange={(e) => setFormData({ ...formData, stokMinimal: e.target.value })} placeholder="Contoh: 500" className={inputCls} required />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className={labelCls}>Harga / Unit (Rp)</label>
                   <input type="number" value={formData.hargaPerUnitRp} onChange={(e) => setFormData({ ...formData, hargaPerUnitRp: e.target.value })} placeholder="Contoh: 1850" className={inputCls} required />
                 </div>
@@ -775,7 +800,7 @@ export const KemasanPage: React.FC = () => {
           {/* ── Tab: Komposisi ── */}
           {modalTab === 'komposisi' && (
             <div className="space-y-3">
-              <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Komposisi / Ingredients Produk</p>
+              <p className="text-xs font-bold text-[#2C4219] mb-1">Komposisi / Ingredients Produk</p>
               <textarea
                 rows={8}
                 value={formExtra.komposisi}
@@ -795,8 +820,8 @@ export const KemasanPage: React.FC = () => {
           {/* ── Tab: Nilai Gizi ── */}
           {modalTab === 'gizi' && (
             <div className="space-y-3">
-              <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Nilai Gizi per 100g Produk</p>
-              <div className="grid grid-cols-2 gap-3">
+              <p className="text-xs font-bold text-[#2C4219] mb-1">Nilai Gizi per 100 g Produk</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {([
                   { key: 'energiKkal', label: 'Energi (kkal)' },
                   { key: 'proteinG', label: 'Protein (g)' },
@@ -807,13 +832,15 @@ export const KemasanPage: React.FC = () => {
                   { key: 'natriumMg', label: 'Natrium (mg)' },
                   { key: 'gulaTotalG', label: 'Gula Total (g)' },
                 ] as { key: keyof NilaiGizi; label: string }[]).map(({ key, label }) => (
-                  <div key={key}>
+                  <div key={key} className="min-w-0">
                     <label className={labelCls}>{label}</label>
                     <input
                       type="number"
                       step="0.1"
-                      value={formExtra.nilaiGizi[key] ?? ''}
-                      onChange={(e) => updateGizi(key, parseFloat(e.target.value) || 0)}
+                      min="0"
+                      value={formExtra.nilaiGizi[key]}
+                      onChange={(e) => updateGizi(key, e.target.value)}
+                      placeholder="Contoh: 0.5"
                       className={inputCls}
                     />
                   </div>
@@ -825,11 +852,11 @@ export const KemasanPage: React.FC = () => {
           {/* ── Tab: AKG ── */}
           {modalTab === 'akg' && (
             <div className="space-y-3">
-              <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Angka Kecukupan Gizi (AKG) — Referensi 2000 kkal</p>
+              <p className="text-xs font-bold text-[#2C4219] mb-1">Angka Kecukupan Gizi (AKG) — Referensi 2000 kkal</p>
               <div className="space-y-2">
                 {formExtra.akg.map((row, i) => (
-                  <div key={i} className="grid grid-cols-5 gap-2 items-end bg-[#F7F7F5] rounded-xl p-2.5">
-                    <div className="col-span-2">
+                  <div key={i} className="grid grid-cols-2 sm:grid-cols-5 gap-3 items-end bg-[#F7F7F5] rounded-xl p-2.5">
+                    <div className="col-span-2 sm:col-span-2 min-w-0">
                       <label className={labelCls}>Nutrisi</label>
                       <input
                         type="text"
@@ -838,7 +865,7 @@ export const KemasanPage: React.FC = () => {
                         className={inputCls}
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className={labelCls}>Per Sajian</label>
                       <input
                         type="text"
@@ -848,7 +875,7 @@ export const KemasanPage: React.FC = () => {
                         placeholder="Contoh: 25 g"
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className={labelCls}>% AKG</label>
                       <input
                         type="number"
@@ -867,13 +894,6 @@ export const KemasanPage: React.FC = () => {
               </div>
             </div>
           )}
-
-          <div className="flex justify-end gap-3 pt-5 mt-5 border-t border-[#c4c8bb]/20">
-            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Batal</Button>
-            <Button type="submit" variant="primary" icon={<Upload className="w-3.5 h-3.5" />}>
-              {editId ? 'Perbarui Data' : 'Simpan Kemasan'}
-            </Button>
-          </div>
         </form>
       </Modal>
 

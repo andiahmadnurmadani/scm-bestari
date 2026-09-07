@@ -102,6 +102,7 @@ export const PanenPage: React.FC = () => {
     tonase: '',
     petaniPenanggungJawab: '',
     catatan: '',
+    panenKe: 1,
   });
   const [formKodePanen, setFormKodePanen] = useState('');
   const [plantingsForForm, setPlantingsForForm] = useState<Planting[]>([]);
@@ -112,6 +113,28 @@ export const PanenPage: React.FC = () => {
   // Daftar gudang untuk pilihan & default sesuai lahan
   const [gudangList, setGudangList] = useState<Warehouse[]>([]);
   const [selectedGudangId, setSelectedGudangId] = useState('');
+  // Ratoon sorgum: daftar panen_ke yang sudah terpakai pada planting terpilih
+  const [usedPanenKe, setUsedPanenKe] = useState<number[]>([]);
+
+  // Hitung nomor panen berikutnya untuk sebuah planting (1..3) dari panen existing
+  const computeNextPanenKe = async (plantingId: string) => {
+    if (!plantingId) {
+      setUsedPanenKe([]);
+      setFormData((prev) => ({ ...prev, panenKe: 1 }));
+      return;
+    }
+    try {
+      const res = await harvestApi.getAll({ plantingId, limit: 100 });
+      const used = (res.data || []).map((h) => Number(h.panenKe) || 1).filter((n) => n >= 1 && n <= 3);
+      setUsedPanenKe(used);
+      let next = 1;
+      while (used.includes(next) && next < 3) next += 1;
+      setFormData((prev) => ({ ...prev, panenKe: next }));
+    } catch {
+      setUsedPanenKe([]);
+      setFormData((prev) => ({ ...prev, panenKe: 1 }));
+    }
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setImageError(null);
@@ -238,9 +261,13 @@ export const PanenPage: React.FC = () => {
         if (auto) {
           setSelectedPlanting(auto);
           setFormData(prev => ({ ...prev, plantingId: auto.id, varietas: auto.varietas || prev.varietas }));
+          await computeNextPanenKe(auto.id);
+        } else {
+          setUsedPanenKe([]);
+          setFormData(prev => ({ ...prev, panenKe: 1 }));
         }
-      } catch { setPlantingsForForm([]); }
-    } else setPlantingsForForm([]);
+      } catch { setPlantingsForForm([]); setUsedPanenKe([]); }
+    } else { setPlantingsForForm([]); setUsedPanenKe([]); }
   };
   const handlePlantingChange = (plantingId: string) => {
     const p = plantingsForForm.find((x) => x.id === plantingId) || null;
@@ -250,6 +277,7 @@ export const PanenPage: React.FC = () => {
       plantingId,
       varietas: p?.varietas || prev.varietas,
     }));
+    computeNextPanenKe(plantingId);
   };
 
   // Buka modal untuk tambah data baru
@@ -264,6 +292,7 @@ export const PanenPage: React.FC = () => {
       tonase: '',
       petaniPenanggungJawab: '',
       catatan: '',
+      panenKe: 1,
     });
     setPlantingsForForm([]);
     setSelectedPlanting(null);
@@ -272,6 +301,7 @@ export const PanenPage: React.FC = () => {
     setFormKodePanen('');
     setStokBatch([{ jumlahKg: '', keterangan: '' }]);
     setStokBatchError('');
+    setUsedPanenKe([]);
     setImagePreview(null);
     setSelectedImage(null);
     setImageError(null);
@@ -302,6 +332,7 @@ export const PanenPage: React.FC = () => {
       tonase: String(kgKeUnit(row.jumlahHasilKg)),
       petaniPenanggungJawab: row.petaniPenanggungJawab,
       catatan: row.catatan || '',
+      panenKe: (row as any).panenKe || 1,
     });
     // muat plantings untuk lahan terkait agar dropdown penanaman terisi saat edit
     const lahanIdForEdit = (row as any).lahanId;
@@ -311,10 +342,21 @@ export const PanenPage: React.FC = () => {
         setPlantingsForForm(res.data || []);
         const p = (res.data || []).find((x: Planting) => x.id === (row as any).plantingId) || null;
         setSelectedPlanting(p);
+        // muat daftar panen existing pada planting ini untuk men-disable nomor yang sudah terpakai
+        if (p) {
+          try {
+            const hp = await harvestApi.getAll({ plantingId: p.id, limit: 100 });
+            const used = (hp.data || []).map((h) => Number(h.panenKe) || 1).filter((n) => n >= 1 && n <= 3);
+            setUsedPanenKe(used);
+          } catch { setUsedPanenKe([]); }
+        } else {
+          setUsedPanenKe([]);
+        }
       } catch { setPlantingsForForm([]); }
     } else {
       setPlantingsForForm([]);
       setSelectedPlanting(null);
+      setUsedPanenKe([]);
     }
     // Prefill pecahan batch stok dari detail panen (stockBatches dari backend)
     try {
@@ -371,6 +413,7 @@ export const PanenPage: React.FC = () => {
         .filter((b) => (Number(b.jumlahKg) || 0) > 0)
         .map((b) => ({ jumlahKg: Number(b.jumlahKg), keterangan: b.keterangan.trim() })),
       gudangId: selectedGudangId || null,
+      panenKe: Number(formData.panenKe) || 1,
     };
 
     if (editingId) {
@@ -920,7 +963,14 @@ export const PanenPage: React.FC = () => {
                     return (
                     <tr key={row.id} className="hover:bg-[#F7F7F5] transition-colors">
                       <td className="py-2.5 px-3 align-middle font-bold text-[#2C4219] whitespace-nowrap">
-                        {row.kodePanen}
+                        <div className="flex items-center gap-1.5">
+                          {row.kodePanen}
+                          {(row as any).panenKe && Number((row as any).panenKe) > 1 && (
+                            <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] font-extrabold leading-none ${Number((row as any).panenKe) === 3 ? 'bg-amber-100 text-amber-700' : 'bg-[#C3E28D] text-[#2C4219]'}`}>
+                              Panen {Number((row as any).panenKe)}/3
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-2.5 px-3 align-middle text-[#44483e] whitespace-nowrap text-xs">
                         {formatTanggal(row.tanggalPanen)}
@@ -1154,20 +1204,35 @@ export const PanenPage: React.FC = () => {
           setEditingId(null);
         }}
         title={editingId ? 'Edit Data Hasil Panen' : 'Input Data Hasil Panen Baru'}
-        subtitle={
-          editingId
-            ? 'Perbarui tonase, lahan, dan varietas sorgum terpanen'
-            : 'Catat hasil tonase lahan dan varietas sorgum terpanen'
+        subtitle={editingId ? 'Perbarui data panen' : 'Lengkapi data panen sorgum'}
+        maxWidth="6xl"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingId(null);
+                handleRemoveImage();
+              }}
+              className="px-6 py-3 text-sm"
+            >
+              Batal
+            </Button>
+            <Button type="submit" form="panen-form" variant="primary" className="px-8 py-3 text-sm">
+              {editingId ? 'Simpan Perubahan' : 'Simpan Data Panen'}
+            </Button>
+          </>
         }
       >
-        <form onSubmit={handleSave} className="space-y-6">
+        <form onSubmit={handleSave} className="space-y-6" id="panen-form">
           {/* ── Bagian 1: Lokasi & Asal Panen ─────────────────────────── */}
           <div className="p-5 sm:p-6 bg-[#FFF8F4] border border-[#c4c8bb]/30 rounded-3xl space-y-4">
             <div className="flex items-center gap-3">
               <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">1</span>
               <div>
                 <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Lokasi & Asal Panen</h3>
-                <p className="text-xs sm:text-sm text-[#6B7280]">Pilih dari lahan mana hasil panen ini berasal</p>
               </div>
             </div>
 
@@ -1214,7 +1279,6 @@ export const PanenPage: React.FC = () => {
                   title="Kode panen dibuat otomatis dari nama lahan & tanggal panen saat disimpan"
                   className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold text-[#6B7280] cursor-not-allowed"
                 />
-                <p className="text-xs text-[#6B7280] mt-1.5">Dibuat otomatis dari <b>nama lahan + tanggal panen</b> (contoh: LUS-10092026-01).</p>
               </div>
 
               <div className="sm:col-span-2">
@@ -1237,121 +1301,46 @@ export const PanenPage: React.FC = () => {
                   disabled={!formData.lahanId}
                 />
                 {selectedPlanting && (
-                  <div className="mt-3 p-4 bg-white border border-[#c4c8bb]/20 rounded-2xl">
-                    {/* Baris 1: kode tanam + status */}
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#2C4219] text-[#C3E28D] text-[11px] font-bold">
-                        <Sprout className="w-3 h-3" /> {selectedPlanting.kodeTanam}
-                      </span>
-                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${selectedPlanting.statusTanam==='Siap Panen'?'bg-amber-100 text-amber-800':selectedPlanting.statusTanam==='Dipanen'?'bg-[#C3E28D] text-[#172C05]':'bg-white text-[#6B7280] border border-[#c4c8bb]/30'}`}>
-                        {selectedPlanting.statusTanam}
-                      </span>
-                    </div>
-
-                    {/* Baris 2: tanggal tanam & estimasi */}
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div className="flex items-center gap-2 text-xs text-[#44483e]">
-                        <span className="w-7 h-7 rounded-lg bg-[#C3E28D]/50 text-[#2C4219] flex items-center justify-center shrink-0">
-                          <Calendar className="w-3.5 h-3.5" />
-                        </span>
-                        <div>
-                          <p className="text-[10px] font-bold text-[#6B7280] uppercase">Tanggal Tanam</p>
-                          <p className="font-bold text-[#172C05]">{formatHariTanggal(selectedPlanting.tanggalTanam)}</p>
-                        </div>
-                      </div>
-                      {selectedPlanting.estimasiPanen && (
-                        <div className="flex items-center gap-2 text-xs text-[#44483e]">
-                          <span className="w-7 h-7 rounded-lg bg-[#C3E28D]/50 text-[#2C4219] flex items-center justify-center shrink-0">
-                            <Clock className="w-3.5 h-3.5" />
-                          </span>
-                          <div>
-                            <p className="text-[10px] font-bold text-[#6B7280] uppercase">Estimasi Panen</p>
-                            <p className="font-bold text-[#172C05]">{formatHariTanggal(selectedPlanting.estimasiPanen)}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Baris 3: detail lahan/varietas/petugas */}
-                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-[#44483e] font-medium">
-                      <span className="inline-flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-[#2C4219]" />
-                        {landList.find(l=>String(l.id)===String(selectedPlanting.lahanId))?.lokasiDesa || selectedPlanting.namaLahan || '-'}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <Leaf className="w-3.5 h-3.5 text-[#2C4219]" />
-                        {selectedPlanting.varietas}
-                      </span>
-                      {selectedPlanting.petugas && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-[#2C4219]" />
-                          {selectedPlanting.petugas}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Baris 4: hitungan lubang → biji (×3) */}
-                    {(() => {
-                      // Nilai tersimpan = lubang × 3 (biji). Ubah balik ke lubang agar
-                      // tampilan konsisten: Lubang → Biji (×3).
-                      const lubang = Math.round((Number(selectedPlanting.jumlahLubang) || 0) / 3);
-                      const biji = lubang * 3;
-                      const fmt = (n: number) =>
-                        Number.isInteger(n)
-                          ? n.toLocaleString('id-ID')
-                          : n.toLocaleString('id-ID', { maximumFractionDigits: 1 });
-                      return (
-                        <div className="mt-3 grid grid-cols-2 gap-2">
-                          <div className="flex flex-col items-center gap-1 p-2.5 bg-white border border-[#c4c8bb]/20 rounded-xl">
-                            <Layers className="w-4 h-4 text-[#2C4219]" />
-                            <p className="text-[9px] font-bold text-[#6B7280] uppercase leading-none">Jumlah Lubang</p>
-                            <p className="text-sm font-bold text-[#172C05] leading-none">{fmt(lubang)}</p>
-                          </div>
-                          <div className="flex flex-col items-center gap-1 p-2.5 bg-[#C3E28D]/30 border border-[#C3E28D]/60 rounded-xl">
-                            <Sprout className="w-4 h-4 text-[#2C4219]" />
-                            <p className="text-[9px] font-bold text-[#2C4219] uppercase leading-none">Jumlah Biji (×3)</p>
-                            <p className="text-sm font-bold text-[#172C05] leading-none">{fmt(biji)}</p>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Baris 5: periode tanam→panen */}
-                    {formData.tanggalPanen && selectedPlanting.tanggalTanam && (
-                      <div className="mt-3 pt-3 border-t border-[#c4c8bb]/20 flex items-center gap-2 text-xs">
-                        <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Periode Tanam → Panen:</span>
-                        <span className="font-bold text-[#2C4219]">
-                          {(() => {
-                            const parse = (s: string) => {
-                              const p = String(s).slice(0,10).split('-');
-                              if (p.length===3) return new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
-                              return new Date(s);
-                            };
-                            const d1=parse(selectedPlanting.tanggalTanam); const d2=parse(formData.tanggalPanen);
-                            if(isNaN(d1.getTime())||isNaN(d2.getTime())) return '-';
-                            const diff=Math.round((d2.getTime()-d1.getTime())/(1000*60*60*24));
-                            return `${diff} hari`;
-                          })()}
-                        </span>
-                        {selectedPlanting.estimasiPanen && (() => {
-                          const parse = (s: string) => {
-                            const p = String(s).slice(0,10).split('-');
-                            if (p.length===3) return new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
-                            return new Date(s);
-                          };
-                          const est=parse(selectedPlanting.estimasiPanen!); const panen=parse(formData.tanggalPanen);
-                          if(isNaN(est.getTime())||isNaN(panen.getTime())) return null;
-                          const selisih=Math.round((panen.getTime()-est.getTime())/(1000*60*60*24));
-                          return selisih===0
-                            ? <span className="px-2 py-0.5 rounded-full bg-[#C3E28D]/40 text-[#2C4219] font-bold">Tepat estimasi</span>
-                            : selisih>0
-                              ? <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">+{selisih} hari dari estimasi</span>
-                              : <span className="px-2 py-0.5 rounded-full bg-[#C3E28D]/40 text-[#2C4219] font-bold">{Math.abs(selisih)} hari lebih cepat</span>;
-                        })()}
-                      </div>
-                    )}
+                  <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 px-3.5 py-2.5 bg-[#C3E28D]/15 border border-[#C3E28D]/40 rounded-xl text-xs text-[#2C4219]">
+                    <span className="inline-flex items-center gap-1.5 font-extrabold">
+                      <Sprout className="w-3.5 h-3.5" /> {selectedPlanting.kodeTanam}
+                    </span>
+                    <span>Tanam {formatTanggal(selectedPlanting.tanggalTanam)}</span>
+                    <span>{selectedPlanting.varietas}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      selectedPlanting.statusTanam === 'Siap Panen' ? 'bg-amber-100 text-amber-800'
+                      : selectedPlanting.statusTanam === 'Dipanen' ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-white text-[#6B7280] border border-[#c4c8bb]/30'}`}>
+                      {selectedPlanting.statusTanam}
+                    </span>
                   </div>
                 )}
+              </div>
+
+              <div>
+                {/* Panen ke-? — ratoon sorgum: 1x tanam maksimal 3x panen */}
+                <div className="p-3.5 bg-[#F1F8E9] border border-[#C3E28D]/60 rounded-2xl h-full">
+                  <label className="block text-sm font-bold text-[#2C4219] mb-2">
+                    Panen Ke-? <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.panenKe}
+                    onChange={(e) => setFormData({ ...formData, panenKe: Number(e.target.value) })}
+                    disabled={!formData.plantingId}
+                    className="w-full p-2.5 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold disabled:opacity-60"
+                  >
+                    <option value={1}>Panen 1 (awal)</option>
+                    <option value={2}>Panen 2 (ratoon)</option>
+                    <option value={3}>Panen 3 (ratoon terakhir)</option>
+                  </select>
+                  <p className="text-[11px] text-[#2C4219] mt-1.5 leading-relaxed">
+                    {formData.plantingId
+                      ? usedPanenKe.includes(Number(formData.panenKe))
+                        ? 'Nomor ini sudah terpakai — pilih nomor lain.'
+                        : '🌾 Satu kali tanam bisa dipanen hingga 3 kali.'
+                      : '🌾 Satu kali tanam bisa dipanen hingga 3 kali.'}
+                  </p>
+                </div>
               </div>
 
               <div>
@@ -1376,7 +1365,6 @@ export const PanenPage: React.FC = () => {
               <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">2</span>
               <div>
                 <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Hasil Panen</h3>
-                <p className="text-xs sm:text-sm text-[#6B7280]">Isi berat gabah yang didapat & siapa yang bertanggung jawab</p>
               </div>
             </div>
 
@@ -1394,9 +1382,6 @@ export const PanenPage: React.FC = () => {
                   className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
                   required
                 />
-                <p className="text-xs text-[#6B7280] mt-1.5">
-                  Hasil panen dicatat sebagai <b>gabah</b>. Setelah masuk gudang, gabah diproses <b>sosoh</b> menjadi biji sorgum.
-                </p>
               </div>
 
               <div>
@@ -1421,7 +1406,6 @@ export const PanenPage: React.FC = () => {
               <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">3</span>
               <div>
                 <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Catatan & Foto</h3>
-                <p className="text-xs sm:text-sm text-[#6B7280]">Tambah keterangan & foto panen (tidak wajib)</p>
               </div>
             </div>
 
@@ -1516,14 +1500,10 @@ export const PanenPage: React.FC = () => {
                 <span className="w-9 h-9 rounded-xl bg-[#C3E28D] text-[#2C4219] flex items-center justify-center text-base font-black shrink-0">4</span>
                 <div>
                   <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Masuk Gudang</h3>
-                  <p className="text-xs sm:text-sm text-[#6B7280]">Opsional — kosongkan jika hasil panen belum masuk gudang</p>
+                  <p className="text-xs sm:text-sm text-[#6B7280]">Opsional</p>
                 </div>
               </div>
             </div>
-            <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
-              Pilih gudang tujuan lalu pecah hasil panen jadi beberapa bagian bila perlu (misal: 1000 kg untuk dijual, 600 kg untuk simpan).
-              Total bagian harus sama dengan berat hasil panen.
-            </p>
 
             {/* Pilih gudang tujuan (default: gudang sesuai lahan) */}
             <div>
@@ -1548,11 +1528,6 @@ export const PanenPage: React.FC = () => {
                   </>
                 )}
               </select>
-              <p className="text-xs text-[#9CA3AF] mt-1.5">
-                {selectedGudangId
-                  ? 'Stok akan masuk ke gudang terpilih (default mengikuti lahan).'
-                  : 'Pilih gudang agar hasil panen bisa langsung masuk gudang.'}
-              </p>
             </div>
 
             {stokBatch.map((b, i) => (
@@ -1611,23 +1586,6 @@ export const PanenPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-5 border-t border-[#c4c8bb]/20 sticky bottom-0 bg-white/95 backdrop-blur-sm py-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setIsModalOpen(false);
-                setEditingId(null);
-                handleRemoveImage();
-              }}
-              className="px-6 py-3 text-sm"
-            >
-              Batal
-            </Button>
-            <Button type="submit" variant="primary" className="px-8 py-3 text-sm">
-              {editingId ? 'Simpan Perubahan' : 'Simpan Data Panen'}
-            </Button>
-          </div>
         </form>
       </Modal>
 
@@ -1658,11 +1616,21 @@ export const PanenPage: React.FC = () => {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-bold text-[#C3E28D] uppercase tracking-wider">Kode Panen</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-[10px] font-bold text-[#C3E28D] uppercase tracking-wider">Kode Panen</p>
+                  {(selectedDetail as any).panenKe && Number((selectedDetail as any).panenKe) > 1 && (
+                    <span className="px-2 py-0.5 rounded-full bg-[#C3E28D] text-[#172C05] text-[10px] font-black">
+                      Panen {Number((selectedDetail as any).panenKe)}/3
+                    </span>
+                  )}
+                </div>
                 <p className="text-lg sm:text-2xl font-black text-white leading-tight truncate">{selectedDetail.kodePanen}</p>
                 <p className="text-[11px] sm:text-xs text-white/70 font-medium truncate mt-1">
                   <MapPin className="w-3 h-3 inline -mt-0.5 mr-1" />
                   {selectedDetail.namaLahan} • {selectedDetail.varietas}
+                  {selectedDetail.panenKe && Number(selectedDetail.panenKe) > 1 && (
+                    <span className="ml-2 font-bold text-[#C3E28D]">• Panen ke-{selectedDetail.panenKe}</span>
+                  )}
                 </p>
               </div>
               <div className="text-right shrink-0 bg-white/10 rounded-xl px-4 py-2.5 border border-white/15">

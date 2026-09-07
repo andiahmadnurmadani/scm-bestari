@@ -26,8 +26,14 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
     try {
       await authApi.login({ usernameOrEmail, password });
-      // Token tersimpan di localStorage oleh authApi → langsung ke dashboard
-      window.location.href = '/dashboard';
+      // Setelah login, cek preferensi mode UI:
+      // Default = Lite (Mode Mudah KWT), kecuali user sudah memilih 'pro' sebelumnya.
+      const savedMode = localStorage.getItem('app_mode');
+      if (savedMode === 'pro') {
+        window.location.href = '/dashboard';
+      } else {
+        window.location.href = '/lite';
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Gagal masuk. Periksa kembali kredensial Anda.';
       setError(message);

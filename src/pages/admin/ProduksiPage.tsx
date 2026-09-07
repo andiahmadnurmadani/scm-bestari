@@ -470,186 +470,189 @@ export const ProduksiPage: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editId ? 'Edit Batch Olahan' : 'Catat Batch Olahan Baru'}
-        subtitle="Catat produk olahan sorgum beserta asal panennya"
+        subtitle={editId ? 'Perbarui data batch olahan' : 'Lengkapi data batch olahan sorgum'}
+        maxWidth="6xl"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-sm">Batal</Button>
+            <Button type="submit" form="produksi-form" variant="primary" className="px-8 py-3 text-sm">
+              {editId ? 'Simpan Perubahan' : 'Simpan Batch Produksi'}
+            </Button>
+          </>
+        }
       >
-        <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Kode Olahan
-            </label>
-            <input
-              type="text"
-              value={formData.kodeBatch}
-              readOnly
-              disabled
-              placeholder={editId ? '' : 'Otomatis — PRD-<lahan>-<tgl>-<no>'}
-              title="Kode dibuat otomatis: 3 huruf nama lahan asal + tanggal produksi + urutan"
-              className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm text-[#2C4219] font-bold cursor-not-allowed"
-            />
-            <p className="text-[11px] text-[#6B7280] mt-1">Kode dibuat otomatis: 3 huruf nama lahan + tanggal produksi + urutan (contoh: PRD-LUS-15092026-01).</p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Nama Produk Olahan <span className="text-red-500">*</span>
-            </label>
-            <Combobox
-              options={productOptions.map((p) => ({
-                value: String(p.id),
-                label: `${p.name} — ${p.satuanHasil || 'Pouch'}`,
-                searchText: `${p.name} ${p.satuanHasil || ''}`,
-              }))}
-              value={selectedProductId || ''}
-              onChange={(v) => handleProductChange(v)}
-              placeholder="-- Pilih Nama Produk --"
-              searchPlaceholder="Cari nama produk..."
-              emptyText="Belum ada produk master. Tambahkan dulu di menu Produk Olahan."
-            />
-            <p className="text-[11px] text-[#6B7280] mt-1">Pilih dari daftar produk; satuan hasil otomatis terisi.</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Jumlah Hasil
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={formData.jumlahHasil}
-                onChange={(e) => setFormData({ ...formData, jumlahHasil: e.target.value })}
-                placeholder="Contoh: 1000"
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Satuan Hasil
-              </label>
-              <input
-                type="text"
-                value={formData.satuan || 'Pouch'}
-                readOnly
-                disabled
-                className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-bold text-[#2C4219] cursor-not-allowed"
-              />
-              <p className="text-[11px] text-[#6B7280] mt-1">Satuan mengikuti produk master terpilih.</p>
-            </div>
-          </div>
-
-          {/* Bahan yang Digunakan — jumlah & satuan bahan baku */}
-          <div className="p-3.5 bg-[#F7F7F5] border border-[#c4c8bb]/20 rounded-xl">
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-2">
-              Bahan yang Digunakan
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <form onSubmit={handleSave} className="space-y-6" id="produksi-form">
+          {/* ── Bagian 1: Informasi Produk ─────────────────────────────── */}
+          <div className="p-5 sm:p-6 bg-[#FFF8F4] border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">1</span>
               <div>
-                <label className="block text-xs font-bold text-[#74796d] uppercase mb-1">
-                  Jumlah Bahan
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Informasi Produk</h3>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Kode Olahan</label>
+                <input
+                  type="text"
+                  value={formData.kodeBatch}
+                  readOnly
+                  disabled
+                  placeholder={editId ? '' : 'Otomatis — PRD-LUS-15092026-01'}
+                  title="Kode dibuat otomatis: 3 huruf nama lahan asal + tanggal produksi + urutan"
+                  className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold text-[#6B7280] cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Nama Produk Olahan <span className="text-red-500">*</span>
+                </label>
+                <Combobox
+                  options={productOptions.map((p) => ({
+                    value: String(p.id),
+                    label: `${p.name} — ${p.satuanHasil || 'Pouch'}`,
+                    searchText: `${p.name} ${p.satuanHasil || ''}`,
+                  }))}
+                  value={selectedProductId || ''}
+                  onChange={(v) => handleProductChange(v)}
+                  placeholder="-- Pilih Nama Produk --"
+                  searchPlaceholder="Cari nama produk..."
+                  emptyText="Belum ada produk master. Tambahkan dulu di menu Produk Olahan."
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Bagian 2: Jumlah Hasil & Bahan ─────────────────────────── */}
+          <div className="p-5 sm:p-6 bg-white border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">2</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Jumlah Hasil & Bahan</h3>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Jumlah Hasil <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
                   min="0"
-                  value={formData.bahanDigunakan != null ? String(formData.bahanDigunakan) : ''}
-                  onChange={(e) => setFormData({ ...formData, bahanDigunakan: e.target.value })}
-                  placeholder="Contoh: 50"
-                  className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm"
+                  value={formData.jumlahHasil}
+                  onChange={(e) => setFormData({ ...formData, jumlahHasil: e.target.value })}
+                  placeholder="Contoh: 1000"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  required
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-[#74796d] uppercase mb-1">
-                  Satuan Bahan
-                </label>
-                <select
-                  value={formData.satuanBahan || 'Kg'}
-                  onChange={(e) => setFormData({ ...formData, satuanBahan: e.target.value })}
-                  className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm"
-                >
-                  <option value="Kg">Kg</option>
-                  <option value="Gram">Gram</option>
-                  <option value="Liter">Liter</option>
-                  <option value="Botol">Botol</option>
-                  <option value="Karung">Karung</option>
-                  <option value="Sak">Sak</option>
-                </select>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Satuan Hasil</label>
+                <input
+                  type="text"
+                  value={formData.satuan || 'Pouch'}
+                  readOnly
+                  disabled
+                  className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold text-[#6B7280] cursor-not-allowed"
+                />
               </div>
+            </div>
+
+            {/* Bahan yang Digunakan — jumlah & satuan bahan baku */}
+            <div className="p-4 bg-[#F1F8E9] border border-[#C3E28D]/50 rounded-2xl space-y-3">
+              <p className="text-sm font-extrabold text-[#2C4219]">Bahan yang Digunakan</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#2C4219] mb-1">Jumlah Bahan</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.bahanDigunakan != null ? String(formData.bahanDigunakan) : ''}
+                    onChange={(e) => setFormData({ ...formData, bahanDigunakan: e.target.value })}
+                    placeholder="Contoh: 50"
+                    className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#2C4219] mb-1">Satuan Bahan</label>
+                  <select
+                    value={formData.satuanBahan || 'Kg'}
+                    onChange={(e) => setFormData({ ...formData, satuanBahan: e.target.value })}
+                    className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold cursor-pointer"
+                  >
+                    <option value="Kg">Kg</option>
+                    <option value="Gram">Gram</option>
+                    <option value="Liter">Liter</option>
+                    <option value="Botol">Botol</option>
+                    <option value="Karung">Karung</option>
+                    <option value="Sak">Sak</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-[#2C4219] mb-1">Gudang Asal Bahan</label>
+                  <Combobox
+                    options={warehouseOptions.map((w) => ({
+                      value: String(w.id),
+                      label: `${w.namaGudang} (${w.kodeGudang}) — ${w.totalStokKg > 0 ? `${w.totalStokKg} kg tersedia` : 'kosong'}`,
+                      searchText: `${w.namaGudang} ${w.kodeGudang} ${w.namaLahan || ''} ${w.totalStokKg}`,
+                    }))}
+                    value={formData.gudangId ? String(formData.gudangId) : ''}
+                    onChange={(v) => handleGudangChange(v)}
+                    placeholder="-- Pilih Gudang --"
+                    searchPlaceholder="Cari nama gudang / kode gudang / lahan..."
+                    emptyText="Tidak ada gudang tersedia."
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Bagian 3: Asal Bahan & Penanggung Jawab ────────────────── */}
+          <div className="p-5 sm:p-6 bg-white border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">3</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Asal Bahan & Penanggung Jawab</h3>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-[#74796d] uppercase mb-1">
-                  Gudang Asal Bahan
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Stok Batch (Sorgum Sosoh) <span className="text-red-500">*</span>
                 </label>
                 <Combobox
-                  options={warehouseOptions.map((w) => ({
-                    value: String(w.id),
-                    label: `${w.namaGudang} (${w.kodeGudang}) — ${w.totalStokKg > 0 ? `${w.totalStokKg} kg tersedia` : 'kosong'}`,
-                    searchText: `${w.namaGudang} ${w.kodeGudang} ${w.namaLahan || ''} ${w.totalStokKg}`,
+                  options={stockBatches.map((b) => ({
+                    value: String(b.id),
+                    label: `${b.kodeBatchStok}${b.asalBatch?.kodeBatchStok ? ` (dari ${b.asalBatch.kodeBatchStok})` : ''} • sisa ${formatBerat(b.sisaKg)}`,
+                    searchText: `${b.kodeBatchStok} ${b.asalBatch?.kodeBatchStok || ''} ${b.kodePanen || ''} ${b.sisaKg}`,
                   }))}
-                  value={formData.gudangId ? String(formData.gudangId) : ''}
-                  onChange={(v) => handleGudangChange(v)}
-                  placeholder="-- Pilih Gudang --"
-                  searchPlaceholder="Cari nama gudang / kode gudang / lahan..."
-                  emptyText="Tidak ada gudang tersedia."
+                  value={formData.stockBatchId ? String(formData.stockBatchId) : ''}
+                  onChange={(v) => handleStockBatchChange(v)}
+                  placeholder={stockBatches.length === 0 ? '-- Pilih Gudang dulu (tidak ada sorgum sosoh) --' : '-- Pilih Stok Sorgum Sosoh --'}
+                  searchPlaceholder="Cari kode batch / asal gabah / panen..."
+                  emptyText="Tidak ada stok SORGUM yang cocok."
                 />
-                <p className="text-[10px] text-[#9CA3AF] mt-1">
-                  Bahan diambil dari gudang pilihan secara FIFO (stok paling lama dipakai duluan).
-                </p>
+                {formData.gudangId && stockBatches.length === 0 && (
+                  <p className="text-[11px] text-amber-700 mt-1.5">Gudang ini tidak punya stok sorgum sosoh.</p>
+                )}
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Penanggung Jawab Produksi</label>
+                <input
+                  type="text"
+                  value={formData.operatorProduksi}
+                  onChange={(e) => setFormData({ ...formData, operatorProduksi: e.target.value })}
+                  placeholder="Contoh: Ibu Hastuti / Tim KWT Asri"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  required
+                />
               </div>
             </div>
           </div>
 
-          {/* Asal Bahan — dari batch stok gudang (bukan asal panen) */}
-          <div className="p-3.5 bg-[#F7F7F5] border border-[#c4c8bb]/20 rounded-xl space-y-3">
-            <label className="block text-xs font-bold text-[#2C4219] uppercase">
-              Asal Bahan (Dari Gudang)
-            </label>
-
-            <div>
-              <label className="block text-xs font-bold text-[#74796d] uppercase mb-1">
-                Stok Batch <span className="text-red-500">*</span>
-              </label>
-              <Combobox
-                options={stockBatches.map((b) => ({
-                  value: String(b.id),
-                  label: `${b.kodeBatchStok}${b.asalBatch?.kodeBatchStok ? ` (dari ${b.asalBatch.kodeBatchStok})` : ''} • sisa ${formatBerat(b.sisaKg)}`,
-                  searchText: `${b.kodeBatchStok} ${b.asalBatch?.kodeBatchStok || ''} ${b.kodePanen || ''} ${b.sisaKg}`,
-                }))}
-                value={formData.stockBatchId ? String(formData.stockBatchId) : ''}
-                onChange={(v) => handleStockBatchChange(v)}
-                placeholder={stockBatches.length === 0 ? '-- Pilih Gudang dulu (tidak ada sorgum sosoh) --' : '-- Pilih Stok Sorgum Sosoh --'}
-                searchPlaceholder="Cari kode batch / asal gabah / panen..."
-                emptyText="Tidak ada stok SORGUM yang cocok."
-              />
-              {formData.gudangId && stockBatches.length === 0 && (
-                <p className="text-[11px] text-amber-700 mt-1">Gudang ini tidak punya stok sorgum sosoh. Proses sosoh dulu gabah di halaman Gudang.</p>
-              )}
-              <p className="text-[10px] text-[#9CA3AF] mt-1">
-                Bahan baku olahan memakai <b>sorgum hasil sosoh</b> (bukan gabah). Sisa stok batch akan berkurang otomatis.
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Penanggung Jawab Produksi
-            </label>
-            <input
-              type="text"
-              value={formData.operatorProduksi}
-              onChange={(e) => setFormData({ ...formData, operatorProduksi: e.target.value })}
-              placeholder="Contoh: Ibu Hastuti / Tim KWT Asri"
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              required
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#c4c8bb]/20">
-            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-              Batal
-            </Button>
-            <Button type="submit" variant="primary">
-              {editId ? 'Perbarui Batch' : 'Simpan Batch Produksi'}
-            </Button>
-          </div>
         </form>
       </Modal>
 

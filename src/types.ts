@@ -61,6 +61,8 @@ export interface Planting {
   statusTanam: 'Ditanam' | 'Tumbuh' | 'Siap Panen' | 'Gagal' | 'Dipanen';
   catatan?: string;
   fotoUrl?: string;
+  jumlahPanen?: number;
+  panenKeTerakhir?: number | null;
 }
 
 export interface HarvestRecord {
@@ -93,6 +95,7 @@ export interface HarvestRecord {
   }[];
   sudahMasukKg?: number;
   sisaBelumMasukKg?: number | null;
+  panenKe?: number;
 }
 
 export interface LandPlot {

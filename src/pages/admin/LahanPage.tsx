@@ -28,7 +28,7 @@ const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value: React.Rea
 
 export const LahanPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
-  const { formatLuas, luasKeHektar, hektarKeUnit, luasSuffix } = useUnitSettings();
+  const { units, formatLuas, luasKeHektar, hektarKeUnit, luasSuffix } = useUnitSettings();
   const [landList, setLandList] = useState<LandPlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -864,6 +864,15 @@ export const LahanPage: React.FC = () => {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-bold text-[#2C4219]">{p.kodeTanam}</span>
                             <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${statusCls}`}>{p.statusTanam}</span>
+                            {(p as any).jumlahPanen != null && Number((p as any).jumlahPanen) > 0 && (
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                Number((p as any).panenKeTerakhir) >= 3
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-[#C3E28D] text-[#172C05]'
+                              }`}>
+                                🌾 Sudah panen {Number((p as any).panenKeTerakhir)}/3
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs font-semibold text-[#221A12] mt-1">{p.varietas}</p>
                         </div>
@@ -928,164 +937,187 @@ export const LahanPage: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingPlot ? 'Edit Data Lahan' : 'Tambah Lahan Baru'}
-        subtitle="Lengkapi informasi lahan di bawah ini"
-      >
-        <form onSubmit={handleSave} className="space-y-4">
-          {/* Baris pertama: Kelompok Tani / Pengelola */}
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Kelompok Tani / Pengelola
-            </label>
-            <input
-              type="text"
-              value={formData.pemilikKelompokTani}
-              onChange={(e) => setFormData({ ...formData, pemilikKelompokTani: e.target.value })}
-              placeholder="Contoh: KWT Sukamaju Tani"
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Nama Lahan / Blok
-              </label>
-              <input
-                type="text"
-                value={formData.namaLahan}
-                onChange={(e) => setFormData({ ...formData, namaLahan: e.target.value })}
-                placeholder="Contoh: Blok A - Sukamaju"
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Lokasi Desa
-              </label>
-              <input
-                type="text"
-                value={formData.lokasiDesa}
-                onChange={(e) => setFormData({ ...formData, lokasiDesa: e.target.value })}
-                placeholder="Terisi otomatis dari peta"
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Kecamatan
-              </label>
-              <input
-                type="text"
-                value={formData.kecamatan}
-                onChange={(e) => setFormData({ ...formData, kecamatan: e.target.value })}
-                placeholder="Terisi otomatis dari peta"
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Luas ({luasSuffix})
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.luasHektar}
-                onChange={(e) => setFormData({ ...formData, luasHektar: e.target.value })}
-                placeholder={`Contoh: 2.5 ${luasSuffix}`}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Peta Lokasi (Google Maps) */}
-          <MapPicker
-            initialLat={formData.latitude}
-            initialLng={formData.longitude}
-            onLocationChange={handleMapLocationChange}
-            onReset={handleMapReset}
-          />
-
-          {/* Upload Foto Lahan (JPG/PNG Only) */}
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Foto Lahan (Khusus JPG / PNG) <span className="text-red-600">*</span>
-            </label>
-
-            {imagePreview ? (
-              <div className="relative p-3 bg-[#FFF8F4] border border-[#c4c8bb]/40 rounded-xl flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <img
-                    src={imagePreview}
-                    alt="Foto Lahan"
-                    referrerPolicy="no-referrer"
-                    className="w-14 h-14 object-cover rounded-lg border border-[#c4c8bb]/40 shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-[#221A12] truncate">
-                      {selectedImage?.name || 'Foto Lahan Terpilih'}
-                    </p>
-                    <p className="text-[10px] text-[#74796d] font-semibold">
-                      {selectedImage ? `${(selectedImage.size / 1024).toFixed(1)} KB • ` : ''}Format JPG/PNG
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('lahan-foto-input')?.click()}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#2C4219] text-white text-[11px] font-bold hover:bg-[#213213] transition-colors shrink-0 cursor-pointer"
-                  title="Ganti foto lahan"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  Edit
-                </button>
-              </div>
-            ) : (
-              <label
-                htmlFor="lahan-foto-input"
-                className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-[#c4c8bb]/50 hover:border-[#2C4219] bg-[#fff1e5]/60 hover:bg-[#FFF8F4] rounded-2xl cursor-pointer transition-all text-center"
-              >
-                <div className="w-10 h-10 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center mb-2">
-                  <Upload className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-bold text-[#2C4219]">
-                  Klik untuk unggah foto lahan atau seret ke sini
-                </span>
-                <span className="text-[11px] text-[#74796d] font-semibold mt-0.5">
-                  Format yang didukung: <strong className="text-[#2C4219]">.JPG, .JPEG, .PNG</strong> (Maks. 5 MB)
-                </span>
-              </label>
-            )}
-
-            {/* Input file selalu ada di DOM agar tombol Edit bisa memicunya */}
-            <input
-              id="lahan-foto-input"
-              type="file"
-              accept="image/png, image/jpeg, image/jpg"
-              onChange={handleImageChange}
-              className="hidden"
-            />
-
-            {imageError && (
-              <p className="text-xs font-bold text-red-600 mt-1.5 flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {imageError}
-              </p>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#c4c8bb]/20">
-            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-              Batal
-            </Button>
-            <Button type="submit" variant="primary">
+        subtitle={editingPlot ? 'Perbarui data lahan' : 'Lengkapi data lahan baru'}
+        maxWidth="6xl"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-sm">Batal</Button>
+            <Button type="submit" form="lahan-form" variant="primary" className="px-8 py-3 text-sm">
               Simpan Data Lahan
             </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSave} className="space-y-6" id="lahan-form">
+          {/* ── Bagian 1: Informasi Lahan ──────────────────────────────── */}
+          <div className="p-5 sm:p-6 bg-[#FFF8F4] border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">1</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Informasi Lahan</h3>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                Kelompok Tani / Pengelola <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.pemilikKelompokTani}
+                onChange={(e) => setFormData({ ...formData, pemilikKelompokTani: e.target.value })}
+                placeholder="Contoh: KWT Sukamaju Tani"
+                className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Nama Lahan / Blok <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.namaLahan}
+                  onChange={(e) => setFormData({ ...formData, namaLahan: e.target.value })}
+                  placeholder="Contoh: Blok A - Sukamaju"
+                  className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Lokasi Desa</label>
+                <input
+                  type="text"
+                  value={formData.lokasiDesa}
+                  onChange={(e) => setFormData({ ...formData, lokasiDesa: e.target.value })}
+                  placeholder="Terisi otomatis dari peta"
+                  className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Kecamatan</label>
+                <input
+                  type="text"
+                  value={formData.kecamatan}
+                  onChange={(e) => setFormData({ ...formData, kecamatan: e.target.value })}
+                  placeholder="Terisi otomatis dari peta"
+                  className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Luas Lahan ({luasSuffix}) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  step={units.luas === 'm2' ? '1' : '0.01'}
+                  min="0"
+                  value={formData.luasHektar}
+                  onChange={(e) => setFormData({ ...formData, luasHektar: e.target.value })}
+                  placeholder={units.luas === 'm2' ? 'Contoh: 500 m2' : units.luas === 'are' ? 'Contoh: 5 are' : units.luas === 'km2' ? 'Contoh: 0.05 km2' : 'Contoh: 0.5 hektar'}
+                  className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm"
+                  required
+                />
+              </div>
+            </div>
           </div>
+
+          {/* ── Bagian 2: Peta Lokasi ──────────────────────────────────── */}
+          <div className="p-5 sm:p-6 bg-white border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">2</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Peta Lokasi</h3>
+                <p className="text-xs text-[#6B7280] mt-0.5">Geser penanda peta ke lokasi lahan, desa & kecamatan terisi otomatis</p>
+              </div>
+            </div>
+
+            <MapPicker
+              initialLat={formData.latitude}
+              initialLng={formData.longitude}
+              onLocationChange={handleMapLocationChange}
+              onReset={handleMapReset}
+            />
+          </div>
+
+          {/* ── Bagian 3: Foto Lahan ───────────────────────────────────── */}
+          <div className="p-5 sm:p-6 bg-white border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">3</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Foto Lahan</h3>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                Foto Lahan (Khusus JPG / PNG) <span className="text-red-500">*</span>
+              </label>
+
+              {imagePreview ? (
+                <div className="relative p-3 bg-[#FFF8F4] border border-[#c4c8bb]/40 rounded-xl flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <img
+                      src={imagePreview}
+                      alt="Foto Lahan"
+                      referrerPolicy="no-referrer"
+                      className="w-14 h-14 object-cover rounded-lg border border-[#c4c8bb]/40 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-[#221A12] truncate">
+                        {selectedImage?.name || 'Foto Lahan Terpilih'}
+                      </p>
+                      <p className="text-[10px] text-[#74796d] font-semibold">
+                        {selectedImage ? `${(selectedImage.size / 1024).toFixed(1)} KB - ` : ''}Format JPG/PNG
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('lahan-foto-input')?.click()}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#2C4219] text-white text-[11px] font-bold hover:bg-[#213213] transition-colors shrink-0 cursor-pointer"
+                    title="Ganti foto lahan"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    Edit
+                  </button>
+                </div>
+              ) : (
+                <label
+                  htmlFor="lahan-foto-input"
+                  className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-[#c4c8bb]/50 hover:border-[#2C4219] bg-[#fff1e5]/60 hover:bg-[#FFF8F4] rounded-2xl cursor-pointer transition-all text-center"
+                >
+                  <div className="w-10 h-10 rounded-full bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center mb-2">
+                    <Upload className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-[#2C4219]">
+                    Klik untuk unggah foto lahan atau seret ke sini
+                  </span>
+                  <span className="text-[11px] text-[#74796d] font-semibold mt-0.5">
+                    Format yang didukung: <strong className="text-[#2C4219]">.JPG, .JPEG, .PNG</strong> (Maks. 5 MB)
+                  </span>
+                </label>
+              )}
+
+              {/* Input file selalu ada di DOM agar tombol Edit bisa memicunya */}
+              <input
+                id="lahan-foto-input"
+                type="file"
+                accept="image/png, image/jpeg, image/jpg"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+
+              {imageError && (
+                <p className="text-xs font-bold text-red-600 mt-1.5 flex items-center gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {imageError}
+                </p>
+              )}
+            </div>
+          </div>
+
         </form>
       </Modal>
 

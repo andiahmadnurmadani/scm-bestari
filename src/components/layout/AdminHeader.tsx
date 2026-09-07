@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Bell, Settings, Menu, LogOut, User as UserIcon, CheckCheck, Sprout } from 'lucide-react';
+import { Search, Bell, Settings, Menu, LogOut, User as UserIcon, CheckCheck, Sprout, Layers } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/endpoints/authApi';
 import { notificationsApi, AppNotification } from '../../api/endpoints/notificationsApi';
 import { Modal } from '../common/Modal';
 import { useCms } from '../../context/CmsContext';
+import { useAppMode } from '../../context/AppModeContext';
+
 
 interface AdminHeaderProps {
   onMenuClick?: () => void;
@@ -19,6 +21,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const { cms } = useCms();
+  const { setMode } = useAppMode();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
@@ -129,6 +132,19 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
         {/* Right: Notifications, Settings, Profile Badge */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Switch ke Mode Mudah (Lite) */}
+          <button
+            onClick={() => {
+              setMode('lite');
+              navigate('/lite');
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#C3E28D]/50 text-[#2C4219] hover:bg-[#C3E28D] transition-colors cursor-pointer text-[11px] font-bold whitespace-nowrap"
+            title="Beralih ke Mode Mudah (Lite)"
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline">Mode Mudah</span>
+          </button>
+
           {/* Notification Bell */}
           <div className="relative">
             <button

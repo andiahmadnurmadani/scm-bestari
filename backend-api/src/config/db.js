@@ -156,6 +156,7 @@ export async function initDatabase() {
       status ENUM('Siap Panen', 'Dalam Proses', 'Selesai', 'Tersimpan di Gudang') NOT NULL DEFAULT 'Selesai',
       catatan TEXT NULL,
       foto_url LONGTEXT NULL,
+      panen_ke TINYINT NOT NULL DEFAULT 1,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -273,7 +274,7 @@ export async function initDatabase() {
       nama_lahan VARCHAR(200) NOT NULL,
       lokasi_desa VARCHAR(150) NOT NULL,
       kecamatan VARCHAR(150) NOT NULL,
-      luas_hektar DECIMAL(8,2) NOT NULL DEFAULT 0,
+      luas_hektar DECIMAL(12,6) NOT NULL DEFAULT 0,
       varietas_sorgum VARCHAR(100) NOT NULL,
       status_irigasi ENUM('Irigasi Teknis', 'Tadah Hujan', 'Semi Teknis') NOT NULL DEFAULT 'Irigasi Teknis',
       jenis_tanah VARCHAR(100) NULL,
@@ -312,6 +313,13 @@ export async function initDatabase() {
     console.log('✓ Kolom "lands.foto_url" dipastikan LONGTEXT.');
   } catch (alterError) {
     console.warn('⚠ Migrasi lands.foto_url dilewati:', alterError.message);
+  }
+  // Migrasi: perlebar presisi luas_hektar (6 desimal) agar luas kecil (mis. < 100 m²) tidak terpotong jadi 0
+  try {
+    await pool.query(`ALTER TABLE lands MODIFY COLUMN luas_hektar DECIMAL(12,6) NOT NULL DEFAULT 0`);
+    console.log('✓ Kolom "lands.luas_hektar" dipastikan DECIMAL(12,6).');
+  } catch (alterError) {
+    console.warn('⚠ Migrasi lands.luas_hektar dilewati:', alterError.message);
   }
 
   // Seed lahan awal jika tabel kosong (DINONAKTIFKAN — user minta data kosong)
@@ -409,11 +417,12 @@ export async function initDatabase() {
     if (seedPlantings.length) console.log(`✓ Seed plantings: ${seedPlantings.length} baris dimasukkan.`);
   }
 
-  // ── Migrasi lineage: harvests tambah lahan_id, planting_id, periode_hari ───────
+  // ── Migrasi lineage: harvests tambah lahan_id, planting_id, periode_hari, panen_ke ─
   for (const [col, def] of [
     ['lahan_id', 'BIGINT UNSIGNED NULL'],
     ['planting_id', 'BIGINT UNSIGNED NULL'],
     ['periode_hari', 'INT NULL'],
+    ['panen_ke', 'TINYINT NOT NULL DEFAULT 1'],
   ]) {
     try {
       const [hr] = await pool.query(`SELECT COUNT(*) AS total FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='harvests' AND COLUMN_NAME=?`, [col]);
@@ -426,6 +435,12 @@ export async function initDatabase() {
   // indeks untuk trace cepat
   try { await pool.query(`CREATE INDEX idx_harvest_lahan ON harvests(lahan_id)`); } catch {}
   try { await pool.query(`CREATE INDEX idx_harvest_planting ON harvests(planting_id)`); } catch {}
+  try { await pool.query(`CREATE INDEX idx_harvest_planting_ke ON harvests(planting_id, panen_ke)`); } catch {}
+  // Backfill: panen lama tanpa panen_ke dianggap panen pertama (panen_ke = 1)
+  try {
+    await pool.query(`UPDATE harvests SET panen_ke = 1 WHERE panen_ke IS NULL OR panen_ke < 1`);
+    console.log('✓ Backfill harvests.panen_ke = 1 untuk data lama.');
+  } catch (e) { console.warn('⚠ Backfill harvests.panen_ke dilewati:', e.message); }
 
   // Backfill harvests yang lama: coba mapping namaLahan -> lahan_id, dan tanam terbaru pada lahan tsb -> planting_id
   try {

@@ -7,6 +7,7 @@ interface ModalProps {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
 }
 
@@ -16,6 +17,7 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   subtitle,
   children,
+  footer,
   maxWidth = 'lg',
 }) => {
   useEffect(() => {
@@ -49,7 +51,7 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
@@ -58,7 +60,7 @@ export const Modal: React.FC<ModalProps> = ({
 
       {/* Modal Container */}
       <div
-        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-[#c4c8bb]/30 z-10 overflow-hidden transform transition-all my-auto max-h-[96vh] flex flex-col`}
+        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-[#c4c8bb]/30 z-10 overflow-hidden my-4 sm:my-6 mx-auto max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -79,7 +81,14 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-4 sm:p-7 overflow-y-auto custom-scrollbar flex-1">{children}</div>
+        <div className="p-4 sm:p-7 overflow-y-auto custom-scrollbar flex-1 min-h-0">{children}</div>
+
+        {/* Footer (opsional) — selalu menempel di dasar modal, di luar area scroll */}
+        {footer && (
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 px-5 sm:px-7 py-4 border-t border-[#c4c8bb]/20 bg-white shrink-0">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

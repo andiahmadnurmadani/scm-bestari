@@ -653,7 +653,6 @@ export const GudangPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Package className="w-4 h-4 text-[#2C4219]" />
                   <h4 className="text-sm font-bold text-[#172C05]">Stok Batch</h4>
-                  <span className="text-[10px] font-bold text-[#8C9E5B] bg-[#C3E28D]/30 px-1.5 py-0.5 rounded-full">Stok terbaru di atas</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button

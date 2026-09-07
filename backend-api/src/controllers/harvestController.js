@@ -20,6 +20,7 @@ function mapRowToHarvest(row) {
     lahanId: row.lahan_id != null ? String(row.lahan_id) : null,
     plantingId: row.planting_id != null ? String(row.planting_id) : null,
     periodeHari: row.periode_hari != null ? Number(row.periode_hari) : null,
+    panenKe: row.panen_ke != null ? Number(row.panen_ke) : 1,
     // lineage tambahan (jika JOIN)
     lahan: row.lahan_id ? { id: String(row.lahan_id), kodeLahan: row.kode_lahan, namaLahan: row.l_nama_lahan, lokasiDesa: row.lokasi_desa, luasHektar: row.luas_hektar != null ? Number(row.luas_hektar) : null } : null,
     planting: row.planting_id ? { id: String(row.planting_id), kodeTanam: row.kode_tanam, tanggalTanam: toISODate(row.tanggal_tanam), estimasiPanen: toISODate(row.estimasi_panen), varietas: row.p_varietas, jumlahLubang: row.jumlah_lubang != null ? Number(row.jumlah_lubang) : null, petugas: row.petugas } : null,
@@ -43,6 +44,10 @@ function validateHarvest(data) {
   if (data.status && !statusValues.includes(data.status)) return 'Status tidak valid.';
   if (data.lahanId && isNaN(Number(data.lahanId))) return 'Lahan tidak valid.';
   if (data.plantingId && isNaN(Number(data.plantingId))) return 'Data penanaman tidak valid.';
+  if (data.panenKe != null) {
+    const pk = Number(data.panenKe);
+    if (!Number.isInteger(pk) || pk < 1 || pk > 3) return 'Panen ke hanya boleh 1, 2, atau 3 (ratoon sorgum).';
+  }
   return null;
 }
 
@@ -219,7 +224,7 @@ export async function getHarvests(req, res) {
 
     const [rows] = await pool.query(
       `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
-              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.created_at,
+              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
               p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
               COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
@@ -256,7 +261,7 @@ export async function getHarvestById(req, res) {
   try {
     const [rows] = await getPool().execute(
       `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
-              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.created_at,
+              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
               p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas
        FROM harvests h
@@ -333,6 +338,19 @@ export async function createHarvest(req, res) {
       namaLahan = lr[0].nama_lahan;
     }
 
+    // Jika planting tidak dikirim (mis. Mode Mudah), auto-pilih planting terakhir pada lahan
+    // agar panen tetap tertaut musim tanam & bisa dibedakan panen ke-1/2/3 (ratoon).
+    if (!plantingId && lahanId) {
+      const [latest] = await pool.execute(
+        `SELECT id, lahan_id, tanggal_tanam FROM plantings WHERE lahan_id = ? ORDER BY tanggal_tanam DESC, id DESC LIMIT 1`,
+        [lahanId]
+      );
+      if (latest.length) {
+        plantingId = latest[0].id;
+        tanggalTanamForPeriode = latest[0].tanggal_tanam;
+      }
+    }
+
     // Buat kode panen otomatis bila tidak disertakan: LUS-10092026-01 (slug nama lahan)
     let kodePanen = String(data.kodePanen || '').trim();
     if (!kodePanen) {
@@ -346,11 +364,34 @@ export async function createHarvest(req, res) {
 
     const periodeHari = calcPeriode(tanggalTanamForPeriode, data.tanggalPanen);
 
+    // ── Tentukan panen_ke (ratoon sorgum: 1x tanam bisa panen hingga 3x) ──────
+    let panenKe = data.panenKe != null ? Number(data.panenKe) : 1;
+    if (plantingId) {
+      const [existing] = await pool.query(
+        `SELECT panen_ke FROM harvests WHERE planting_id = ? ORDER BY panen_ke ASC`,
+        [plantingId]
+      );
+      const used = existing.map((r) => Number(r.panen_ke));
+      if (data.panenKe == null || String(data.panenKe) === '') {
+        // otomatis gunakan nomor berikutnya, batas maksimal 3
+        panenKe = 1;
+        while (used.includes(panenKe) && panenKe < 3) panenKe += 1;
+      } else {
+        panenKe = Number(data.panenKe);
+        if (used.includes(panenKe)) {
+          return res.status(409).json({ success: false, message: `Panen ke-${panenKe} pada penanaman ini sudah tercatat. Pilih nomor lain (maksimal 3).` });
+        }
+      }
+    }
+    if (panenKe < 1 || panenKe > 3) {
+      return res.status(400).json({ success: false, message: 'Maksimal 3 kali panen untuk satu kali tanam (ratoon sorgum).' });
+    }
+
     const [result] = await pool.execute(
       `INSERT INTO harvests
         (kode_panen, nama_lahan, varietas, tanggal_panen, jumlah_hasil_kg,
-         kualitas_grade, petani_penanggung_jawab, status, catatan, foto_url, lahan_id, planting_id, periode_hari)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         kualitas_grade, petani_penanggung_jawab, status, catatan, foto_url, lahan_id, planting_id, periode_hari, panen_ke)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         kodePanen,
         String(data.namaLahan).trim(),
@@ -365,17 +406,18 @@ export async function createHarvest(req, res) {
         lahanId,
         plantingId,
         periodeHari,
+        panenKe,
       ]
     );
 
-    // update planting status jadi Dipanen jika panen berhasil
+    // update planting: tandai Dipanen hanya jika sudah panen ke-3 (ratoon selesai)
     if (plantingId) {
-      try { await pool.execute(`UPDATE plantings SET status_tanam='Dipanen' WHERE id=?`, [plantingId]); } catch {}
+      try { await pool.execute(`UPDATE plantings SET status_tanam='Dipanen' WHERE id=? AND (SELECT COUNT(*) FROM harvests WHERE planting_id=? AND panen_ke<=3) >= 3`, [plantingId, plantingId]); } catch {}
     }
 
     const [newRow] = await pool.execute(
       `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
-              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.created_at,
+              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
               p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas
        FROM harvests h LEFT JOIN lands l ON h.lahan_id=l.id LEFT JOIN plantings p ON h.planting_id=p.id WHERE h.id = ? LIMIT 1`,
@@ -451,6 +493,7 @@ export async function updateHarvest(req, res) {
       fotoUrl: 'foto_url',
       lahanId: 'lahan_id',
       plantingId: 'planting_id',
+      panenKe: 'panen_ke',
     };
 
     const sets = [];
@@ -462,6 +505,24 @@ export async function updateHarvest(req, res) {
       }
     }
     if (periodeHari !== undefined) { sets.push(`periode_hari = ?`); values.push(periodeHari); }
+
+    // Validasi panen_ke (ratoon sorgum: 1..3, unik per planting)
+    if (data.panenKe !== undefined && data.panenKe !== null) {
+      const pk = Number(data.panenKe);
+      if (!Number.isInteger(pk) || pk < 1 || pk > 3) {
+        return res.status(400).json({ success: false, message: 'Panen ke hanya boleh 1, 2, atau 3 (ratoon sorgum).' });
+      }
+      const effPlantingId = plantingId !== undefined ? plantingId : existing[0].planting_id;
+      if (effPlantingId) {
+        const [dup] = await pool.query(
+          `SELECT id FROM harvests WHERE planting_id = ? AND panen_ke = ? AND id <> ? LIMIT 1`,
+          [effPlantingId, pk, id]
+        );
+        if (dup.length) {
+          return res.status(409).json({ success: false, message: `Panen ke-${pk} pada penanaman ini sudah tercatat. Pilih nomor lain (maksimal 3).` });
+        }
+      }
+    }
 
     if (sets.length > 0) {
       await pool.execute(`UPDATE harvests SET ${sets.join(', ')} WHERE id = ?`, [...values, id]);
@@ -484,7 +545,7 @@ export async function updateHarvest(req, res) {
 
     const [updatedRow] = await pool.execute(
       `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
-              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.created_at,
+              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
               p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas
        FROM harvests h LEFT JOIN lands l ON h.lahan_id=l.id LEFT JOIN plantings p ON h.planting_id=p.id WHERE h.id = ? LIMIT 1`,

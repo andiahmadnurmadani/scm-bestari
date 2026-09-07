@@ -63,12 +63,12 @@ export const LogistikPage: React.FC = () => {
     catatanNota: '',
   });
 
-  // Rincian barang/jasa dinamis (diisi user, total otomatis) — qty & hargaSatuan pakai string agar bisa dikosongkan
+  // Rincian barang/jasa dinamis (diisi user, total otomatis) -- qty & hargaSatuan pakai string agar bisa dikosongkan
   const [detailItems, setDetailItems] = useState<{ nama: string; qty: string; hargaSatuan: string }[]>([
     { nama: '', qty: '', hargaSatuan: '' },
   ]);
 
-  // ── Summary terpisah (total bulan ini dihitung dari SEMUA data, bukan halaman aktif) ──
+  //  Summary terpisah (total bulan ini dihitung dari SEMUA data, bukan halaman aktif) 
   const [summary, setSummary] = useState({ totalBulanIni: 0, totalTransportasi: 0, totalBahanOp: 0 });
 
   // Parser tanggal robust: dukung 'YYYY-MM-DD', '14 Mei 2026', '05/08/2026', dsb.
@@ -209,7 +209,7 @@ export const LogistikPage: React.FC = () => {
     setEditingExpenseId(null);
     fetchExpenses();
 
-    // ── Update TOTAL PENGELUARAN BULAN INI langsung (tanpa nunggu fetch ulang) ──
+    //  Update TOTAL PENGELUARAN BULAN INI langsung (tanpa nunggu fetch ulang) 
     const d = parseTanggal(payload.tanggal);
     const now = new Date();
     const isThisMonth = d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -228,7 +228,7 @@ export const LogistikPage: React.FC = () => {
       }
       return next;
     });
-    // Sinkronkan dengan backend (data edit perlu nilai lama) — berjalan di background
+    // Sinkronkan dengan backend (data edit perlu nilai lama) -- berjalan di background
     fetchSummary();
   };
 
@@ -245,7 +245,7 @@ export const LogistikPage: React.FC = () => {
     setPage(targetPage);
   };
 
-  // ── Rincian barang/jasa dinamis ───────────────────────────────────────────
+  //  Rincian barang/jasa dinamis 
   const updateItem = (idx: number, field: 'nama' | 'qty' | 'hargaSatuan', value: string | number) => {
     setDetailItems((prev) => prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it)));
   };
@@ -256,7 +256,7 @@ export const LogistikPage: React.FC = () => {
     setDetailItems((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev));
   };
 
-  // ── Summary dari API ─────────────────────────────────────────────────────
+  //  Summary dari API 
   const formatRupiah = (n: number) =>
     `Rp ${(n || 0).toLocaleString('id-ID')}`;
 
@@ -264,7 +264,7 @@ export const LogistikPage: React.FC = () => {
   const totalTransportasi = summary.totalTransportasi;
   const totalBahanOp = summary.totalBahanOp;
 
-  // ── Export ──────────────────────────────────────────────────────────
+  //  Export 
   const fetchAllExpenses = async () => {
     const res = await logisticsApi.getFinancialLogs({ page: 1, limit: 1000, search: searchTerm || undefined, kategori: selectedCategoryTab === 'Semua Transaksi' ? undefined : undefined });
     return res.data || [];
@@ -350,7 +350,7 @@ export const LogistikPage: React.FC = () => {
           .tot{font-weight:bold}
         </style></head><body>
         <h1>Laporan Keuangan Logistik</h1>
-        <p class="meta">Sorgum SCM • Dicetak ${new Date().toLocaleDateString('id-ID')} • Jumlah: ${data.length} transaksi</p>
+        <p class="meta">Sorgum SCM ¢ Dicetak ${new Date().toLocaleDateString('id-ID')} ¢ Jumlah: ${data.length} transaksi</p>
         <table><thead><tr><th>Kode</th><th>Tanggal</th><th>Kategori</th><th>Vendor</th><th>Biaya (Rp)</th><th>No. Nota</th><th>Status</th></tr></thead>
         <tbody>${rowsHtml}</tbody></table>
         <p class="meta" style="margin-top:12px">Total Pengeluaran: <b>${formatRupiah(data.reduce((s, r) => s + (r.totalBiayaRp || 0), 0))}</b></p>
@@ -775,202 +775,221 @@ export const LogistikPage: React.FC = () => {
         isOpen={addExpenseModalOpen}
         onClose={() => setAddExpenseModalOpen(false)}
         title={editingExpenseId ? 'Edit Transaksi Pengeluaran' : 'Catat Transaksi Pengeluaran Baru'}
-        subtitle={editingExpenseId ? 'Perbarui data biaya dan rincian barang/jasa' : 'Input data biaya pupuk, logistik armada, perawatan, atau kemasan'}
-      >
-        <form onSubmit={handleSaveExpense} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Kode Transaksi
-              </label>
-              <input
-                type="text"
-                value={formData.kodeTransaksi}
-                readOnly
-                disabled
-                title="Kode transaksi dibuat otomatis oleh sistem"
-                className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-bold text-[#2C4219] cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Kategori Biaya
-              </label>
-              <select
-                value={formData.kategori}
-                onChange={(e) => setFormData({ ...formData, kategori: e.target.value as any })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              >
-                <option value="Bahan Baku">Bahan Baku (Pupuk/Benih)</option>
-                <option value="Transportasi">Transportasi / Sewa Truk</option>
-                <option value="Operasional">Operasional KWT</option>
-                <option value="Kemasan">Kemasan & Packaging</option>
-                <option value="Perawatan Peralatan">Perawatan Peralatan</option>
-                <option value="Sertifikasi">Sertifikasi Legalitas</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Tanggal Transaksi
-              </label>
-              <input
-                type="date"
-                value={formData.tanggal || ''}
-                onChange={(e) => setFormData({ ...formData, tanggal: e.target.value })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Status Pembayaran
-              </label>
-              <select
-                value={formData.statusPembayaran}
-                onChange={(e) => setFormData({ ...formData, statusPembayaran: e.target.value as any })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              >
-                <option value="LUNAS">Lunas</option>
-                <option value="PENDING">Pending</option>
-                <option value="DIBATALKAN">Dibatalkan</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Keterangan / Vendor
-            </label>
-            <input
-              type="text"
-              value={formData.keteranganVendor}
-              onChange={(e) => setFormData({ ...formData, keteranganVendor: e.target.value })}
-              placeholder="Contoh: Beli Pupuk Organik / CV BioTech"
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              required
-            />
-          </div>
-
-          {/* Rincian Barang / Jasa */}
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Rincian Barang / Jasa
-            </label>
-            <div className="space-y-2">
-              {detailItems.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-[1fr_70px_1fr_70px_32px] gap-2 items-center">
-                  <input
-                    type="text"
-                    placeholder="Nama barang atau jasa"
-                    value={item.nama}
-                    onChange={(e) => updateItem(idx, 'nama', e.target.value)}
-                    className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-sm min-w-0"
-                  />
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="Jumlah (contoh: 5)"
-                    value={item.qty}
-                    onChange={(e) => updateItem(idx, 'qty', e.target.value)}
-                    className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-sm text-center"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Harga satuan (contoh: 5000)"
-                    value={item.hargaSatuan}
-                    onChange={(e) => updateItem(idx, 'hargaSatuan', e.target.value)}
-                    className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-sm min-w-0"
-                  />
-                  <span className="text-xs font-extrabold text-[#2C4219] whitespace-nowrap">
-                    Rp {(Number(item.qty) * Number(item.hargaSatuan)).toLocaleString('id-ID')}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeItem(idx)}
-                    disabled={detailItems.length <= 1}
-                    className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-40 flex items-center justify-center"
-                    title="Hapus baris"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={addItem}
-              className="mt-2 flex items-center gap-1.5 text-xs font-bold text-[#2C4219] hover:text-[#172C05] transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> Tambah Baris Rincian
-            </button>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Total Biaya (Rp)
-            </label>
-            <input
-              type="number"
-              value={detailItems.reduce((s, it) => s + (it.nama.trim() ? (Number(it.qty) || 0) * (Number(it.hargaSatuan) || 0) : 0), 0)}
-              readOnly
-              className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-extrabold text-[#2C4219] cursor-not-allowed"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Metode Pembayaran
-              </label>
-              <select
-                value={formData.metodePembayaran}
-                onChange={(e) => setFormData({ ...formData, metodePembayaran: e.target.value as any })}
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              >
-                <option value="Transfer Bank">Transfer Bank</option>
-                <option value="Kas Tunai">Kas Tunai</option>
-                <option value="E-Wallet">E-Wallet QRIS</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-                Nomor Nota / Kwitansi
-              </label>
-              <input
-                type="text"
-                value={formData.nomorNotaReceipt}
-                onChange={(e) => setFormData({ ...formData, nomorNotaReceipt: e.target.value })}
-                placeholder="Contoh: INV-00129"
-                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">
-              Catatan Pengeluaran
-            </label>
-            <textarea
-              value={formData.catatanNota}
-              onChange={(e) => setFormData({ ...formData, catatanNota: e.target.value })}
-              placeholder="Contoh: Pembayaran tunai ke pemasok pupuk, nota asli disimpan di arsip KWT"
-              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm h-20"
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#c4c8bb]/20">
-            <Button type="button" variant="outline" onClick={() => setAddExpenseModalOpen(false)}>
-              Batal
-            </Button>
-            <Button type="submit" variant="primary">
+        subtitle={editingExpenseId ? 'Perbarui data biaya pengeluaran' : 'Lengkapi data biaya pengeluaran'}
+        maxWidth="6xl"
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setAddExpenseModalOpen(false)} className="px-6 py-3 text-sm">Batal</Button>
+            <Button type="submit" form="logistik-form" variant="primary" className="px-8 py-3 text-sm">
               {editingExpenseId ? 'Simpan Perubahan' : 'Simpan Transaksi Pengeluaran'}
             </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSaveExpense} className="space-y-6" id="logistik-form">
+          {/*  Bagian 1: Informasi Transaksi  */}
+          <div className="p-5 sm:p-6 bg-[#FFF8F4] border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">1</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Informasi Transaksi</h3>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Kode Transaksi</label>
+                <input
+                  type="text"
+                  value={formData.kodeTransaksi}
+                  readOnly
+                  disabled
+                  placeholder={formData.kodeTransaksi ? '' : 'Otomatis -- LOG-TRX-001'}
+                  title="Kode transaksi dibuat otomatis oleh sistem"
+                  className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold text-[#6B7280] cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Kategori Biaya <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.kategori}
+                  onChange={(e) => setFormData({ ...formData, kategori: e.target.value as any })}
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold cursor-pointer"
+                  required
+                >
+                  <option value="Bahan Baku">Bahan Baku (Pupuk/Benih)</option>
+                  <option value="Transportasi">Transportasi / Sewa Truk</option>
+                  <option value="Operasional">Operasional KWT</option>
+                  <option value="Kemasan">Kemasan & Packaging</option>
+                  <option value="Perawatan Peralatan">Perawatan Peralatan</option>
+                  <option value="Sertifikasi">Sertifikasi Legalitas</option>
+                </select>
+              </div>
+            </div>
           </div>
+
+          {/*  Bagian 2: Detail Transaksi  */}
+          <div className="p-5 sm:p-6 bg-white border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">2</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Detail Transaksi</h3>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Tanggal Transaksi <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.tanggal}
+                  onChange={(e) => setFormData({ ...formData, tanggal: e.target.value })}
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Status Pembayaran</label>
+                <select
+                  value={formData.statusPembayaran}
+                  onChange={(e) => setFormData({ ...formData, statusPembayaran: e.target.value as any })}
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold cursor-pointer"
+                >
+                  <option value="LUNAS">Lunas</option>
+                  <option value="PENDING">Pending (Belum Bayar)</option>
+                  <option value="DIBATALKAN">Dibatalkan</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Vendor / Keterangan <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.keteranganVendor}
+                  onChange={(e) => setFormData({ ...formData, keteranganVendor: e.target.value })}
+                  placeholder="Contoh: Pembelian pupuk NPK dari Toko Tani Makmur"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/*  Bagian 3: Rincian Biaya & Pembayaran  */}
+          <div className="p-5 sm:p-6 bg-white border border-[#c4c8bb]/30 rounded-3xl space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center text-base font-black shrink-0">3</span>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight">Rincian Biaya & Pembayaran</h3>
+              </div>
+            </div>
+
+            {/* Rincian Barang / Jasa */}
+            <div>
+              <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Rincian Barang / Jasa</label>
+              <div className="space-y-2">
+                {detailItems.map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-[1fr_70px_1fr_70px_32px] gap-2 items-center">
+                    <input
+                      type="text"
+                      placeholder="Nama barang atau jasa"
+                      value={item.nama}
+                      onChange={(e) => updateItem(idx, 'nama', e.target.value)}
+                      className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-sm min-w-0"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Jumlah (contoh: 5)"
+                      value={item.qty}
+                      onChange={(e) => updateItem(idx, 'qty', e.target.value)}
+                      className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-sm text-center"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Harga satuan (contoh: 5000)"
+                      value={item.hargaSatuan}
+                      onChange={(e) => updateItem(idx, 'hargaSatuan', e.target.value)}
+                      className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-sm min-w-0"
+                    />
+                    <span className="text-xs font-extrabold text-[#2C4219] whitespace-nowrap">
+                      Rp {(Number(item.qty) * Number(item.hargaSatuan)).toLocaleString('id-ID')}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(idx)}
+                      disabled={detailItems.length <= 1}
+                      className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-40 flex items-center justify-center"
+                      title="Hapus baris"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addItem}
+                className="mt-2 flex items-center gap-1.5 text-xs font-bold text-[#2C4219] hover:text-[#172C05] transition-colors cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Tambah Baris Rincian
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Total Biaya (Rp)</label>
+              <input
+                type="number"
+                value={detailItems.reduce((s, it) => s + (it.nama.trim() ? (Number(it.qty) || 0) * (Number(it.hargaSatuan) || 0) : 0), 0)}
+                readOnly
+                className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-extrabold text-[#2C4219] cursor-not-allowed"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Metode Pembayaran</label>
+                <select
+                  value={formData.metodePembayaran}
+                  onChange={(e) => setFormData({ ...formData, metodePembayaran: e.target.value as any })}
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold cursor-pointer"
+                >
+                  <option value="Transfer Bank">Transfer Bank</option>
+                  <option value="Kas Tunai">Kas Tunai</option>
+                  <option value="E-Wallet">E-Wallet QRIS</option>
+                  <option value="Giro">Giro</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Nomor Nota / Kwitansi</label>
+                <input
+                  type="text"
+                  value={formData.nomorNotaReceipt}
+                  onChange={(e) => setFormData({ ...formData, nomorNotaReceipt: e.target.value })}
+                  placeholder="Contoh: INV-00129"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Catatan Pengeluaran</label>
+              <textarea
+                value={formData.catatanNota}
+                onChange={(e) => setFormData({ ...formData, catatanNota: e.target.value })}
+                placeholder="Contoh: Pembayaran tunai ke pemasok pupuk, nota asli disimpan di arsip KWT"
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm h-20"
+              />
+            </div>
+          </div>
+
         </form>
       </Modal>
 
@@ -992,7 +1011,7 @@ export const LogistikPage: React.FC = () => {
                   Apakah Anda yakin ingin menghapus transaksi ini?
                 </p>
                 <p className="text-[11px] text-[#6B7280] mt-1 leading-relaxed">
-                  <strong>{deleteTarget.kodeTransaksi}</strong> — {deleteTarget.keteranganVendor} (Rp{' '}
+                  <strong>{deleteTarget.kodeTransaksi}</strong> -- {deleteTarget.keteranganVendor} (Rp{' '}
                   {deleteTarget.totalBiayaRp.toLocaleString('id-ID')}).
                   Tindakan ini tidak dapat dibatalkan.
                 </p>

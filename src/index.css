@@ -18,7 +18,7 @@ html {
   }
 }
 
-/* ── Tipografi: hierarki jelas & nyaman dibaca ─────────────────────────────
+/* 🌾 Tipografi: hierarki jelas & nyaman dibaca 🌾
    - Judul (h1–h6) & elemen berkelas font-bold: TEGAS (700/800)
    - Sub-judul (font-semibold): 600
    - Teks isi: ringan (400) agar kontras dengan judul.
@@ -33,7 +33,7 @@ html {
 
   /* Teks isi default: ringan & nyaman dibaca.
      Catatan: utility Tailwind (font-bold dll) tetap menang atas aturan ini
-     karena lebih spesifik — hierarki judul/isi terjaga. */
+     karena lebih spesifik → hierarki judul/isi terjaga. */
   body,
   p,
   span,
@@ -134,4 +134,4 @@ html {
   }
 }
 
-
+}
