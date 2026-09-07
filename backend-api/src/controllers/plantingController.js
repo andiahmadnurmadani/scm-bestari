@@ -1,4 +1,5 @@
 import { getPool } from '../config/db.js';
+import { slugNama, tanggalKode, kodeUnik, buatCekAda } from '../utils/kodeUtil.js';
 
 function mapRowToPlanting(row) {
   const fmt = (v) => {
@@ -35,6 +36,7 @@ function validatePlanting(data) {
   if (!data.lahanId) return 'Lahan wajib dipilih.';
   if (!data.tanggalTanam) return 'Tanggal tanam wajib diisi.';
   if (!data.varietas || !String(data.varietas).trim()) return 'Varietas wajib diisi.';
+  if (!data.petugas || !String(data.petugas).trim()) return 'Petugas penanaman wajib diisi.';
   if (data.jumlahLubang != null && (isNaN(Number(data.jumlahLubang)) || Number(data.jumlahLubang) < 0)) return 'Jumlah lubang tidak valid.';
   if (data.statusTanam && !statusVals.includes(data.statusTanam)) return 'Status tanam tidak valid.';
   if (data.tanggalTanam && data.estimasiPanen) {
@@ -104,14 +106,19 @@ export async function createPlanting(req, res) {
     if (validationError) return res.status(400).json({ success: false, message: validationError });
 
     const pool = getPool();
-    // validasi lahan ada
-    const [landRows] = await pool.execute('SELECT id FROM lands WHERE id=? LIMIT 1', [data.lahanId]);
+    // validasi lahan ada + ambil nama lahan utk kode
+    const [landRows] = await pool.execute('SELECT id, nama_lahan FROM lands WHERE id=? LIMIT 1', [data.lahanId]);
     if (!landRows.length) return res.status(400).json({ success: false, message: 'Lahan tidak ditemukan.' });
 
     let kodeTanam = String(data.kodeTanam || '').trim();
     if (!kodeTanam) {
-      const [c] = await pool.execute('SELECT COUNT(*) AS total FROM plantings');
-      kodeTanam = `TNM-${String(Number(c[0].total)+1).padStart(3,'0')}`;
+      // TNM -> LUS-15012026-01 (slug nama lahan + tanggal tanam + urutan)
+      const slug = slugNama(landRows[0].nama_lahan);
+      const tgl = tanggalKode(data.tanggalTanam);
+      kodeTanam = await kodeUnik(
+        (seq) => `${slug}-${tgl}-${String(seq).padStart(2, '0')}`,
+        buatCekAda(pool, 'plantings', 'kode_tanam')
+      );
     }
 
     // hitung luas tanam default dari lahan jika tidak diisi
@@ -145,8 +152,9 @@ export async function updatePlanting(req, res) {
       const [lr] = await pool.execute('SELECT id FROM lands WHERE id=? LIMIT 1', [data.lahanId]);
       if (!lr.length) return res.status(400).json({ success: false, message: 'Lahan tidak ditemukan.' });
     }
-    const validationError = validatePlanting({ lahanId: data.lahanId || 1, tanggalTanam: data.tanggalTanam || '2000-01-01', varietas: data.varietas || 'x', jumlahLubang: data.jumlahLubang, statusTanam: data.statusTanam, estimasiPanen: data.estimasiPanen });
+    const validationError = validatePlanting({ lahanId: data.lahanId || 1, tanggalTanam: data.tanggalTanam || '2000-01-01', varietas: data.varietas || 'x', petugas: data.petugas || 'x', jumlahLubang: data.jumlahLubang, statusTanam: data.statusTanam, estimasiPanen: data.estimasiPanen });
     // allow partial update: hanya cek yang dikirim
+    if (data.petugas !== undefined && !String(data.petugas).trim()) return res.status(400).json({ success: false, message: 'Petugas penanaman wajib diisi.' });
     if (data.statusTanam && !['Ditanam','Tumbuh','Siap Panen','Gagal','Dipanen'].includes(data.statusTanam)) return res.status(400).json({ success: false, message: 'Status tanam tidak valid.' });
 
     const fieldMap = { kodeTanam:'kode_tanam', lahanId:'lahan_id', tanggalTanam:'tanggal_tanam', estimasiPanen:'estimasi_panen', varietas:'varietas', jumlahLubang:'jumlah_lubang', luasTanam:'luas_tanam', petugas:'petugas', statusTanam:'status_tanam', catatan:'catatan', fotoUrl:'foto_url' };

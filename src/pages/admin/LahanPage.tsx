@@ -12,7 +12,6 @@ import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { ActionButtons } from '../../components/common/ActionButtons';
 import { Toast } from '../../components/common/Toast';
-import { nextCode } from '../../utils/kodeGenerator';
 
 // ── Baris info sederhana untuk modal Detail (ramah pengguna) ────────────────
 const InfoRow: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNode }> = ({ icon, label, value }) => (
@@ -202,6 +201,10 @@ export const LahanPage: React.FC = () => {
   const handleSavePlanting = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!plantingLahan) return;
+    if (!plantingForm.petugas.trim()) {
+      setToast({ msg: 'Petugas penanaman wajib diisi.', type: 'error' });
+      return;
+    }
     try {
       // Estimasi panen otomatis: tanggal tanam + lamaPanen varietas (dari Master Varietas)
       const v = varieties.find((x) => x.name === plantingForm.varietas);
@@ -268,7 +271,7 @@ export const LahanPage: React.FC = () => {
     setEditingPlot(null);
     handleRemoveImage();
     setFormData({
-      kodeLahan: nextCode('BLK-', landList, 3),
+      kodeLahan: '',
       namaLahan: '',
       lokasiDesa: '',
       kecamatan: '',
@@ -323,8 +326,10 @@ export const LahanPage: React.FC = () => {
         await landApi.update(editingPlot.id, { ...payload, fotoUrl: finalFotoUrl });
         setToast({ msg: 'Data lahan berhasil diperbarui.', type: 'success' });
       } else {
+        // Kode lahan dibuat otomatis backend: 3 huruf awal nama lahan + tanggal daftar (contoh LUS-03092026)
+        const { kodeLahan: _kl, ...payloadCreate } = payload;
         await landApi.create({
-          ...payload,
+          ...payloadCreate,
           fotoUrl: finalFotoUrl,
         });
         setToast({ msg: 'Data lahan baru berhasil ditambahkan.', type: 'success' });
@@ -432,7 +437,7 @@ export const LahanPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#221A12] tracking-tight">
-            Kelola Lahan
+            Kelola Lahan & Tanaman
           </h1>
         </div>
 
@@ -798,8 +803,8 @@ export const LahanPage: React.FC = () => {
               <p className="text-[11px] text-[#6B7280] mt-1">Jumlah lubang (di kali 3) — isi sesuai lubang yang dibuat, sistem mengalikan otomatis.</p>
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">Petugas Penanaman</label>
-              <input type="text" value={plantingForm.petugas} onChange={(e) => setPlantingForm({ ...plantingForm, petugas: e.target.value })} placeholder="Contoh: Ibu Siti - KWT" className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm" />
+              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">Petugas Penanaman <span className="text-red-500">*</span></label>
+              <input type="text" value={plantingForm.petugas} onChange={(e) => setPlantingForm({ ...plantingForm, petugas: e.target.value })} placeholder="Contoh: Ibu Siti - KWT" required className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm" />
             </div>
             <div>
               <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">Catatan</label>
@@ -894,7 +899,7 @@ export const LahanPage: React.FC = () => {
                         )}
                         <p className="text-[11px] text-[#6B7280] flex items-center gap-1.5">
                           <Layers className="w-3.5 h-3.5 text-[#2C4219] shrink-0" />
-                          {Number(p.jumlahLubang).toLocaleString('id-ID')} lubang tanam
+                          {Math.round((Number(p.jumlahLubang) || 0) / 3).toLocaleString('id-ID')} lubang tanam
                         </p>
                         <p className="text-[11px] text-[#6B7280] flex items-center gap-1.5">
                           <User className="w-3.5 h-3.5 text-[#2C4219] shrink-0" />

@@ -56,8 +56,13 @@ async function reverseGeocode(lat: number, lng: number): Promise<MapLocation> {
     if (!res.ok) throw new Error('Geocode gagal');
     const data = await res.json();
     const addr = data.address || {};
-    const desa = addr.village || addr.hamlet || addr.suburb || '';
-    const kecamatan = addr.county || addr.city_district || addr.district || '';
+    // Indonesia (OSM/Nominatim):
+    //  - desa      = village / suburb / hamlet
+    //  - kecamatan = district (Bandung: "Sumur Bandung"); sebagian wilayah
+    //                memakai town/municipality (Cisarua) — county adalah
+    //                kabupaten/kota → JANGAN dipakai sebagai kecamatan.
+    const desa = addr.village || addr.suburb || addr.hamlet || addr.town || addr.municipality || addr.city || '';
+    const kecamatan = addr.district || addr.city_district || addr.town || addr.municipality || '';
     return {
       latitude: Math.round(lat * 1e6) / 1e6,
       longitude: Math.round(lng * 1e6) / 1e6,

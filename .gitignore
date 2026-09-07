@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+# Skrip uji lokal (tidak untuk dipush)
+backend-api/scratch_*.mjs
+backend-api/scratch_*.js

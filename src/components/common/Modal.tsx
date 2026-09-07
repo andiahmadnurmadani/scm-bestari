@@ -7,7 +7,7 @@ interface ModalProps {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -35,15 +35,21 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   const maxWidthClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
+    sm: 'max-w-md',
+    md: 'max-w-lg',
+    lg: 'max-w-xl',
+    xl: 'max-w-2xl',
+    '2xl': 'max-w-3xl',
+    '3xl': 'max-w-4xl',
+    '4xl': 'max-w-5xl',
+    '5xl': 'max-w-6xl',
+    '6xl': 'max-w-7xl',
+    '7xl': 'max-w-[92vw]',
+    full: 'max-w-[96vw]',
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
@@ -52,28 +58,28 @@ export const Modal: React.FC<ModalProps> = ({
 
       {/* Modal Container */}
       <div
-        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-[#c4c8bb]/30 z-10 overflow-hidden transform transition-all my-auto max-h-[92vh] flex flex-col`}
+        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-[#c4c8bb]/30 z-10 overflow-hidden transform transition-all my-auto max-h-[96vh] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between px-3.5 sm:px-5 py-2.5 sm:py-3.5 border-b border-[#c4c8bb]/20 bg-[#fff8f4] shrink-0">
+        <div className="flex items-start justify-between px-5 sm:px-7 py-3.5 sm:py-5 border-b border-[#c4c8bb]/20 bg-[#fff8f4] shrink-0">
           <div className="pr-2">
-            <h3 className="text-sm sm:text-base font-semibold text-[#2C4219] leading-tight">{title}</h3>
+            <h3 className="text-base sm:text-lg font-bold text-[#2C4219] leading-tight">{title}</h3>
             {subtitle && (
-              <p className="text-[11px] text-[#44483e] mt-0.5 sm:mt-1 font-medium">{subtitle}</p>
+              <p className="text-xs sm:text-sm text-[#44483e] mt-1 sm:mt-1.5 font-medium">{subtitle}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 -mr-1 rounded-full text-[#44483e] hover:bg-[#efe0d2] transition-colors cursor-pointer shrink-0"
+            className="p-2 -mr-1 rounded-full text-[#44483e] hover:bg-[#efe0d2] transition-colors cursor-pointer shrink-0"
             aria-label="Tutup Modal"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-3.5 sm:p-5 overflow-y-auto custom-scrollbar flex-1">{children}</div>
+        <div className="p-4 sm:p-7 overflow-y-auto custom-scrollbar flex-1">{children}</div>
       </div>
     </div>
   );

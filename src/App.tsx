@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/common/ProtectedRoute';
 // Public Pages
 import { LandingPage } from './pages/public/LandingPage';
 import { LoginPage } from './pages/public/LoginPage';
+import { TracePage } from './pages/public/TracePage';
 
 // Admin Layout & Pages
 import { AdminLayout } from './components/layout/AdminLayout';
@@ -23,6 +24,7 @@ import { LogistikPage } from './pages/admin/LogistikPage';
 import { ProfilePage } from './pages/admin/ProfilePage';
 import { CmsPage } from './pages/admin/CmsPage';
 import { MasterVarietasPage } from './pages/admin/MasterVarietasPage';
+import { MasterProdukPage } from './pages/admin/MasterProdukPage';
 
 export default function App() {
   return (
@@ -33,6 +35,7 @@ export default function App() {
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/trace/:kodeBatchStok" element={<TracePage />} />
 
             {/* Protected / Admin Dashboard Routes */}
             <Route
@@ -55,6 +58,7 @@ export default function App() {
               <Route path="profil" element={<ProfilePage />} />
               <Route path="cms" element={<CmsPage />} />
               <Route path="master/varietas" element={<MasterVarietasPage />} />
+              <Route path="master/produk" element={<MasterProdukPage />} />
               {/* Backward compat: keep old integrasi route */}
               <Route path="integrasi" element={<Navigate to="/dashboard/cms" replace />} />
             </Route>

@@ -219,9 +219,9 @@ export async function initDatabase() {
     console.warn('⚠ Migrasi varieties.lama_panen dilewati:', alterError.message);
   }
 
-  // Seed varietas awal jika tabel kosong
+  // Seed varietas awal jika tabel kosong (DINONAKTIFKAN — user minta data kosong)
   const [vCount] = await pool.query('SELECT COUNT(*) AS total FROM varieties');
-  if (Number(vCount[0].total) === 0) {
+  if (false && Number(vCount[0].total) === 0) {
     const seedVarieties = [
       ['Sorgum Bioguma 1', 'Varietas unggul Balitbangtan, cocok untuk pangan, umur panen ±100 hari.', 100],
       ['Sorgum Bioguma 2', 'Varietas unggul dengan hasil tinggi, toleran kekeringan.', 105],
@@ -234,6 +234,35 @@ export async function initDatabase() {
       await pool.execute('INSERT INTO varieties (name, description, lama_panen) VALUES (?, ?, ?)', v);
     }
     console.log(`✓ Seed varietas: ${seedVarieties.length} baris dimasukkan.`);
+  }
+
+  // Auto-migrasi: tabel products (master data produk olahan — tanpa kategori)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS products (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(150) NOT NULL UNIQUE,
+      satuan_hasil VARCHAR(50) NOT NULL DEFAULT 'Pouch',
+      deskripsi TEXT NULL,
+      foto_url LONGTEXT NULL,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  console.log('✓ Tabel "products" siap.');
+
+  // Migrasi: pastikan kolom product_id ada di production_batches (referensi master produk)
+  try {
+    const [prodCol] = await pool.query(
+      `SELECT COUNT(*) AS total FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'production_batches' AND COLUMN_NAME = 'product_id'`
+    );
+    if (Number(prodCol[0].total) === 0) {
+      await pool.query(`ALTER TABLE production_batches ADD COLUMN product_id BIGINT UNSIGNED NULL`);
+      console.log('✓ Kolom "production_batches.product_id" ditambahkan.');
+    }
+  } catch (alterError) {
+    console.warn('⚠ Migrasi production_batches.product_id dilewati:', alterError.message);
   }
 
   // Auto-migrasi: tabel lands (kelola lahan)
@@ -285,9 +314,9 @@ export async function initDatabase() {
     console.warn('⚠ Migrasi lands.foto_url dilewati:', alterError.message);
   }
 
-  // Seed lahan awal jika tabel kosong (dari mock data frontend)
+  // Seed lahan awal jika tabel kosong (DINONAKTIFKAN — user minta data kosong)
   const [lCount] = await pool.query('SELECT COUNT(*) AS total FROM lands');
-  if (Number(lCount[0].total) === 0) {
+  if (false && Number(lCount[0].total) === 0) {
     const seedLands = [
       ['BLK-001', 'Blok A - Sukamaju', 'Sukamaju', 'Cisalak', 2.5, 'Sorgum Bioguma 1', 'Irigasi Teknis', 'Aluvial', 'KWT Sukamaju Tani', 'Siap Tanam', 'AKTIF', 12.4, 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80'],
       ['BLK-002', 'Blok B - Cisarua', 'Cisarua', 'Lembang', 1.8, 'Sorgum Kawali', 'Semi Teknis', 'Latosol', 'Kelompok Tani Cisarua', 'Masa Pertumbuhan', 'PERSIAPAN', 9.2, 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80'],
@@ -352,9 +381,9 @@ export async function initDatabase() {
     } catch (e) { console.warn(`⚠ Migrasi plantings.${cName} dilewati:`, e.message); }
   }
 
-  // Seed plantings awal jika kosong — buat 1 per lahan untuk demo traceability
+  // Seed plantings awal jika kosong (DINONAKTIFKAN — user minta data kosong)
   const [plCount] = await pool.query('SELECT COUNT(*) AS total FROM plantings');
-  if (Number(plCount[0].total) === 0) {
+  if (false && Number(plCount[0].total) === 0) {
     // ambil ids lahan untuk mapping
     const [landRows] = await pool.query('SELECT id, kode_lahan, nama_lahan, varietas_sorgum FROM lands ORDER BY id LIMIT 6');
     const seedPlantings = landRows.map((lr, idx) => {
@@ -430,6 +459,7 @@ export async function initDatabase() {
     ['bahan_digunakan', 'DECIMAL(12,2) NULL'],
     ['satuan_bahan', "VARCHAR(50) NULL DEFAULT 'Kg'"],
     ['gudang_id', 'BIGINT UNSIGNED NULL'],
+    ['stock_batch_id', 'BIGINT UNSIGNED NULL'],
   ]) {
     try {
       const [pr] = await pool.query(`SELECT COUNT(*) AS total FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='production_batches' AND COLUMN_NAME=?`, [col]);
@@ -471,9 +501,9 @@ export async function initDatabase() {
     console.warn('⚠ Migrasi equipment.foto_url dilewati:', alterError.message);
   }
 
-  // Seed peralatan awal jika tabel kosong (dari mock data frontend)
+  // Seed peralatan awal jika tabel kosong (DINONAKTIFKAN — user minta data kosong)
   const [eCount] = await pool.query('SELECT COUNT(*) AS total FROM equipment');
-  if (Number(eCount[0].total) === 0) {
+  if (false && Number(eCount[0].total) === 0) {
     const seedEquipment = [
       ['ALAT-001', 'Hand Tractor Quick G1000 Kubota 8.5 HP', 'Mesin Olah Tanah', 3, 'Sangat Baik', 'Tersedia', 'Gudang Alat Lahan A (Gubug Tani)', '15 Maret 2024', 'Mesin Diesel Kubota RD 85 DI-1T, Kecepatan 2 Maju 1 Mundur, Kapasitas Kerja 0.12 Ha/Jam.', 'https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=800&q=80', '10 April 2026'],
       ['ALAT-002', 'Mesin Perontok Sorgum Multi-Guna Model S-500', 'Pascapanen', 2, 'Baik', 'Sedang Digunakan', 'Sentra Pengolahan KWT Sorgum', '10 Juni 2024', 'Motor Penggerak Honda GX200 6.5 HP, Kapasitas Perontokan 500-700 kg/jam, Tingkat Kebersihan 98%.', 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&w=800&q=80', '22 Mei 2026'],
@@ -518,9 +548,9 @@ export async function initDatabase() {
   `);
   console.log('✓ Tabel "production_batches" siap.');
 
-  // Seed batch produksi awal
+  // Seed batch produksi awal (DINONAKTIFKAN — user minta data kosong)
   const [pCount] = await pool.query('SELECT COUNT(*) AS total FROM production_batches');
-  if (Number(pCount[0].total) === 0) {
+  if (false && Number(pCount[0].total) === 0) {
     const seedBatches = [
       ['PRD-001', 'Tepung Sorgum Bioguma White Premium 500g', 'Ready to Eat (Siap Konsumsi)', '15 Mei 2026', '15 Mei 2027', 2500, 'Kemasan (Pouch)', 'PN-001', 'Ibu KWT Tani Rahayu (Ny. Hastuti)', 'Lolos QC', 'Gudang A - Rak Pouch Ready'],
       ['PRD-002', 'Rengginang Sorgum Bumbu Savory Herbs', 'Ready to Eat (Siap Konsumsi)', '18 Mei 2026', '18 November 2026', 1800, 'Box (150g)', 'PN-002', 'Tim Olahan KWT Pertiwi', 'Lolos QC', 'Gudang A - Rak Box Snack'],
@@ -565,12 +595,42 @@ export async function initDatabase() {
       kode_batch_stok VARCHAR(50) NOT NULL UNIQUE,
       jumlah_masuk_kg DECIMAL(12,2) NOT NULL DEFAULT 0,
       sisa_kg DECIMAL(12,2) NOT NULL DEFAULT 0,
-      tanggal_masuk DATE NULL,
+      tanggal_masuk DATETIME NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  // Migrasi tabel lama: tanggal_masuk DATE → DATETIME (agar menyimpan jam masuk)
+  try {
+    await pool.query(`ALTER TABLE warehouse_stock_batches MODIFY COLUMN tanggal_masuk DATETIME NULL`);
+    console.log('✓ Kolom "warehouse_stock_batches.tanggal_masuk" dipastikan DATETIME.');
+  } catch (e) { console.warn('⚠ Migrasi tanggal_masuk dilewati:', e.message); }
   console.log('✓ Tabel "warehouse_stock_batches" siap.');
+
+  // Migrasi: kolom jenis (GABAH/SORGUM), asal_batch_id, tanggal_sosoh, operator_sosoh
+  const stockBatchCols = [
+    ["jenis", "ALTER TABLE warehouse_stock_batches ADD COLUMN jenis ENUM('GABAH','SORGUM') NOT NULL DEFAULT 'GABAH'"],
+    ["asal_batch_id", "ALTER TABLE warehouse_stock_batches ADD COLUMN asal_batch_id BIGINT UNSIGNED NULL"],
+    ["tanggal_sosoh", "ALTER TABLE warehouse_stock_batches ADD COLUMN tanggal_sosoh DATETIME NULL"],
+    ["operator_sosoh", "ALTER TABLE warehouse_stock_batches ADD COLUMN operator_sosoh VARCHAR(200) NULL"],
+  ];
+  for (const [col, sql] of stockBatchCols) {
+    try {
+      const [colRows] = await pool.query(
+        `SELECT COUNT(*) AS total FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'warehouse_stock_batches' AND COLUMN_NAME = ?`,
+        [col]
+      );
+      if (Number(colRows[0].total) === 0) {
+        await pool.query(sql);
+        console.log(`✓ Kolom "warehouse_stock_batches.${col}" ditambahkan.`);
+      }
+    } catch (e) { console.warn(`⚠ Migrasi kolom ${col} dilewati:`, e.message); }
+  }
+  // Backfill: batch lama = gabah (hasil panen)
+  try {
+    await pool.query(`UPDATE warehouse_stock_batches SET jenis = 'GABAH' WHERE jenis IS NULL OR jenis = ''`);
+  } catch (e) { /* abaikan */ }
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS warehouse_movements (
@@ -581,24 +641,67 @@ export async function initDatabase() {
       keterangan VARCHAR(255) NULL,
       harvest_id BIGINT UNSIGNED NULL,
       production_id BIGINT UNSIGNED NULL,
+      stock_batch_id BIGINT UNSIGNED NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  // Migrasi: tambah kolom stock_batch_id jika belum ada (tabel lama)
+  try {
+    await pool.query(`ALTER TABLE warehouse_movements ADD COLUMN stock_batch_id BIGINT UNSIGNED NULL`);
+    console.log('✓ Kolom "warehouse_movements.stock_batch_id" ditambahkan.');
+  } catch (e) {
+    if (!String(e.message).includes('Duplicate column')) console.warn('⚠ Migrasi stock_batch_id dilewati:', e.message);
+  }
   console.log('✓ Tabel "warehouse_movements" siap.');
 
-  // Auto-create gudang untuk lahan yang sudah ada (backfill)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS sosoh_processes (
+      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      kode_sosoh VARCHAR(50) NOT NULL UNIQUE,
+      gudang_id BIGINT UNSIGNED NOT NULL,
+      batch_gabah_id BIGINT UNSIGNED NULL,
+      batch_sorgum_id BIGINT UNSIGNED NULL,
+      kg_gabah_dipakai DECIMAL(12,2) NOT NULL DEFAULT 0,
+      kg_sorgum_hasil DECIMAL(12,2) NOT NULL DEFAULT 0,
+      rendemen_persen DECIMAL(6,2) NULL,
+      operator VARCHAR(200) NULL,
+      keterangan VARCHAR(255) NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  console.log('✓ Tabel "sosoh_processes" siap.');
+
+  // Auto-create gudang untuk lahan yang sudah ada (backfill) — format GDG-<desa>-01
   try {
     const [lahanRows] = await pool.query('SELECT id, kode_lahan, nama_lahan, lokasi_desa FROM lands');
     for (const l of lahanRows) {
       const [wg] = await pool.query('SELECT id FROM warehouses WHERE lahan_id = ? LIMIT 1', [l.id]);
       if (wg.length === 0) {
-        const seq = String(l.id).padStart(3, '0');
+        // slug 3 huruf dari NAMA lahan (huruf awal tiap kata)
+        const bersih = String(l.nama_lahan || '')
+          .replace(/[^a-zA-Z ]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        const kata = bersih.split(' ').filter(Boolean);
+        let slug = (kata.map((k) => k[0]).join('') || 'XXX').toUpperCase().replace(/[^A-Z]/g, '');
+        if (slug.length < 3) {
+          const sisa = kata.map((k) => k.slice(1)).join('').replace(/[^A-Za-z]/g, '');
+          slug = (slug + sisa).toUpperCase().slice(0, 3);
+        }
+        slug = (slug + 'XXX').slice(0, 3);
+        // cari urutan terakhir utk slug ini
+        const [gdgRows] = await pool.query(
+          `SELECT COUNT(*) AS total FROM warehouses WHERE kode_gudang LIKE ?`,
+          [`GDG-${slug}-%`]
+        );
+        const seq = Number(gdgRows[0].total || 0) + 1;
+        const kodeGudang = `GDG-${slug}-${String(seq).padStart(2, '0')}`;
         await pool.query(
           `INSERT INTO warehouses (kode_gudang, nama_gudang, lahan_id, lokasi)
            VALUES (?, ?, ?, ?)`,
-          [`GDG-LHN-${seq}`, `Gudang ${l.nama_lahan}`, l.id, l.lokasi_desa || null]
+          [kodeGudang, `Gudang ${l.nama_lahan}`, l.id, l.lokasi_desa || null]
         );
-        console.log(`✓ Gudang auto-create untuk lahan "${l.nama_lahan}" (GDG-LHN-${seq}).`);
+        console.log(`✓ Gudang auto-create untuk lahan "${l.nama_lahan}" (${kodeGudang}).`);
       }
     }
   } catch (e) { console.warn('⚠ Backfill gudang dilewati:', e.message); }
@@ -630,9 +733,9 @@ export async function initDatabase() {
     "<svg xmlns='http://www.w3.org/2000/svg' width='600' height='800' viewBox='0 0 600 800'><rect width='600' height='800' fill='#FFF8F0'/><rect x='30' y='30' width='540' height='740' rx='16' fill='#ffffff' stroke='#2C4219' stroke-width='4'/><rect x='70' y='70' width='460' height='96' rx='14' fill='#C3E28D'/><text x='300' y='140' font-family='Arial' font-size='34' font-weight='bold' fill='#172C05' text-anchor='middle'>SERTIFIKAT</text><text x='300' y='200' font-family='Arial' font-size='22' fill='#2C4219' text-anchor='middle'>Produk Olahan Sorgum KWT</text><text x='300' y='430' font-family='Arial' font-size='20' fill='#9CA3AF' text-anchor='middle'>Dokumen PDF legalitas</text><text x='300' y='464' font-family='Arial' font-size='16' fill='#B9BFc4' text-anchor='middle'>Unduh untuk melihat isi dokumen</text><rect x='150' y='560' width='300' height='56' rx='12' fill='#2C4219'/><text x='300' y='598' font-family='Arial' font-size='20' font-weight='bold' fill='#C3E28D' text-anchor='middle'>SORGUM SCM</text></svg>";
   const docPlaceholder = 'data:image/svg+xml,' + encodeURIComponent(docSvg);
 
-  // Seed sertifikat awal
+  // Seed sertifikat awal (DINONAKTIFKAN — user minta data kosong)
   const [cCount] = await pool.query('SELECT COUNT(*) AS total FROM certificates');
-  if (Number(cCount[0].total) === 0) {
+  if (false && Number(cCount[0].total) === 0) {
     const seedCerts = [
       ['CERT-001', 'Sertifikat Halal Produk Olahan Sorgum BPJPH', 'BPJPH Kementerian Agama RI & LPPOM MUI', 'ID311100012948120323', '12 Maret 2024', '12 Maret 2028', 'AKTIF', 'Sertifikat Halal', docPlaceholder, 'Sertifikat_Halal_BPJPH_2024', 'image', 'Mencakup Tepung Sorgum, Rengginang, dan Gula Cair Sorgum KWT Mitra.'],
       ['CERT-002', 'Izin Edar P-IRT Tepung & Olahan Sorgum', 'Dinas Kesehatan & PTSP Kabupaten Sleman', 'P-IRT 2063404010892-28', '05 Januari 2023', '05 Januari 2028', 'AKTIF', 'Izin P-IRT', docPlaceholder, 'Izin_PIRT_Sleman_2023', 'image', 'Kelayakan hygiene saniter tempat produksi dan standar kemasan kedap udara.'],
@@ -709,9 +812,9 @@ export async function initDatabase() {
     console.warn('⚠ Migrasi extra_data kemasan dilewati:', extraErr.message);
   }
 
-  // Seed kemasan awal
+  // Seed kemasan awal (DINONAKTIFKAN — user minta data kosong)
   const [pkCount] = await pool.query('SELECT COUNT(*) AS total FROM packaging_materials');
-  if (Number(pkCount[0].total) === 0) {
+  if (false && Number(pkCount[0].total) === 0) {
     // Placeholder foto (data URL base64 1x1 transparan) supaya semua data dummy punya foto
     const dummyFoto =
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -800,9 +903,9 @@ export async function initDatabase() {
   `);
   console.log('✓ Tabel "logistics_expenses" siap.');
 
-  // Seed logistik awal
+  // Seed logistik awal (DINONAKTIFKAN — user minta data kosong)
   const [lCount2] = await pool.query('SELECT COUNT(*) AS total FROM logistics_expenses');
-  if (Number(lCount2[0].total) === 0) {
+  if (false && Number(lCount2[0].total) === 0) {
     const seedExpenses = [
       ['LOG-TRX-001', '14 Mei 2026', 'Bahan Baku', 'Beli Pupuk Organik / CV BioTech Agriculture', 3500000, 'LUNAS', 'Transfer Bank', 'INV/BIOTECH/2026/05/112', 'Pembelian 50 karung pupuk kompos organik terverifikasi SNI.', JSON.stringify([{ nama: 'Pupuk Kompos Granul Organik 25kg', qty: 40, hargaSatuan: 70000 }, { nama: 'Pupuk Hayati Cair Bio-Activator 5L', qty: 7, hargaSatuan: 100000 }]), 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80'],
       ['LOG-TRX-002', '12 Mei 2026', 'Transportasi', 'Sewa Truk Distribusi Hasil Panen / Jasa Angkut Sleman', 1200000, 'PENDING', 'Transfer Bank', 'NOTA-JSA-8812', 'Pengangkutan 4.5 ton hasil panen sorgum basah dari Lahan A ke Rumah Pengeringan.', JSON.stringify([{ nama: 'Jasa Sewa Truk Colt Diesel 6-Roda', qty: 1, hargaSatuan: 1000000 }, { nama: 'Biaya Bongkar Muat Tenaga Kerja', qty: 4, hargaSatuan: 50000 }]), 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&w=600&q=80'],
@@ -836,9 +939,9 @@ export async function initDatabase() {
   `);
   console.log('✓ Tabel "notifications" siap.');
 
-  // Seed notifikasi awal
+  // Seed notifikasi awal (DINONAKTIFKAN — user minta data kosong)
   const [nCount] = await pool.query('SELECT COUNT(*) AS total FROM notifications');
-  if (Number(nCount[0].total) === 0) {
+  if (false && Number(nCount[0].total) === 0) {
     const seedNotif = [
       ['Sertifikat Halal Diperbarui', 'BPJPH No. ID31110001294812 berstatus AKTIF.', 'sertifikat', 0],
       ['Pencatatan Panen Sektor C', 'Hasil panen 1.850 kg sorgum varietas Bioguma berhasil diinput.', 'panen', 0],
@@ -867,9 +970,9 @@ export async function initDatabase() {
   `);
   console.log('✓ Tabel "api_keys" siap.');
 
-  // Seed 1 API key demo saat tabel kosong
+  // Seed 1 API key demo saat tabel kosong (DINONAKTIFKAN — user minta data kosong)
   const [kCount] = await pool.query('SELECT COUNT(*) AS total FROM api_keys');
-  if (Number(kCount[0].total) === 0) {
+  if (false && Number(kCount[0].total) === 0) {
     const crypto = await import('crypto');
     const demoKey = `sk-${crypto.randomBytes(24).toString('hex')}`;
     await pool.execute(

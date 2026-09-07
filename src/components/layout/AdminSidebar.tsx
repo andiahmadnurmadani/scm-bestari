@@ -23,6 +23,7 @@ import {
   Headphones,
   ChevronLeft,
   ChevronRight,
+  Boxes,
 } from 'lucide-react';
 import { authApi } from '../../api/endpoints/authApi';
 import { Modal } from '../common/Modal';
@@ -67,14 +68,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, end: true },
     { label: 'Panen', path: '/dashboard/panen', icon: Sprout },
-    { label: 'Kelola Lahan', path: '/dashboard/lahan', icon: Tractor },
+    { label: 'Kelola Lahan & Tanaman', path: '/dashboard/lahan', icon: Tractor },
+    { label: 'Gudang', path: '/dashboard/gudang', icon: Warehouse },
     { label: 'Sarana & Peralatan', path: '/dashboard/peralatan', icon: Wrench },
     { label: 'Kelola Olahan', path: '/dashboard/produksi', icon: Factory },
     { label: 'Kelola Sertifikat', path: '/dashboard/sertifikat', icon: Award },
     { label: 'Kelola Data Kemasan', path: '/dashboard/kemasan', icon: Package },
-    { label: 'Gudang', path: '/dashboard/gudang', icon: Warehouse },
     { label: 'Logistik', path: '/dashboard/logistik', icon: Truck },
     { label: 'Varietas Sorgum', path: '/dashboard/master/varietas', icon: Database },
+    { label: 'Produk Olahan', path: '/dashboard/master/produk', icon: Boxes },
   ];
 
   const sidebarContent = (
@@ -246,7 +248,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <div className="bg-white rounded-xl border border-[#c4c8bb]/20 overflow-hidden">
               <div className="px-4 py-2.5 bg-[#F7F7F5] border-b border-[#c4c8bb]/15 flex items-center gap-2">
                 <Tractor className="w-4 h-4 text-[#2C4219]" />
-                <span className="text-xs font-bold text-[#2C4219]">Kelola Lahan</span>
+                <span className="text-xs font-bold text-[#2C4219]">Kelola Lahan & Tanaman</span>
               </div>
               <ol className="px-4 py-3 space-y-1.5 text-xs list-decimal pl-8">
                 <li>Klik <b>Tambah Lahan Baru</b> untuk mendaftarkan blok lahan baru.</li>

@@ -1,4 +1,5 @@
 import { getPool } from '../config/db.js';
+import { slugNama, tanggalKode, kodeUnik, buatCekAda, toISODate } from '../utils/kodeUtil.js';
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -9,7 +10,7 @@ function mapRowToHarvest(row) {
     kodePanen: row.kode_panen,
     namaLahan: row.nama_lahan,
     varietas: row.varietas,
-    tanggalPanen: row.tanggal_panen,
+    tanggalPanen: toISODate(row.tanggal_panen),
     jumlahHasilKg: Number(row.jumlah_hasil_kg),
     kualitasGrade: row.kualitas_grade,
     petaniPenanggungJawab: row.petani_penanggung_jawab,
@@ -21,7 +22,10 @@ function mapRowToHarvest(row) {
     periodeHari: row.periode_hari != null ? Number(row.periode_hari) : null,
     // lineage tambahan (jika JOIN)
     lahan: row.lahan_id ? { id: String(row.lahan_id), kodeLahan: row.kode_lahan, namaLahan: row.l_nama_lahan, lokasiDesa: row.lokasi_desa, luasHektar: row.luas_hektar != null ? Number(row.luas_hektar) : null } : null,
-    planting: row.planting_id ? { id: String(row.planting_id), kodeTanam: row.kode_tanam, tanggalTanam: row.tanggal_tanam ? String(row.tanggal_tanam).slice(0,10) : null, estimasiPanen: row.estimasi_panen ? String(row.estimasi_panen).slice(0,10) : null, varietas: row.p_varietas, jumlahLubang: row.jumlah_lubang != null ? Number(row.jumlah_lubang) : null, petugas: row.petugas } : null,
+    planting: row.planting_id ? { id: String(row.planting_id), kodeTanam: row.kode_tanam, tanggalTanam: toISODate(row.tanggal_tanam), estimasiPanen: toISODate(row.estimasi_panen), varietas: row.p_varietas, jumlahLubang: row.jumlah_lubang != null ? Number(row.jumlah_lubang) : null, petugas: row.petugas } : null,
+    // status stok gudang
+    sudahMasukKg: row.sudah_masuk_kg != null ? Number(row.sudah_masuk_kg) : 0,
+    sisaBelumMasukKg: row.sisa_belum_masuk_kg != null ? Number(row.sisa_belum_masuk_kg) : null,
     createdAt: row.created_at,
   };
 }
@@ -64,17 +68,31 @@ function fmtTanggalStok(t) {
   return `${y}-${m}-${day}`;
 }
 
+// Format DATETIME lokal 'YYYY-MM-DD HH:mm:ss' (jam masuk = waktu sekarang jika kosong)
+function fmtDateTimeStok(t) {
+  const d = t ? new Date(t) : new Date();
+  if (isNaN(d.getTime())) return new Date().toISOString().slice(0, 10);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 /**
  * Sinkronkan stok gudang lahan untuk sebuah panen (Opsi B: 1 panen → banyak batch).
  * - Hapus batch stok lama milik panen ini & kembalikan sisa ke stok gudang.
  * - Buat batch baru sesuai array `stokBatch` [{ jumlahKg, keterangan }].
  * - Jika `stokBatch` kosong/tidak dikirim → otomatis 1 batch penuh.
  */
-async function replaceHarvestStockBatches(pool, { harvestId, lahanId, kodePanen, tanggalPanen, stokBatch, qtyPanenKg }) {
-  if (!lahanId) return;
-  const [wg] = await pool.execute('SELECT id FROM warehouses WHERE lahan_id = ? LIMIT 1', [lahanId]);
-  if (!wg.length) return;
-  const gudangId = wg[0].id;
+async function replaceHarvestStockBatches(pool, { harvestId, lahanId, kodePanen, tanggalPanen, stokBatch, qtyPanenKg, gudangId }) {
+  if (!lahanId && !gudangId) return;
+  // Default: gudang sesuai lahan. Bila user pilih gudang lain → pakai pilihan itu.
+  let gudangTujuan = gudangId ? Number(gudangId) : null;
+  if (!gudangTujuan && lahanId) {
+    const [wg] = await pool.execute('SELECT id FROM warehouses WHERE lahan_id = ? LIMIT 1', [lahanId]);
+    if (!wg.length) return;
+    gudangTujuan = wg[0].id;
+  }
+  if (!gudangTujuan) return;
+  const gudangIdAkhir = gudangTujuan;
 
   // 1. Hapus batch lama milik panen ini & kembalikan sisa stok
   const [oldBatches] = await pool.execute(
@@ -91,34 +109,42 @@ async function replaceHarvestStockBatches(pool, { harvestId, lahanId, kodePanen,
   }
   await pool.execute('DELETE FROM warehouse_movements WHERE harvest_id = ?', [harvestId]);
 
-  // 2. Buat batch baru
-  const rows = Array.isArray(stokBatch) && stokBatch.length > 0
-    ? stokBatch
-    : [{ jumlahKg: qtyPanenKg, keterangan: '' }];
+  // 2. Buat batch baru HANYA jika stokBatch berisi (kosong/undefined → tidak masuk gudang, bisa diisi nanti via Gudang → Stok Masuk)
+  const rows = Array.isArray(stokBatch)
+    ? stokBatch.filter((r) => Number(r.jumlahKg) > 0)
+    : [];
+  if (rows.length === 0) {
+    console.log(`✓ ${kodePanen}: tidak ada batch stok (belum masuk gudang).`);
+    return;
+  }
 
   for (const r of rows) {
     const qty = Number(r.jumlahKg);
     if (!qty || qty <= 0) continue;
-    const [countRows] = await pool.execute('SELECT COUNT(*) AS total FROM warehouse_stock_batches');
-    const seq = Number(countRows[0].total) + 1;
-    const kodeBatchStok = `STK-${String(seq).padStart(3, '0')}`;
-    const tgl = fmtTanggalStok(tanggalPanen);
+    // Kode batch gabah bermakna: GAB-<kode panen> (pecahan → -02, -03, dst), konsisten dgn Stok Masuk
+    const kodeBatchStok = await kodeUnik(
+      (seq) => (seq === 1
+        ? `GAB-${kodePanen}`
+        : `GAB-${kodePanen}-${String(seq).padStart(2, '0')}`),
+      buatCekAda(pool, 'warehouse_stock_batches', 'kode_batch_stok')
+    );
+    const tgl = fmtDateTimeStok(null); // jam masuk = waktu input sekarang
     await pool.execute(
-      `INSERT INTO warehouse_stock_batches (gudang_id, harvest_id, kode_batch_stok, jumlah_masuk_kg, sisa_kg, tanggal_masuk)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [gudangId, harvestId, kodeBatchStok, qty, qty, tgl]
+      `INSERT INTO warehouse_stock_batches (gudang_id, harvest_id, kode_batch_stok, jumlah_masuk_kg, sisa_kg, tanggal_masuk, jenis)
+       VALUES (?, ?, ?, ?, ?, ?, 'GABAH')`,
+      [gudangIdAkhir, harvestId, kodeBatchStok, qty, qty, tgl]
     );
     await pool.execute(
       'UPDATE warehouses SET total_stok_kg = total_stok_kg + ? WHERE id = ?',
-      [qty, gudangId]
+      [qty, gudangIdAkhir]
     );
     await pool.execute(
       `INSERT INTO warehouse_movements (gudang_id, tipe, jumlah_kg, keterangan, harvest_id)
        VALUES (?, 'MASUK', ?, ?, ?)`,
-      [gudangId, qty, `${r.keterangan ? r.keterangan + ' — ' : ''}${kodePanen}`, harvestId]
+      [gudangIdAkhir, qty, `${r.keterangan ? r.keterangan + ' — ' : ''}${kodePanen}`, harvestId]
     );
   }
-  console.log(`✓ Stok gudang ${gudangId} disinkronkan untuk ${kodePanen} (${rows.length} batch).`);
+  console.log(`✓ Stok gudang ${gudangIdAkhir} disinkronkan untuk ${kodePanen} (${rows.length} batch).`);
 }
 
 // ── Controller: Daftar Panen (dengan pagination) ──────────────────────────────
@@ -195,7 +221,8 @@ export async function getHarvests(req, res) {
       `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
               h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
-              p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas
+              p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
+              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
        FROM harvests h
        LEFT JOIN lands l ON h.lahan_id = l.id
        LEFT JOIN plantings p ON h.planting_id = p.id
@@ -245,20 +272,25 @@ export async function getHarvestById(req, res) {
 
     const data = mapRowToHarvest(rows[0]);
 
-    // Sertakan batch stok gudang milik panen ini (untuk prefill edit)
+    // Sertakan batch stok gudang milik panen ini (untuk prefill edit & info gudang)
     const [stocks] = await getPool().execute(
-      `SELECT id, gudang_id, harvest_id, kode_batch_stok, jumlah_masuk_kg, sisa_kg, tanggal_masuk
-       FROM warehouse_stock_batches WHERE harvest_id = ? ORDER BY id ASC`,
+      `SELECT sb.id, sb.gudang_id, sb.harvest_id, sb.kode_batch_stok, sb.jenis, sb.jumlah_masuk_kg, sb.sisa_kg, sb.tanggal_masuk,
+              w.kode_gudang, w.nama_gudang
+       FROM warehouse_stock_batches sb
+       LEFT JOIN warehouses w ON sb.gudang_id = w.id
+       WHERE sb.harvest_id = ? ORDER BY sb.id ASC`,
       [req.params.id]
     );
     data.stockBatches = stocks.map((s) => ({
       id: String(s.id),
       gudangId: String(s.gudang_id),
+      gudang: s.gudang_id ? { id: String(s.gudang_id), kodeGudang: s.kode_gudang, namaGudang: s.nama_gudang } : null,
       harvestId: s.harvest_id != null ? String(s.harvest_id) : null,
       kodeBatchStok: s.kode_batch_stok,
+      jenis: s.jenis || 'GABAH',
       jumlahMasukKg: Number(s.jumlah_masuk_kg || 0),
       sisaKg: Number(s.sisa_kg || 0),
-      tanggalMasuk: s.tanggal_masuk ? String(s.tanggal_masuk).slice(0, 10) : null,
+      tanggalMasuk: toISODate(s.tanggal_masuk),
     }));
 
     return res.status(200).json({ success: true, data });
@@ -293,17 +325,23 @@ export async function createHarvest(req, res) {
       // validasi planting milik lahan
       if (lahanId && Number(pr[0].lahan_id) !== Number(lahanId)) return res.status(400).json({ success: false, message: 'Penanaman tidak sesuai dengan lahan yang dipilih.' });
     }
+    // ambil nama lahan dari lahan (untuk kode panen bermakna)
+    let namaLahan = null;
     if (lahanId) {
-      const [lr] = await pool.execute('SELECT id FROM lands WHERE id=? LIMIT 1', [lahanId]);
+      const [lr] = await pool.execute('SELECT id, nama_lahan FROM lands WHERE id=? LIMIT 1', [lahanId]);
       if (!lr.length) return res.status(400).json({ success: false, message: 'Lahan tidak ditemukan.' });
+      namaLahan = lr[0].nama_lahan;
     }
 
-    // Buat kode panen otomatis bila tidak disertakan
+    // Buat kode panen otomatis bila tidak disertakan: LUS-10092026-01 (slug nama lahan)
     let kodePanen = String(data.kodePanen || '').trim();
     if (!kodePanen) {
-      const [countRows] = await pool.execute('SELECT COUNT(*) AS total FROM harvests');
-      const seq = Number(countRows[0].total) + 1;
-      kodePanen = `PANEN-${new Date().getFullYear()}-${String(seq).padStart(3, '0')}`;
+      const slug = slugNama(namaLahan);
+      const tgl = tanggalKode(data.tanggalPanen);
+      kodePanen = await kodeUnik(
+        (seq) => `${slug}-${tgl}-${String(seq).padStart(2, '0')}`,
+        buatCekAda(pool, 'harvests', 'kode_panen')
+      );
     }
 
     const periodeHari = calcPeriode(tanggalTanamForPeriode, data.tanggalPanen);
@@ -353,6 +391,7 @@ export async function createHarvest(req, res) {
         tanggalPanen: data.tanggalPanen,
         stokBatch: data.stokBatch,
         qtyPanenKg: Number(data.jumlahHasilKg),
+        gudangId: data.gudangId || undefined,
       });
     } catch (e) { console.warn('⚠ Stok masuk gudang dilewati:', e.message); }
 
@@ -439,6 +478,7 @@ export async function updateHarvest(req, res) {
         tanggalPanen: cur[0]?.tanggal_panen,
         stokBatch: data.stokBatch,
         qtyPanenKg: Number(cur[0]?.jumlah_hasil_kg || 0),
+        gudangId: data.gudangId || undefined,
       });
     } catch (e) { console.warn('⚠ Sinkron stok gudang saat update dilewati:', e.message); }
 

@@ -16,7 +16,7 @@ export function parseTanggal(value: string | null | undefined): Date | null {
   const s = String(value).trim();
   if (!s) return null;
 
-  // ISO (YYYY-MM-DD atau YYYY-MM-DDTHH:mm:ss)
+  // ISO (YYYY-MM-DD atau YYYY-MM-DDTHH:mm:ss atau YYYY-MM-DD HH:mm:ss)
   const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/);
   if (iso) {
     const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
@@ -60,6 +60,29 @@ export function formatTanggalId(
     month: 'long',
     year: 'numeric',
   });
+}
+
+/** Ambil jam 'HH:mm' dari string tanggal (jika ada). */
+function extractJam(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const m = String(value).match(/(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  return `${m[1].padStart(2, '0')}:${m[2]}`;
+}
+
+/**
+ * Format tanggal + jam ke teks Indonesia: 'Rabu, 2 September 2025 • 14:30'.
+ * Jika tidak ada jam, atau jam-nya 00:00 (data lama tanpa info jam), hanya tanggal.
+ */
+export function formatDateTimeId(
+  value: string | null | undefined,
+  opts: { weekday?: boolean } = {}
+): string {
+  const tgl = formatTanggalId(value, { weekday: opts.weekday ?? true });
+  if (tgl === '-') return '-';
+  const jam = extractJam(value);
+  if (!jam || jam === '00:00') return tgl;
+  return `${tgl} • ${jam}`;
 }
 
 /** Konversi tanggal (format apa pun) ke nilai untuk <input type="date">: 'YYYY-MM-DD'. */

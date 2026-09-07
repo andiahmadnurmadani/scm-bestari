@@ -1,4 +1,5 @@
 import { getPool } from '../config/db.js';
+import { slugNama, tanggalKode, kodeUnik, buatCekAda } from '../utils/kodeUtil.js';
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -136,12 +137,15 @@ export async function createLand(req, res) {
 
     const pool = getPool();
 
-    // Buat kode lahan otomatis bila tidak disertakan
+    // Buat kode lahan otomatis bila tidak disertakan: LUS-03092026 (3 huruf awal nama lahan + tgl daftar)
     let kodeLahan = String(data.kodeLahan || '').trim();
     if (!kodeLahan) {
-      const [countRows] = await pool.execute('SELECT COUNT(*) AS total FROM lands');
-      const seq = Number(countRows[0].total) + 1;
-      kodeLahan = `BLK-LHN-${String(seq).padStart(2, '0')}`;
+      const slug = slugNama(data.namaLahan);
+      const tgl = tanggalKode(new Date()); // tanggal daftar hari ini
+      kodeLahan = await kodeUnik(
+        (seq) => (seq === 1 ? `${slug}-${tgl}` : `${slug}-${tgl}-${String(seq).padStart(2, '0')}`),
+        buatCekAda(pool, 'lands', 'kode_lahan')
+      );
     }
 
     const [result] = await pool.execute(
@@ -178,17 +182,21 @@ export async function createLand(req, res) {
       [result.insertId]
     );
 
-    // Auto-create gudang untuk lahan baru
+    // Auto-create gudang untuk lahan baru (kode: GDG-<slug nama>-01)
     try {
       const [wg] = await pool.execute('SELECT id FROM warehouses WHERE lahan_id = ? LIMIT 1', [result.insertId]);
       if (wg.length === 0) {
-        const seq = String(result.insertId).padStart(3, '0');
+        const slug = slugNama(data.namaLahan);
+        const kodeGudang = await kodeUnik(
+          (seq) => `GDG-${slug}-${String(seq).padStart(2, '0')}`,
+          buatCekAda(pool, 'warehouses', 'kode_gudang')
+        );
         await pool.execute(
           `INSERT INTO warehouses (kode_gudang, nama_gudang, lahan_id, lokasi)
            VALUES (?, ?, ?, ?)`,
-          [`GDG-LHN-${seq}`, `Gudang ${String(data.namaLahan).trim()}`, result.insertId, String(data.lokasiDesa || '').trim()]
+          [kodeGudang, `Gudang ${String(data.namaLahan).trim()}`, result.insertId, String(data.lokasiDesa || '').trim()]
         );
-        console.log(`✓ Gudang auto-create untuk lahan baru "${data.namaLahan}" (GDG-LHN-${seq}).`);
+        console.log(`✓ Gudang auto-create untuk lahan baru "${data.namaLahan}" (${kodeGudang}).`);
       }
     } catch (e) { console.warn('⚠ Auto-create gudang dilewati:', e.message); }
 

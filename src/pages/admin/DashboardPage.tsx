@@ -167,14 +167,13 @@ export const DashboardPage: React.FC = () => {
 
   // ── Grafik hasil panen per periode ───────────────────────────────────────────
   const chartData = useMemo(() => {
-    if (harvests.length === 0) return { items: [], maxTonase: 1, totalLabel: '0 Ton' };
+    if (harvests.length === 0) return { items: [], maxKg: 1, totalKg: 0 };
 
-    const buckets = new Map<string, { label: string; tonase: number; sortKey: number }>();
+    const buckets = new Map<string, { label: string; totalKg: number; sortKey: number }>();
 
     for (const h of harvests) {
       const d = parseHarvestDate(h.tanggalPanen);
       const kg = Number(h.jumlahHasilKg || 0);
-      const ton = kg / 1000;
       let key = '';
       let label = '';
       let sortKey = 0;
@@ -194,18 +193,18 @@ export const DashboardPage: React.FC = () => {
         sortKey = d.getFullYear();
       }
 
-      if (!buckets.has(key)) buckets.set(key, { label, tonase: 0, sortKey });
-      buckets.get(key)!.tonase += ton;
+      if (!buckets.has(key)) buckets.set(key, { label, totalKg: 0, sortKey });
+      buckets.get(key)!.totalKg += kg;
     }
 
     const items = [...buckets.values()]
       .sort((a, b) => a.sortKey - b.sortKey)
-      .map((b) => ({ label: b.label, tonase: Math.round(b.tonase * 10) / 10 }));
+      .map((b) => ({ label: b.label, totalKg: b.totalKg }));
 
-    const maxTonase = Math.max(...items.map((i) => i.tonase), 1);
-    const totalTon = items.reduce((acc, i) => acc + i.tonase, 0);
-    return { items, maxTonase, totalLabel: `${Math.round(totalTon)} ${beratSuffix}` };
-  }, [harvests, timeFilter, beratSuffix]);
+    const maxKg = Math.max(...items.map((i) => i.totalKg), 1);
+    const totalKg = items.reduce((acc, i) => acc + i.totalKg, 0);
+    return { items, maxKg, totalKg };
+  }, [harvests, timeFilter]);
 
   const currentChart = chartData;
 
@@ -215,7 +214,7 @@ export const DashboardPage: React.FC = () => {
     const maxVal = Math.max(...landStats.entries.map(([, v]) => v), 1);
     return landStats.entries.slice(0, 5).map(([nama, kg]) => ({
       nama,
-      ton: Math.round((kg / 1000) * 10) / 10,
+      kg,
       percent: Math.max(8, Math.round((kg / maxVal) * 100)),
     }));
   }, [landStats]);
@@ -374,14 +373,14 @@ export const DashboardPage: React.FC = () => {
             ) : (
             <div className="h-60 sm:h-64 flex items-end justify-between gap-3 sm:gap-6 px-2 border-b border-[#c4c8bb]/30 pb-2">
               {currentChart.items.map((item, idx) => {
-                const isHighest = item.tonase === currentChart.maxTonase && currentChart.items.length > 1;
-                const heightPercent = Math.max(4, (item.tonase / currentChart.maxTonase) * 100);
+                const isHighest = item.totalKg === currentChart.maxKg && currentChart.items.length > 1;
+                const heightPercent = Math.max(4, (item.totalKg / currentChart.maxKg) * 100);
                 return (
                   <div key={item.label} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
                     <div className="w-full flex items-end justify-center h-full relative">
                       {isHighest && (
                         <div className="absolute -top-8 bg-[#2C4219] text-[#C3E28D] text-[10px] font-black px-2 py-0.5 rounded-md whitespace-nowrap shadow-xs animate-bounce z-10">
-                          Puncak ({formatBerat(item.tonase * 1000)})
+                          Puncak ({formatBerat(item.totalKg)})
                         </div>
                       )}
                       <div
@@ -394,7 +393,7 @@ export const DashboardPage: React.FC = () => {
                       >
                         {/* Hover Tooltip */}
                         <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 bg-[#221A12] text-white text-[11px] font-bold py-1 px-2.5 rounded-lg whitespace-nowrap z-20 transition-opacity shadow-lg">
-                          {formatBerat(item.tonase * 1000)}
+                          {formatBerat(item.totalKg)}
                         </div>
                       </div>
                     </div>
@@ -411,7 +410,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             )}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-[11px] text-[#74796d] font-semibold mt-3 px-2 gap-1">
-              <span>Total {currentChart.totalLabel} tercatat di sistem</span>
+              <span>Total {formatBerat(currentChart.totalKg)} tercatat di sistem</span>
               <span className="flex items-center gap-2">
                 <span className="inline-block w-3 h-3 bg-[#2C4219] rounded-xs" /> Puncak
                 <span className="inline-block w-3 h-3 bg-[#A8B774] rounded-xs" /> Reguler
@@ -455,7 +454,7 @@ export const DashboardPage: React.FC = () => {
                     <div key={item.nama} className="space-y-1">
                       <div className="flex items-center justify-between text-xs font-bold">
                         <span className="text-[#221A12] truncate pr-2">{item.nama}</span>
-                        <span className="text-[#2C4219] font-bold whitespace-nowrap">{item.ton} Ton</span>
+                        <span className="text-[#2C4219] font-bold whitespace-nowrap">{formatBerat(item.kg)}</span>
                       </div>
                       <div className="w-full h-2 bg-[#efe0d2]/60 rounded-full overflow-hidden">
                         <div

@@ -9,6 +9,7 @@ import { initDatabase } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import harvestRoutes from './routes/harvestRoutes.js';
 import varietyRoutes from './routes/varietyRoutes.js';
+import productRoutes from './routes/productRoutes.js';
 import landRoutes from './routes/landRoutes.js';
 import plantingRoutes from './routes/plantingRoutes.js';
 import equipmentRoutes from './routes/equipmentRoutes.js';
@@ -20,6 +21,7 @@ import cmsRoutes from './routes/cmsRoutes.js';
 import notificationsRoutes from './routes/notificationsRoutes.js';
 import apiKeyRoutes from './routes/apiKeyRoutes.js';
 import warehouseRoutes from './routes/warehouseRoutes.js';
+import publicRoutes from './routes/publicRoutes.js';
 import { openApiSpec } from './openapi.js';
 import { apiReference } from '@scalar/express-api-reference';
 import { seedHarvests } from './seeders/seedHarvests.js';
@@ -55,6 +57,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/harvest', harvestRoutes);
 app.use('/api/varieties', varietyRoutes);
+app.use('/api/products', productRoutes);
 app.use('/api/land', landRoutes);
 app.use('/api/plantings', plantingRoutes);
 app.use('/api/equipment', equipmentRoutes);
@@ -66,6 +69,7 @@ app.use('/api/cms', cmsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/keys', apiKeyRoutes);
 app.use('/api/warehouse', warehouseRoutes);
+app.use('/api/public', publicRoutes);
 
 // ── Dokumentasi API (Scalar) ─────────────────────────────────────────────────
 app.use(

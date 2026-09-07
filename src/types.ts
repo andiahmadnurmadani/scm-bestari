@@ -84,12 +84,15 @@ export interface HarvestRecord {
   stockBatches?: {
     id: string;
     gudangId: string;
+    gudang?: { id: string; kodeGudang: string; namaGudang: string } | null;
     harvestId: string | null;
     kodeBatchStok: string;
     jumlahMasukKg: number;
     sisaKg: number;
     tanggalMasuk: string | null;
   }[];
+  sudahMasukKg?: number;
+  sisaBelumMasukKg?: number | null;
 }
 
 export interface LandPlot {
@@ -116,7 +119,8 @@ export interface ProductionBatch {
   id: string;
   kodeBatch: string;
   namaProduk: string;
-  kategori: 'Ready to Eat (Siap Konsumsi)' | 'Raw (Bahan Mentah)' | 'Lainnya' | string;
+  kategori?: 'Ready to Eat (Siap Konsumsi)' | 'Raw (Bahan Mentah)' | 'Lainnya' | string; // legacy — tidak dipakai lagi
+  productId?: string | null;
   tanggalProduksi: string;
   tanggalKadaluarsa: string;
   jumlahHasil: number;
@@ -131,9 +135,12 @@ export interface ProductionBatch {
   plantingId?: string | null;
   harvestId?: string | null;
   gudangId?: string | null;
+  stockBatchId?: string | null;
   lahan?: { id: string; kodeLahan: string; namaLahan: string } | null;
   planting?: Planting | null;
   harvest?: HarvestRecord | null;
+  gudang?: { id: string; kodeGudang: string; namaGudang: string } | null;
+  stockBatch?: { id: string; kodeBatchStok: string; jenis?: 'GABAH' | 'SORGUM'; asalBatch?: { kodeBatchStok: string } | null } | null;
 }
 
 export interface Certificate {
@@ -204,11 +211,13 @@ export interface Warehouse {
   namaGudang: string;
   lahanId: string | null;
   lokasi: string;
-  kapasitasKg: number | null;
   totalStokKg: number;
+  stokGabahKg?: number;
+  stokSorgumKg?: number;
   lahan?: { id: string; kodeLahan: string; namaLahan: string; lokasiDesa: string } | null;
   stockBatches?: WarehouseStockBatch[];
   movements?: WarehouseMovement[];
+  sosohList?: SosohProcess[];
   createdAt?: string;
 }
 
@@ -216,12 +225,30 @@ export interface WarehouseStockBatch {
   id: string;
   gudangId: string;
   harvestId: string | null;
+  jenis: 'GABAH' | 'SORGUM';
+  asalBatchId?: string | null;
   kodeBatchStok: string;
   jumlahMasukKg: number;
   sisaKg: number;
   tanggalMasuk: string | null;
+  tanggalSosoh?: string | null;
+  operatorSosoh?: string | null;
+  asalBatch?: { id: string; kodeBatchStok: string; jumlahMasukKg: number | null } | null;
   harvest?: { id: string; kodePanen: string; tanggalPanen: string | null; varietas: string } | null;
   createdAt?: string;
+}
+
+export interface SosohProcess {
+  id: string;
+  kodeSosoh: string;
+  kodeBatchGabah: string | null;
+  kodeBatchSorgum: string | null;
+  kgGabah: number;
+  kgSorgum: number;
+  rendemen: number;
+  operator: string | null;
+  keterangan: string | null;
+  createdAt: string | null;
 }
 
 export interface WarehouseMovement {
@@ -232,8 +259,10 @@ export interface WarehouseMovement {
   keterangan: string;
   harvestId: string | null;
   productionId: string | null;
+  stockBatchId?: string | null;
   kodePanen?: string | null;
   kodeBatch?: string | null;
+  kodeBatchStok?: string | null;
   namaProduk?: string | null;
   createdAt?: string;
 }
