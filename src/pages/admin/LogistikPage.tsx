@@ -776,7 +776,7 @@ export const LogistikPage: React.FC = () => {
         onClose={() => setAddExpenseModalOpen(false)}
         title={editingExpenseId ? 'Edit Transaksi Pengeluaran' : 'Catat Transaksi Pengeluaran Baru'}
         subtitle={editingExpenseId ? 'Perbarui data biaya pengeluaran' : 'Lengkapi data biaya pengeluaran'}
-        maxWidth="6xl"
+        maxWidth="4xl"
         footer={
           <>
             <Button type="button" variant="outline" onClick={() => setAddExpenseModalOpen(false)} className="px-6 py-3 text-sm">Batal</Button>

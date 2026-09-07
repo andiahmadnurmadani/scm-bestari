@@ -938,7 +938,7 @@ export const LahanPage: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         title={editingPlot ? 'Edit Data Lahan' : 'Tambah Lahan Baru'}
         subtitle={editingPlot ? 'Perbarui data lahan' : 'Lengkapi data lahan baru'}
-        maxWidth="6xl"
+        maxWidth="4xl"
         footer={
           <>
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-sm">Batal</Button>

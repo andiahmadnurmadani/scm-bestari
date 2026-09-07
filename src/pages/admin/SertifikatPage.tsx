@@ -634,7 +634,7 @@ export const SertifikatPage: React.FC = () => {
         onClose={() => setFormModalOpen(false)}
         title={editId ? 'Edit Dokumen Sertifikat' : 'Unggah Sertifikat Legalitas Baru'}
         subtitle={editId ? 'Perbarui data dokumen sertifikat' : 'Lengkapi data dokumen sertifikat'}
-        maxWidth="6xl"
+        maxWidth="4xl"
         footer={
           <>
             <Button type="button" variant="outline" onClick={() => setFormModalOpen(false)} className="px-6 py-3 text-sm">Batal</Button>

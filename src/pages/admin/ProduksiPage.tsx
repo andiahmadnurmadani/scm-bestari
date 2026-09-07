@@ -471,7 +471,7 @@ export const ProduksiPage: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         title={editId ? 'Edit Batch Olahan' : 'Catat Batch Olahan Baru'}
         subtitle={editId ? 'Perbarui data batch olahan' : 'Lengkapi data batch olahan sorgum'}
-        maxWidth="6xl"
+        maxWidth="4xl"
         footer={
           <>
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-sm">Batal</Button>

@@ -1205,7 +1205,7 @@ export const PanenPage: React.FC = () => {
         }}
         title={editingId ? 'Edit Data Hasil Panen' : 'Input Data Hasil Panen Baru'}
         subtitle={editingId ? 'Perbarui data panen' : 'Lengkapi data panen sorgum'}
-        maxWidth="6xl"
+        maxWidth="4xl"
         footer={
           <>
             <Button

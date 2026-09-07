@@ -505,7 +505,7 @@ export const PeralatanPage: React.FC = () => {
         onClose={() => setFormModalOpen(false)}
         title={editId ? 'Edit Data Peralatan' : 'Tambah Peralatan Mesin Baru'}
         subtitle={editId ? 'Perbarui data alat & mesin' : 'Lengkapi data alat & mesin'}
-        maxWidth="6xl"
+        maxWidth="4xl"
         footer={
           <>
             <Button type="button" variant="outline" onClick={() => setFormModalOpen(false)} className="px-6 py-3 text-sm">Batal</Button>
