@@ -67,8 +67,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, end: true },
-    { label: 'Panen', path: '/dashboard/panen', icon: Sprout },
     { label: 'Kelola Lahan & Tanaman', path: '/dashboard/lahan', icon: Tractor },
+    { label: 'Panen', path: '/dashboard/panen', icon: Sprout },
     { label: 'Gudang', path: '/dashboard/gudang', icon: Warehouse },
     { label: 'Sarana & Peralatan', path: '/dashboard/peralatan', icon: Wrench },
     { label: 'Kelola Olahan', path: '/dashboard/produksi', icon: Factory },
