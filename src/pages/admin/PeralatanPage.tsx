@@ -116,6 +116,17 @@ export const PeralatanPage: React.FC = () => {
     });
   }, [equipmentList, filterKey, searchTerm]);
 
+  // Opsi Tempat Penyimpanan (combobox): nilai unik dari data peralatan yang sudah ada.
+  // Bisa dipilih, atau diketik bebas → langsung dipakai sebagai nilai baru.
+  const lokasiOptions = useMemo(() => {
+    const seen = new Set<string>();
+    (equipmentList || []).forEach((item) => {
+      const v = (item.lokasiPenyimpanan || '').trim();
+      if (v) seen.add(v);
+    });
+    return Array.from(seen).sort((a, b) => a.localeCompare(b, 'id'));
+  }, [equipmentList]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -621,11 +632,18 @@ export const PeralatanPage: React.FC = () => {
                 <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Tempat Penyimpanan</label>
                 <input
                   type="text"
+                  list="lokasi-penyimpanan-options"
                   value={formData.lokasiPenyimpanan || ''}
                   onChange={(e) => setFormData({ ...formData, lokasiPenyimpanan: e.target.value })}
                   placeholder="Contoh: Gudang Alat Lahan A (Gubug Tani)"
                   className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
                 />
+                <datalist id="lokasi-penyimpanan-options">
+                  {lokasiOptions.map((opt) => (
+                    <option key={opt} value={opt} />
+                  ))}
+                </datalist>
+                <p className="text-[11px] text-[#9CA3AF] mt-1">Ketik nama baru untuk menyimpan otomatis, atau pilih dari saran yang sudah ada.</p>
               </div>
             </div>
           </div>

@@ -96,6 +96,28 @@ export const warehouseApi = {
       }[];
     };
   },
+  async getAllStockSorgum() {
+    const res = await axiosClient.get('/warehouse/stock-sorgum/all');
+    return res.data as {
+      success: boolean;
+      data: {
+        id: string;
+        gudangId: string;
+        kodeGudang: string;
+        namaGudang: string;
+        namaLahan: string | null;
+        harvestId: string | null;
+        kodeBatchStok: string;
+        jenis: 'GABAH' | 'SORGUM';
+        asalBatch?: { id: string; kodeBatchStok: string } | null;
+        kodePanen: string | null;
+        varietas: string | null;
+        jumlahMasukKg: number;
+        sisaKg: number;
+        tanggalMasuk: string | null;
+      }[];
+    };
+  },
   async getHistory(gudangId: string, params?: { bulan?: string; search?: string; tipe?: 'MASUK' | 'KELUAR' | 'SOSOH'; page?: number; limit?: number }) {
     const res = await axiosClient.get(`/warehouse/${gudangId}/history`, { params });
     return res.data as {

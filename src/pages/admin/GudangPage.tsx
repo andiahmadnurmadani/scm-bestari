@@ -561,8 +561,8 @@ export const GudangPage: React.FC = () => {
               <Combobox
                 options={harvestOptions.map((h) => ({
                   value: h.id,
-                  label: `${h.kodePanen} • ${h.varietas} • sisa ${h.sisaBelumMasukKg} kg`,
-                  searchText: `${h.kodePanen} ${h.varietas} ${h.namaLahan || ''} ${h.sisaBelumMasukKg}`,
+                  label: `${h.kodePanen} • ${h.varietas}`,
+                  searchText: `${h.kodePanen} ${h.varietas} ${h.namaLahan || ''} sisa ${h.sisaBelumMasukKg} kg`,
                 }))}
                 value={stockForm.harvestId}
                 onChange={(v) => setStockForm({ ...stockForm, harvestId: v })}
@@ -662,38 +662,29 @@ export const GudangPage: React.FC = () => {
                   >
                     <History className="w-3.5 h-3.5" /> Riwayat
                   </button>
-                  <div className="flex gap-1 bg-[#F7F7F5] rounded-lg p-0.5">
-                    {(['SEMUA', 'GABAH', 'SORGUM'] as const).map((f) => (
-                      <button
-                        key={f}
-                        onClick={() => setJenisFilter(f)}
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-colors cursor-pointer ${
-                          jenisFilter === f ? 'bg-[#2C4219] text-white shadow-xs' : 'text-[#6B7280] hover:bg-white'
-                        }`}
-                      >
-                        {f === 'SEMUA' ? 'Semua' : f === 'GABAH' ? 'Gabah' : 'Sorgum Sosoh'}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Filter status */}
-                  <div className="flex gap-1 bg-[#F7F7F5] rounded-lg p-0.5">
-                    {([
-                      { key: 'SEMUA', label: 'Semua Status' },
-                      { key: 'TERSEDIA', label: 'Tersedia' },
-                      { key: 'SIAP_SOSOH', label: 'Siap Sosoh' },
-                      { key: 'HABIS', label: 'Habis' },
-                    ] as const).map((f) => (
-                      <button
-                        key={f.key}
-                        onClick={() => setStatusFilter(f.key)}
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-colors cursor-pointer ${
-                          statusFilter === f.key ? 'bg-[#8C5A2B] text-white shadow-xs' : 'text-[#6B7280] hover:bg-white'
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
+                  {/* Dropdown filter jenis stok */}
+                  <select
+                    value={jenisFilter}
+                    onChange={(e) => setJenisFilter(e.target.value as 'SEMUA' | 'GABAH' | 'SORGUM')}
+                    className="px-2.5 py-1.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-[11px] font-bold text-[#172C05] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#2C4219]/30"
+                    title="Filter jenis stok"
+                  >
+                    <option value="SEMUA">Semua Jenis</option>
+                    <option value="GABAH">Gabah</option>
+                    <option value="SORGUM">Sorgum Sosoh</option>
+                  </select>
+                  {/* Dropdown filter status */}
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as 'SEMUA' | 'TERSEDIA' | 'SIAP_SOSOH' | 'HABIS')}
+                    className="px-2.5 py-1.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-[11px] font-bold text-[#172C05] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#2C4219]/30"
+                    title="Filter status stok"
+                  >
+                    <option value="SEMUA">Semua Status</option>
+                    <option value="TERSEDIA">Tersedia</option>
+                    <option value="SIAP_SOSOH">Siap Sosoh</option>
+                    <option value="HABIS">Habis</option>
+                  </select>
                   {/* Filter rentang tanggal masuk */}
                   <div className="flex items-center gap-1.5">
                     <input

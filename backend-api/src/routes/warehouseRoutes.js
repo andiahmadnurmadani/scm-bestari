@@ -11,6 +11,7 @@ import {
   getWarehouseOptions,
   getHarvestOptions,
   getStockBatchesByWarehouse,
+  getAllStockSorgum,
   getWarehouseHistory,
   getBatchTrace,
 } from '../controllers/warehouseController.js';
@@ -24,6 +25,8 @@ router.use(authenticateToken);
 // Opsi gudang (untuk dropdown olahan) — HARUS sebelum /:id
 router.get('/options', getWarehouseOptions);
 router.get('/harvest-options', getHarvestOptions);
+// Semua batch stok SORGUM lintas gudang (dropdown bahan produksi 1 tahap) — HARUS sebelum /:id
+router.get('/stock-sorgum/all', getAllStockSorgum);
 
 // CRUD gudang
 router.get('/', getWarehouses);

@@ -9,7 +9,6 @@ import { useAdminSearch } from '../../components/layout/AdminLayout';
 
 import { useUnitSettings } from '../../context/UnitSettingsContext';
 import { warehouseApi } from '../../api/endpoints/warehouseApi';
-import { WarehouseOption } from '../../types';
 import { Toast } from '../../components/common/Toast';
 import { Combobox } from '../../components/common/Combobox';
 import { formatTanggalId, formatDateTimeId } from '../../utils/dateUtils';
@@ -36,12 +35,16 @@ export const ProduksiPage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Bahan baku: pilih batch stok dari gudang (bukan asal panen)
+  // Bahan baku: pilih batch stok SORGUM langsung (sudah membawa info gudang asal)
   const [selectedStockBatch, setSelectedStockBatch] = useState<{
     id: string;
+    gudangId: string;
+    kodeGudang: string;
+    namaGudang: string;
     kodeBatchStok: string;
     asalBatch?: { id: string; kodeBatchStok: string } | null;
     kodePanen: string | null;
+    varietas?: string | null;
     sisaKg: number;
     tanggalMasuk: string | null;
   } | null>(null);
@@ -65,20 +68,22 @@ export const ProduksiPage: React.FC = () => {
     gudangId: null as any,
   });
 
-  // Daftar gudang untuk pilihan bahan baku
-  const [warehouseOptions, setWarehouseOptions] = useState<WarehouseOption[]>([]);
-  // Batch stok dari gudang terpilih (dropdown bahan)
-  const [stockBatches, setStockBatches] = useState<{
-    id: string;
-    kodeBatchStok: string;
-    jenis?: string;
-    asalBatch?: { id: string; kodeBatchStok: string } | null;
-    harvestId: string | null;
-    kodePanen: string | null;
-    jumlahMasukKg: number;
-    sisaKg: number;
-    tanggalMasuk: string | null;
-  }[]>([]);
+  // Daftar batch stok SORGUM lintas gudang (dropdown bahan — pilih langsung, tanpa pilih gudang dulu)
+  const [allStockSorgum, setAllStockSorgum] = useState<
+    {
+      id: string;
+      gudangId: string;
+      kodeGudang: string;
+      namaGudang: string;
+      namaLahan: string | null;
+      kodeBatchStok: string;
+      asalBatch?: { id: string; kodeBatchStok: string } | null;
+      kodePanen: string | null;
+      varietas: string | null;
+      sisaKg: number;
+      tanggalMasuk: string | null;
+    }[]
+  >([]);
 
   const fetchProduction = async (targetPage = page, search = searchTerm) => {
     setLoading(true);
@@ -116,23 +121,22 @@ export const ProduksiPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, searchTerm]);
 
-  // Muat opsi gudang untuk pilihan bahan baku (batch stok dimuat saat pilih gudang)
+  // Muat semua batch stok SORGUM lintas gudang (dropdown bahan baku langsung pilih batch)
   useEffect(() => {
-    const fetchWarehouses = async () => {
+    const fetchStockSorgum = async () => {
       try {
-        const res = await warehouseApi.getOptions();
-        setWarehouseOptions(res.data || []);
+        const res = await warehouseApi.getAllStockSorgum();
+        setAllStockSorgum(res.data || []);
       } catch {
-        setWarehouseOptions([]);
+        setAllStockSorgum([]);
       }
     };
-    fetchWarehouses();
+    fetchStockSorgum();
   }, []);
 
   const handleOpenAdd = () => {
     setEditId(null);
     setSelectedStockBatch(null);
-    setStockBatches([]);
     setSelectedProductId(null);
     setFormData({
       kodeBatch: '', // dibuat otomatis backend: PRD-<nama lahan>-<tgl produksi>-<urutan>
@@ -156,7 +160,6 @@ export const ProduksiPage: React.FC = () => {
   const handleOpenEdit = (item: ProductionBatch) => {
     setEditId(item.id);
     setSelectedStockBatch(null);
-    setStockBatches([]);
     setFormData({
       ...item,
       jumlahHasil: String(item.jumlahHasil ?? ''),
@@ -167,50 +170,32 @@ export const ProduksiPage: React.FC = () => {
       gudangId: (item as any).gudangId || null,
     });
     setSelectedProductId((item as any).productId || null);
-    // Jika batch stok sudah terhubung, muat daftar batch gudang untuk ditampilkan
-    const gid = (item as any).gudangId;
+    // Batch stok terhubung → cari dari daftar global & tampilkan info gudangnya
     const sbId = (item as any).stockBatchId;
-    if (gid) {
-      warehouseApi.getStockBatches(String(gid)).then((res) => {
-        const list = res.data || [];
-        setStockBatches(list);
-        const match = list.find((b) => String(b.id) === String(sbId));
-        if (match) {
-          setSelectedStockBatch({
-            id: match.id,
-            kodeBatchStok: match.kodeBatchStok,
-            asalBatch: match.asalBatch,
-            kodePanen: match.kodePanen,
-            sisaKg: match.sisaKg,
-            tanggalMasuk: match.tanggalMasuk,
-          });
-        }
-      }).catch(() => {});
+    if (sbId) {
+      const match = allStockSorgum.find((b) => String(b.id) === String(sbId)) || null;
+      if (match) {
+        setSelectedStockBatch(match);
+        setFormData((prev) => ({
+          ...prev,
+          gudangId: match.gudangId || null,
+          stockBatchId: match.id || null,
+          nomorBatchBahanBaku: `${match.kodeBatchStok}${match.asalBatch?.kodeBatchStok ? ` (sosoh dari ${match.asalBatch.kodeBatchStok})` : ''}`,
+        }));
+      }
     }
     setIsModalOpen(true);
   };
 
-  // Pilih gudang → muat batch stok yang masih ada sisa
-  const handleGudangChange = async (gudangId: string) => {
-    setFormData((prev) => ({ ...prev, gudangId: gudangId || (null as any), stockBatchId: null as any }));
-    setSelectedStockBatch(null);
-    setStockBatches([]);
-    if (!gudangId) return;
-    try {
-      const res = await warehouseApi.getStockBatches(gudangId);
-      setStockBatches(res.data || []);
-    } catch {
-      setStockBatches([]);
-    }
-  };
-
-  // Pilih batch stok → isi asal (nomor batch bahan baku) + jumlah bahan otomatis
-  const handleStockBatchChange = (id: string) => {
-    const b = stockBatches.find((x) => String(x.id) === id) || null;
+  // Pilih batch stok SORGUM → isi gudang asal (tersirat), no. batch bahan, & siap simpan
+  const handleBatchBahanChange = (id: string) => {
+    const b = allStockSorgum.find((x) => String(x.id) === id) || null;
     setSelectedStockBatch(b);
     setFormData((prev) => ({
       ...prev,
+      gudangId: b ? b.gudangId : (null as any),
       stockBatchId: id || (null as any),
+      lokasiGudang: b ? `${b.namaGudang}${b.kodeGudang ? ` (${b.kodeGudang})` : ''}` : prev.lokasiGudang,
       nomorBatchBahanBaku: b ? `${b.kodeBatchStok}${b.asalBatch?.kodeBatchStok ? ` (sosoh dari ${b.asalBatch.kodeBatchStok})` : ''}` : '',
     }));
   };
@@ -242,12 +227,8 @@ export const ProduksiPage: React.FC = () => {
     }
     // Validasi: bahan tidak boleh melebihi sisa batch stok terpilih
     if (bahan > 0) {
-      if (!formData.gudangId) {
-        setToast({ msg: 'Pilih gudang asal bahan dulu.', type: 'error' });
-        return;
-      }
-      if (!formData.stockBatchId || !selectedStockBatch) {
-        setToast({ msg: 'Pilih stok batch (asal bahan) dulu.', type: 'error' });
+      if (!selectedStockBatch) {
+        setToast({ msg: 'Pilih kode produksi / stok sorgum (asal bahan) dulu.', type: 'error' });
         return;
       }
       if (bahan > selectedStockBatch.sisaKg) {
@@ -511,7 +492,7 @@ export const ProduksiPage: React.FC = () => {
                 <Combobox
                   options={productOptions.map((p) => ({
                     value: String(p.id),
-                    label: `${p.name} — ${p.satuanHasil || 'Pouch'}`,
+                    label: p.name,
                     searchText: `${p.name} ${p.satuanHasil || ''}`,
                   }))}
                   value={selectedProductId || ''}
@@ -591,18 +572,20 @@ export const ProduksiPage: React.FC = () => {
                   </select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-[#2C4219] mb-1">Gudang Asal Bahan</label>
-                  <Combobox
-                    options={warehouseOptions.map((w) => ({
-                      value: String(w.id),
-                      label: `${w.namaGudang} (${w.kodeGudang}) — ${w.totalStokKg > 0 ? `${w.totalStokKg} kg tersedia` : 'kosong'}`,
-                      searchText: `${w.namaGudang} ${w.kodeGudang} ${w.namaLahan || ''} ${w.totalStokKg}`,
-                    }))}
-                    value={formData.gudangId ? String(formData.gudangId) : ''}
-                    onChange={(v) => handleGudangChange(v)}
-                    placeholder="-- Pilih Gudang --"
-                    searchPlaceholder="Cari nama gudang / kode gudang / lahan..."
-                    emptyText="Tidak ada gudang tersedia."
+                  <label className="block text-xs font-bold text-[#2C4219] mb-1">
+                    Gudang Asal Bahan (otomatis dari kode batch)
+                  </label>
+                  <input
+                    type="text"
+                    value={
+                      selectedStockBatch
+                        ? `${selectedStockBatch.namaGudang}${selectedStockBatch.kodeGudang ? ` (${selectedStockBatch.kodeGudang})` : ''}`
+                        : ''
+                    }
+                    readOnly
+                    disabled
+                    placeholder={selectedStockBatch ? '' : 'Pilih kode produksi di bagian bawah → gudang terisi otomatis'}
+                    className="w-full p-3 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold text-[#6B7280] cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -621,22 +604,27 @@ export const ProduksiPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="sm:col-span-2">
                 <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
-                  Stok Batch (Sorgum Sosoh) <span className="text-red-500">*</span>
+                  Kode Produksi / Stok Bahan (Sorgum Sosoh) <span className="text-red-500">*</span>
                 </label>
                 <Combobox
-                  options={stockBatches.map((b) => ({
+                  options={allStockSorgum.map((b) => ({
                     value: String(b.id),
-                    label: `${b.kodeBatchStok}${b.asalBatch?.kodeBatchStok ? ` (dari ${b.asalBatch.kodeBatchStok})` : ''} • sisa ${formatBerat(b.sisaKg)}`,
-                    searchText: `${b.kodeBatchStok} ${b.asalBatch?.kodeBatchStok || ''} ${b.kodePanen || ''} ${b.sisaKg}`,
+                    label: `${b.kodeBatchStok} • ${b.namaGudang} • sisa ${formatBerat(b.sisaKg)}`,
+                    searchText: `${b.kodeBatchStok} ${b.namaGudang} ${b.kodeGudang} ${b.namaLahan || ''} ${b.asalBatch?.kodeBatchStok || ''} ${b.kodePanen || ''} ${b.varietas || ''} ${b.sisaKg}`,
                   }))}
-                  value={formData.stockBatchId ? String(formData.stockBatchId) : ''}
-                  onChange={(v) => handleStockBatchChange(v)}
-                  placeholder={stockBatches.length === 0 ? '-- Pilih Gudang dulu (tidak ada sorgum sosoh) --' : '-- Pilih Stok Sorgum Sosoh --'}
-                  searchPlaceholder="Cari kode batch / asal gabah / panen..."
-                  emptyText="Tidak ada stok SORGUM yang cocok."
+                  value={selectedStockBatch ? String(selectedStockBatch.id) : ''}
+                  onChange={(v) => handleBatchBahanChange(v)}
+                  placeholder={allStockSorgum.length === 0 ? '-- Belum ada stok Sorgum Sosoh tersedia --' : '-- Pilih Kode Batch / Gudang --'}
+                  searchPlaceholder="Cari kode batch / gudang / asal gabah / panen..."
+                  emptyText="Tidak ada stok SORGUM yang tersedia."
                 />
-                {formData.gudangId && stockBatches.length === 0 && (
-                  <p className="text-[11px] text-amber-700 mt-1.5">Gudang ini tidak punya stok sorgum sosoh.</p>
+                {selectedStockBatch && (
+                  <p className="text-[11px] text-[#2C4219] mt-1.5 font-medium">
+                    Gudang asal: <b>{selectedStockBatch.namaGudang}</b> ({selectedStockBatch.kodeGudang}){selectedStockBatch.namaLahan ? ` • ${selectedStockBatch.namaLahan}` : ''}
+                  </p>
+                )}
+                {allStockSorgum.length === 0 && (
+                  <p className="text-[11px] text-amber-700 mt-1.5">Belum ada stok Sorgum Sosoh. Masukkan hasil panen ke gudang & proses sosoh dulu.</p>
                 )}
               </div>
               <div className="sm:col-span-2">

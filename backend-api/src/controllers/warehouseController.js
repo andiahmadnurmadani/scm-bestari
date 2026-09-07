@@ -397,6 +397,51 @@ export async function getStockBatchesByWarehouse(req, res) {
   }
 }
 
+// ── Controller: Semua Batch Stok SORGUM lintas gudang (untuk dropdown bahan produksi 1 tahap) ──
+
+export async function getAllStockSorgum(req, res) {
+  try {
+    const [rows] = await getPool().execute(
+      `SELECT s.id, s.gudang_id, s.harvest_id, s.kode_batch_stok, s.jumlah_masuk_kg, s.sisa_kg,
+              DATE_FORMAT(s.tanggal_masuk, '%Y-%m-%d %H:%i:%s') AS tanggal_masuk,
+              s.jenis, s.asal_batch_id,
+              w.kode_gudang, w.nama_gudang,
+              l.nama_lahan AS l_nama_lahan,
+              h.kode_panen, h.varietas AS h_varietas,
+              ab.kode_batch_stok AS asal_kode_batch_stok
+       FROM warehouse_stock_batches s
+       LEFT JOIN warehouses w ON s.gudang_id = w.id
+       LEFT JOIN lands l ON w.lahan_id = l.id
+       LEFT JOIN harvests h ON s.harvest_id = h.id
+       LEFT JOIN warehouse_stock_batches ab ON s.asal_batch_id = ab.id
+       WHERE s.sisa_kg > 0 AND s.jenis = 'SORGUM'
+       ORDER BY w.nama_gudang ASC, s.tanggal_masuk ASC, s.id ASC`
+    );
+    return res.status(200).json({
+      success: true,
+      data: rows.map((r) => ({
+        id: String(r.id),
+        gudangId: String(r.gudang_id),
+        kodeGudang: r.kode_gudang,
+        namaGudang: r.nama_gudang,
+        namaLahan: r.l_nama_lahan || null,
+        harvestId: r.harvest_id != null ? String(r.harvest_id) : null,
+        kodeBatchStok: r.kode_batch_stok,
+        jenis: r.jenis || 'SORGUM',
+        asalBatch: r.asal_batch_id ? { id: String(r.asal_batch_id), kodeBatchStok: r.asal_kode_batch_stok } : null,
+        kodePanen: r.kode_panen || null,
+        varietas: r.h_varietas || null,
+        jumlahMasukKg: Number(r.jumlah_masuk_kg || 0),
+        sisaKg: Number(r.sisa_kg || 0),
+        tanggalMasuk: r.tanggal_masuk,
+      })),
+    });
+  } catch (error) {
+    console.error('[getAllStockSorgum] Error:', error.message);
+    return res.status(500).json({ success: false, message: 'Gagal mengambil daftar stok sorgum.' });
+  }
+}
+
 // ── Controller: Stok Masuk (WAJIB dari panen yang belum penuh masuk) ──────────
 
 export async function stockIn(req, res) {

@@ -75,8 +75,8 @@ export const LiteGudangPage: React.FC = () => {
         const res = await warehouseApi.getHarvestOptions();
         setHarvestOptions((res.data || []).map((h) => ({
           value: String(h.id),
-          label: `${h.kodePanen} — ${h.varietas} (sisa ${formatBerat(Number(h.sisaBelumMasukKg) || 0)})`,
-          searchText: h.namaLahan || '',
+          label: `${h.kodePanen} — ${h.varietas}`,
+          searchText: `${h.kodePanen} ${h.varietas} ${h.namaLahan || ''} sisa ${formatBerat(Number(h.sisaBelumMasukKg) || 0)}`,
         })));
       } catch {
         setHarvestOptions([]);
@@ -95,7 +95,7 @@ export const LiteGudangPage: React.FC = () => {
         .filter((b: any) => Number(b.sisaKg) > 0)
         .map((b: any) => {
           map[String(b.id)] = Number(b.sisaKg) || 0;
-          return { value: String(b.id), label: `${b.kodeBatchStok} (${b.jenis || ''}) — sisa ${formatBerat(Number(b.sisaKg) || 0)}`, searchText: b.kodePanen || '' };
+          return { value: String(b.id), label: `${b.kodeBatchStok} — sisa ${formatBerat(Number(b.sisaKg) || 0)}`, searchText: `${b.kodeBatchStok} ${b.jenis || ''} ${b.kodePanen || ''}` };
         });
       setBatchMap(map);
       setBatchOptions(opts);
