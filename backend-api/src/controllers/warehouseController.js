@@ -14,7 +14,7 @@ function mapRowToWarehouse(row) {
     stokGabahKg: Number(row.stok_gabah_kg || 0),
     stokSorgumKg: Number(row.stok_sorgum_kg || 0),
     // lineage lahan
-    lahan: row.lahan_id ? { id: String(row.lahan_id), kodeLahan: row.kode_lahan, namaLahan: row.l_nama_lahan, lokasiDesa: row.lokasi_desa } : null,
+    lahan: row.lahan_id ? { id: String(row.lahan_id), kodeLahan: row.kode_lahan, namaLahan: row.l_nama_lahan, lokasiDesa: row.lokasi_desa, pemilikKelompokTani: row.pemilik_kelompok_tani || null } : null,
     createdAt: row.created_at,
   };
 }
@@ -99,7 +99,7 @@ export async function getWarehouses(req, res) {
 
     const [rows] = await pool.query(
       `SELECT w.id, w.kode_gudang, w.nama_gudang, w.lahan_id, w.lokasi, w.total_stok_kg, w.created_at,
-              l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa,
+              l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.pemilik_kelompok_tani,
               COALESCE((SELECT SUM(sb.sisa_kg) FROM warehouse_stock_batches sb WHERE sb.gudang_id = w.id AND sb.jenis = 'GABAH'), 0) AS stok_gabah_kg,
               COALESCE((SELECT SUM(sb.sisa_kg) FROM warehouse_stock_batches sb WHERE sb.gudang_id = w.id AND sb.jenis = 'SORGUM'), 0) AS stok_sorgum_kg
        FROM warehouses w
@@ -135,7 +135,7 @@ export async function getWarehouseById(req, res) {
     const pool = getPool();
     const [rows] = await pool.execute(
       `SELECT w.id, w.kode_gudang, w.nama_gudang, w.lahan_id, w.lokasi, w.total_stok_kg, w.created_at,
-              l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa
+              l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.pemilik_kelompok_tani
        FROM warehouses w
        LEFT JOIN lands l ON w.lahan_id = l.id
        WHERE w.id = ? LIMIT 1`,
@@ -264,7 +264,7 @@ export async function createWarehouse(req, res) {
 
     const [newRow] = await pool.execute(
       `SELECT w.id, w.kode_gudang, w.nama_gudang, w.lahan_id, w.lokasi, w.total_stok_kg, w.created_at,
-              l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa
+              l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.pemilik_kelompok_tani
        FROM warehouses w LEFT JOIN lands l ON w.lahan_id = l.id
        WHERE w.id = ? LIMIT 1`,
       [result.insertId]
@@ -319,7 +319,7 @@ export async function updateWarehouse(req, res) {
 
     const [updatedRow] = await pool.execute(
       `SELECT w.id, w.kode_gudang, w.nama_gudang, w.lahan_id, w.lokasi, w.total_stok_kg, w.created_at,
-              l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa
+              l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.pemilik_kelompok_tani
        FROM warehouses w LEFT JOIN lands l ON w.lahan_id = l.id
        WHERE w.id = ? LIMIT 1`,
       [id]

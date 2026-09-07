@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Warehouse as WarehouseIcon, Plus, MapPin, Sprout, Package, ArrowDownToLine, ArrowUpFromLine, History, Trash2, Pencil, QrCode, Download, Search, X, ArrowLeftRight } from 'lucide-react';
+import { Warehouse as WarehouseIcon, Plus, MapPin, Sprout, Package, ArrowDownToLine, ArrowUpFromLine, History, Trash2, Pencil, QrCode, Download, Search, X, ArrowLeftRight, User } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { warehouseApi, BatchTrace, WarehouseHistoryItem } from '../../api/endpoints/warehouseApi';
 import { Warehouse, WarehouseStockBatch } from '../../types';
@@ -1194,7 +1194,7 @@ export const GudangPage: React.FC = () => {
         onClose={() => setQrTarget(null)}
         title="QR Code Batch Stok"
         subtitle={qrTarget ? qrTarget.kodeBatchStok : ''}
-        maxWidth="sm"
+        maxWidth="xl"
       >
         {qrTarget && detailWarehouse && (() => {
           const url = `${window.location.origin}/trace/${qrTarget.kodeBatchStok}`;
@@ -1202,6 +1202,7 @@ export const GudangPage: React.FC = () => {
           const namaLahan = detailWarehouse.lahan?.namaLahan || 'Lahan terkait';
           const kodeLahan = detailWarehouse.lahan?.kodeLahan || '';
           const lokasiDesa = detailWarehouse.lahan?.lokasiDesa || '';
+          const penanggungJawab = detailWarehouse.lahan?.pemilikKelompokTani || '-';
           const varietas = (qrTarget.harvest?.varietas && qrTarget.harvest.varietas.trim()) || '-';
           const lokasiLengkap = [namaLahan, kodeLahan, lokasiDesa].filter(Boolean).join(' • ');
           return (
@@ -1224,12 +1225,12 @@ export const GudangPage: React.FC = () => {
                 </div>
 
                 {/* Badan: QR + info utama */}
-                <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-[190px_1fr] gap-4 sm:gap-6 items-center">
+                <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-[210px_1fr] gap-5 sm:gap-7 items-center">
                   <div className="justify-self-center bg-[#F7F7F5] p-3 rounded-xl border border-[#c4c8bb]/20">
                     <QRCodeCanvas
                       id="qr-canvas-batch"
                       value={url}
-                      size={170}
+                      size={180}
                       level="M"
                       includeMargin
                       fgColor="#172C05"
@@ -1239,6 +1240,7 @@ export const GudangPage: React.FC = () => {
                   <div className="w-full min-w-0 divide-y divide-[#c4c8bb]/15 text-sm">
                     {[
                       { label: 'Lahan', value: lokasiLengkap, icon: <Sprout className="w-4 h-4 text-[#2C4219]" /> },
+                      { label: 'Penanggung Jawab', value: penanggungJawab, icon: <User className="w-4 h-4 text-[#8C5A2B]" /> },
                       { label: 'Varietas', value: varietas, icon: <Package className="w-4 h-4 text-[#8C5A2B]" /> },
                       {
                         label: 'Gudang',
@@ -1246,11 +1248,11 @@ export const GudangPage: React.FC = () => {
                         icon: <WarehouseIcon className="w-4 h-4 text-[#6B7280]" />,
                       },
                     ].map((r) => (
-                      <div key={r.label} className="flex items-start gap-3 py-2 first:pt-0 last:pb-0">
+                      <div key={r.label} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
                         <span className="mt-0.5 shrink-0">{r.icon}</span>
                         <div className="min-w-0 flex-1">
                           <p className="text-[9px] font-bold uppercase tracking-wider text-[#9CA3AF]">{r.label}</p>
-                          <p className="text-[13px] font-semibold text-[#172C05] leading-snug break-words">{r.value}</p>
+                          <p className="text-sm font-semibold text-[#172C05] leading-relaxed break-words whitespace-normal">{r.value || '-'}</p>
                         </div>
                       </div>
                     ))}

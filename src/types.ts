@@ -217,7 +217,7 @@ export interface Warehouse {
   totalStokKg: number;
   stokGabahKg?: number;
   stokSorgumKg?: number;
-  lahan?: { id: string; kodeLahan: string; namaLahan: string; lokasiDesa: string } | null;
+  lahan?: { id: string; kodeLahan: string; namaLahan: string; lokasiDesa: string; pemilikKelompokTani?: string | null } | null;
   stockBatches?: WarehouseStockBatch[];
   movements?: WarehouseMovement[];
   sosohList?: SosohProcess[];
