@@ -28,6 +28,8 @@ export const LiteGudangPage: React.FC = () => {
   // Opsi panen utk stok masuk
   const [harvestOptions, setHarvestOptions] = useState<ComboboxOption[]>([]);
   const [harvestId, setHarvestId] = useState('');
+  const [harvestInfoMap, setHarvestInfoMap] = useState<Record<string, { kodePanen: string; varietas: string; jumlahHasilKg: number; sudahMasukKg: number; sisaBelumMasukKg: number }>>({});
+  const [selectedHarvestInfo, setSelectedHarvestInfo] = useState<{ kodePanen: string; varietas: string; jumlahHasilKg: number; sudahMasukKg: number; sisaBelumMasukKg: number } | null>(null);
 
   // Opsi batch utk stok keluar
   const [batchOptions, setBatchOptions] = useState<ComboboxOption[]>([]);
@@ -73,15 +75,34 @@ export const LiteGudangPage: React.FC = () => {
     if (type === 'MASUK') {
       try {
         const res = await warehouseApi.getHarvestOptions();
-        setHarvestOptions((res.data || []).map((h) => ({
+        const list = res.data || [];
+        const map: Record<string, { kodePanen: string; varietas: string; jumlahHasilKg: number; sudahMasukKg: number; sisaBelumMasukKg: number }> = {};
+        list.forEach((h) => {
+          map[String(h.id)] = {
+            kodePanen: h.kodePanen,
+            varietas: h.varietas,
+            jumlahHasilKg: Number(h.jumlahHasilKg) || 0,
+            sudahMasukKg: Number(h.sudahMasukKg) || 0,
+            sisaBelumMasukKg: Number(h.sisaBelumMasukKg) || 0,
+          };
+        });
+        setHarvestInfoMap(map);
+        setSelectedHarvestInfo(null);
+        setHarvestOptions(list.map((h) => ({
           value: String(h.id),
-          label: `${h.kodePanen} — ${h.varietas}`,
-          searchText: `${h.kodePanen} ${h.varietas} ${h.namaLahan || ''} sisa ${formatBerat(Number(h.sisaBelumMasukKg) || 0)}`,
+          label: `${h.kodePanen} — ${h.varietas} (total ${formatBerat(Number(h.jumlahHasilKg) || 0)})`,
+          searchText: `${h.kodePanen} ${h.varietas} ${h.namaLahan || ''} total ${formatBerat(Number(h.jumlahHasilKg) || 0)} sisa ${formatBerat(Number(h.sisaBelumMasukKg) || 0)}`,
         })));
       } catch {
         setHarvestOptions([]);
+        setHarvestInfoMap({});
       }
     }
+  };
+
+  const handleHarvestChange = (id: string) => {
+    setHarvestId(id);
+    setSelectedHarvestInfo(id ? harvestInfoMap[id] || null : null);
   };
 
   const handleGudangChange = async (gid: string) => {
@@ -134,6 +155,7 @@ export const LiteGudangPage: React.FC = () => {
       }
       setStockModalOpen(false);
       fetchData();
+      setSelectedHarvestInfo(null);
     } catch (err: any) {
       setToast({ msg: err?.response?.data?.message || 'Gagal memproses stok.', type: 'error' });
     }
@@ -246,10 +268,29 @@ export const LiteGudangPage: React.FC = () => {
               <Combobox
                 options={harvestOptions}
                 value={harvestId}
-                onChange={setHarvestId}
+                onChange={handleHarvestChange}
                 placeholder="Pilih catatan panen..."
                 emptyText="Tidak ada panen yang belum penuh masuk gudang."
               />
+              {selectedHarvestInfo && (
+                <div className="mt-2 p-2.5 bg-[#F7F7F5] rounded-xl border border-[#c4c8bb]/20 space-y-1">
+                  <p className="text-[10px] font-bold text-[#6B7280] uppercase">Info Hasil Panen</p>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[#44483e]">Total Panen</span>
+                    <span className="font-extrabold text-[#2C4219]">{formatBerat(selectedHarvestInfo.jumlahHasilKg)}</span>
+                  </div>
+                  {selectedHarvestInfo.sudahMasukKg > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[#44483e]">Sudah Masuk Gudang</span>
+                      <span className="font-bold text-[#6B7280]">{formatBerat(selectedHarvestInfo.sudahMasukKg)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[#44483e]">Sisa Belum Masuk</span>
+                    <span className="font-bold text-amber-700">{formatBerat(selectedHarvestInfo.sisaBelumMasukKg)}</span>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             gudangId && (
