@@ -475,14 +475,12 @@ export const LitePanenPage: React.FC = () => {
       >
         {detailTarget && (
               <div className="space-y-3">
-                {/* Status Pemasukan ke Gudang */}
                 {(() => {
-                  const sudahMasuk = (detailTarget.stockBatches?.length || 0) > 0 || Number(detailTarget.sudahMasukKg || 0) > 0;
-                  const masukKg = Number(detailTarget.sudahMasukKg) || 0;
-                  const sisaKg = detailTarget.sisaBelumMasukKg != null
-                    ? Number(detailTarget.sisaBelumMasukKg)
-                    : (Number(detailTarget.jumlahHasilKg) || 0) - masukKg;
-                  const totalKg = Number(detailTarget.jumlahHasilKg) || 0;
+                  const batches = detailTarget.stockBatches || [];
+                  const sudahMasuk = batches.length > 0 || Number(detailTarget.sudahMasukKg || 0) > 0;
+                  const gudangNames = Array.from(
+                    new Set(batches.map((b) => b.gudang?.namaGudang).filter(Boolean))
+                  ) as string[];
                   return (
                     <div className={`p-3 rounded-xl border flex items-center gap-3 ${
                       sudahMasuk
@@ -500,15 +498,12 @@ export const LitePanenPage: React.FC = () => {
                         </p>
                         <p className="text-[11px] text-[#6B7280]">
                           {sudahMasuk
-                            ? `Tersimpan ${formatBerat(masukKg)}${sisaKg > 0 ? ` · sisa ${formatBerat(sisaKg)}` : ''}`
+                            ? (gudangNames.length > 0
+                              ? `Masuk ke gudang ${gudangNames.join(', ')}.`
+                              : 'Hasil panen ini sudah disimpan ke gudang.')
                             : 'Hasil panen ini belum disimpan ke gudang.'}
                         </p>
                       </div>
-                      {sudahMasuk && (
-                        <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-[#2C4219] text-[#C3E28D] shrink-0">
-                          {totalKg > 0 ? Math.round((masukKg / totalKg) * 100) : 0}%
-                        </span>
-                      )}
                     </div>
                   );
                 })()}
@@ -536,19 +531,7 @@ export const LitePanenPage: React.FC = () => {
                     <img src={detailTarget.fotoUrl} alt={`Foto panen ${detailTarget.namaLahan}`} className="w-full max-h-60 object-cover" referrerPolicy="no-referrer" />
                   </div>
                 )}
-                {detailTarget.stockBatches && detailTarget.stockBatches.length > 0 && (
-                  <div className="p-3 bg-[#C3E28D]/15 rounded-xl">
-                    <p className="text-xs font-bold text-[#2C4219] mb-1.5">Stok di Gudang</p>
-                    <div className="space-y-1">
-                      {detailTarget.stockBatches.map((b) => (
-                        <div key={b.id} className="flex justify-between text-xs">
-                          <span className="text-[#44483e]">{b.kodeBatchStok}</span>
-                          <span className="font-bold text-[#172C05]">{formatBerat(Number(b.jumlahMasukKg) || 0)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
                 {detailTarget.catatan && (
                   <p className="text-xs text-[#6B7280] italic">"{detailTarget.catatan}"</p>
                 )}
