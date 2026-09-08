@@ -158,7 +158,7 @@ export const LiteProfilePage: React.FC = () => {
         </div>
       </form>
 
-      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };

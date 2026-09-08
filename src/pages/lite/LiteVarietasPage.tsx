@@ -235,7 +235,7 @@ export const LiteVarietasPage: React.FC = () => {
         </div>
       </Modal>
 
-      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };
