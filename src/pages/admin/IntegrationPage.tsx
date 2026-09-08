@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Settings,
   Key,
@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Toast } from '../../components/common/Toast';
 import { getApiBaseUrl } from '../../utils/apiConfig';
+import { apiKeyApi, ActiveApiKey } from '../../api/endpoints/apiKeyApi';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -153,7 +154,9 @@ const EndpointRow: React.FC<{
 export const IntegrationPage: React.FC = () => {
   // API Config state
   const [apiBaseUrl, setApiBaseUrl] = useState(getApiBaseUrl());
-  const [apiKey, setApiKey] = useState(generateKey());
+  const [apiKey, setApiKey] = useState('');
+  const [apiKeySource, setApiKeySource] = useState<'env' | 'db' | null>(null);
+  const [apiKeyLoading, setApiKeyLoading] = useState(true);
   const [webhookUrl, setWebhookUrl] = useState('https://');
   const [webhookSecret, setWebhookSecret] = useState(generateWebhookSecret());
   const [webhookEvents, setWebhookEvents] = useState<string[]>([
@@ -162,6 +165,28 @@ export const IntegrationPage: React.FC = () => {
   const [savedSuccess, setSavedSuccess] = useState('');
   const [regenerating, setRegenerating] = useState(false);
   const [activeTab, setActiveTab] = useState<'config' | 'endpoints' | 'logs'>('config');
+
+  // Ambil API key aktif dari backend (nilai dari env API_KEYS / DB) saat halaman dibuka
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const active = await apiKeyApi.getActive();
+        if (!mounted) return;
+        setApiKey(active.keyValue);
+        setApiKeySource(active.source);
+      } catch {
+        if (!mounted) return;
+        setApiKey('');
+        setApiKeySource(null);
+      } finally {
+        if (mounted) setApiKeyLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const allEvents = [
     'panen.created', 'panen.updated', 'sertifikat.created', 'sertifikat.updated',
@@ -176,6 +201,11 @@ export const IntegrationPage: React.FC = () => {
   };
 
   const handleRegenerate = () => {
+    if (apiKeySource === 'env') {
+      setSavedSuccess('API key ini diatur dari file .env (API_KEYS). Ubah di server untuk menggantinya.');
+      setTimeout(() => setSavedSuccess(''), 4000);
+      return;
+    }
     setRegenerating(true);
     setTimeout(() => {
       setApiKey(generateKey());

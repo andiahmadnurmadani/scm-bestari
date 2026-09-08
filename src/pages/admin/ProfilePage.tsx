@@ -17,9 +17,6 @@ import {
   KeyRound,
   Copy,
   RefreshCw,
-  Trash2,
-  Plus,
-  ExternalLink,
   Scale,
   Ruler,
   CheckCircle2,
@@ -27,7 +24,7 @@ import {
   Square,
 } from 'lucide-react';
 import { authApi } from '../../api/endpoints/authApi';
-import { apiKeyApi, ApiKey, ApiKeyCreated } from '../../api/endpoints/apiKeyApi';
+import { apiKeyApi } from '../../api/endpoints/apiKeyApi';
 import { getApiBaseUrl, setApiBaseUrl, resetApiBaseUrl, getDocsUrl } from '../../utils/apiConfig';
 import { Toast } from '../../components/common/Toast';
 import {
@@ -111,14 +108,15 @@ export const ProfilePage: React.FC = () => {
   const MAX_AVATAR_MB = 2;
   const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
-  // ── State API Key (tab Pengaturan) ──
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
-  const [keysLoading, setKeysLoading] = useState(true);
+  // ── State notifikasi tab Pengaturan ──
   const [keysToast, setKeysToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  const [newKeyName, setNewKeyName] = useState('');
-  const [creatingKey, setCreatingKey] = useState(false);
-  const [createdKey, setCreatedKey] = useState<ApiKeyCreated | null>(null);
-  const [copiedKey, setCopiedKey] = useState(false);
+
+  // ── State API Key aktif dari env API_KEYS (1 key utama) ──
+  const [envApiKey, setEnvApiKey] = useState('');
+  const [envApiKeySource, setEnvApiKeySource] = useState<'env' | 'db' | null>(null);
+  const [envApiKeyLoading, setEnvApiKeyLoading] = useState(true);
+  const [envApiKeyVisible, setEnvApiKeyVisible] = useState(false);
+  const [envApiKeyCopied, setEnvApiKeyCopied] = useState(false);
 
   // ── State URL API (tab Pengaturan) ──
   const [apiUrlInput, setApiUrlInput] = useState(getApiBaseUrl());
@@ -254,84 +252,37 @@ export const ProfilePage: React.FC = () => {
     { id: 'pengaturan' as const, label: 'Pengaturan', icon: <KeyRound className="w-3.5 h-3.5" /> },
   ];
 
-  // Muat daftar API key saat halaman dibuka
+  // Ambil API key aktif dari backend (nilai env API_KEYS / DB) untuk ditampilkan di Pengaturan
   useEffect(() => {
     let cancelled = false;
-    const loadKeys = async () => {
+    const loadActiveKey = async () => {
       try {
-        const keys = await apiKeyApi.getAll();
-        if (!cancelled) setApiKeys(keys);
+        const active = await apiKeyApi.getActive();
+        if (cancelled) return;
+        setEnvApiKey(active.keyValue || '');
+        setEnvApiKeySource(active.source || null);
       } catch {
-        if (!cancelled) setKeysToast({ msg: 'Gagal memuat daftar API key.', type: 'error' });
+        if (cancelled) return;
+        setEnvApiKey('');
+        setEnvApiKeySource(null);
       } finally {
-        if (!cancelled) setKeysLoading(false);
+        if (!cancelled) setEnvApiKeyLoading(false);
       }
     };
-    loadKeys();
+    loadActiveKey();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const handleCreateKey = async () => {
-    if (!newKeyName.trim()) {
-      setKeysToast({ msg: 'Nama API key wajib diisi.', type: 'error' });
-      return;
-    }
-    setCreatingKey(true);
+  const handleCopyEnvKey = async () => {
+    if (!envApiKey) return;
     try {
-      const created = await apiKeyApi.create(newKeyName.trim());
-      setCreatedKey(created);
-      setApiKeys((prev) => [
-        {
-          id: created.id,
-          nama: created.nama,
-          keyPreview: `${created.keyValue.slice(0, 12)}...${created.keyValue.slice(-4)}`,
-          isActive: true,
-          lastUsedAt: null,
-          createdAt: new Date().toISOString(),
-          revokedAt: null,
-        },
-        ...prev,
-      ]);
-      setNewKeyName('');
-      setCopiedKey(false);
-      setKeysToast({ msg: 'API key berhasil dibuat.', type: 'success' });
-    } catch (err: any) {
-      setKeysToast({ msg: err?.response?.data?.message || 'Gagal membuat API key.', type: 'error' });
-    } finally {
-      setCreatingKey(false);
-    }
-  };
-
-  const handleCopyKey = async (value: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopiedKey(true);
-      setTimeout(() => setCopiedKey(false), 2500);
+      await navigator.clipboard.writeText(envApiKey);
+      setEnvApiKeyCopied(true);
+      setTimeout(() => setEnvApiKeyCopied(false), 2500);
     } catch {
       setKeysToast({ msg: 'Gagal menyalin ke clipboard.', type: 'error' });
-    }
-  };
-
-  const handleToggleKey = async (key: ApiKey) => {
-    try {
-      const updated = await apiKeyApi.update(key.id, !key.isActive);
-      setApiKeys((prev) => prev.map((k) => (k.id === updated.id ? updated : k)));
-      setKeysToast({ msg: updated.isActive ? 'API key diaktifkan.' : 'API key dinonaktifkan.', type: 'success' });
-    } catch (err: any) {
-      setKeysToast({ msg: err?.response?.data?.message || 'Gagal memperbarui API key.', type: 'error' });
-    }
-  };
-
-  const handleDeleteKey = async (key: ApiKey) => {
-    if (!window.confirm(`Hapus API key "${key.nama}"?`)) return;
-    try {
-      await apiKeyApi.delete(key.id);
-      setApiKeys((prev) => prev.filter((k) => k.id !== key.id));
-      setKeysToast({ msg: 'API key berhasil dihapus.', type: 'success' });
-    } catch (err: any) {
-      setKeysToast({ msg: err?.response?.data?.message || 'Gagal menghapus API key.', type: 'error' });
     }
   };
 
@@ -783,135 +734,82 @@ export const ProfilePage: React.FC = () => {
             </div>
           </SectionCard>
 
-          <SectionCard title="API Key (Akses Read-Only)" icon={<KeyRound className="w-4 h-4" />}>
-            <div className="space-y-4">
+          {/* API Key utama dari env API_KEYS — bisa dilihat / disembunyikan */}
+          <SectionCard title="Kunci API (Bearer)" icon={<KeyRound className="w-4 h-4" />}>
+            <div className="space-y-3">
               <div className="p-4 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl">
-                <p className="text-xs font-bold text-[#2C4219] mb-1">🔑 Kunci API untuk integrasi data</p>
+                <p className="text-xs font-bold text-[#2C4219] mb-1 flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5" /> Kunci utama untuk integrasi data
+                </p>
                 <p className="text-[11px] text-[#6B7280] leading-relaxed">
-                  Gunakan API key ini untuk membaca data dari luar (laporan, website, aplikasi lain) tanpa login.
-                  Header: <code className="bg-white border border-[#c4c8bb]/30 rounded px-1.5 py-0.5 text-[10px] font-bold text-[#2C4219]">x-api-key</code>.
-                  API key <b>hanya bisa membaca</b> (GET) — perubahan data tetap butuh login admin.
-                  Dokumentasi lengkap tersedia di{' '}
-                  <a
-                    href={getDocsUrl()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[#2C4219] font-bold hover:underline"
-                  >
-                    {getDocsUrl()} <ExternalLink className="w-3 h-3" />
-                  </a>
+                  {envApiKeySource === 'env' ? (
+                    <>
+                      Kunci ini diambil dari file{' '}
+                      <code className="bg-white border border-[#c4c8bb]/30 rounded px-1.5 py-0.5 text-[10px] font-bold text-[#2C4219]">.env</code>{' '}
+                      (variabel{' '}
+                      <code className="bg-white border border-[#c4c8bb]/30 rounded px-1 py-0.5 text-[10px] font-bold text-[#2C4219]">API_KEYS</code>)
+                      dan dipakai untuk autentikasi Bearer saat membaca data dari luar tanpa login.
+                    </>
+                  ) : envApiKeySource === 'db' ? (
+                    'Kunci diambil dari API key aktif di database. Untuk menggantinya, atur variabel API_KEYS di file .env server.'
+                  ) : (
+                    'Memuat kunci aktif dari server...'
+                  )}
                 </p>
               </div>
 
-              {/* Form buat key baru */}
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  value={newKeyName}
-                  onChange={(e) => setNewKeyName(e.target.value)}
-                  placeholder="Nama API key (contoh: Aplikasi Laporan)"
-                  className={`${inputCls} flex-1`}
-                />
-                <button
-                  type="button"
-                  onClick={handleCreateKey}
-                  disabled={creatingKey}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#2C4219] text-white font-bold text-xs hover:bg-[#213213] shadow-sm transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  {creatingKey ? 'Membuat...' : 'Buat API Key'}
-                </button>
-              </div>
-
-              {/* Key baru dibuat — tampilkan SEKALI */}
-              {createdKey && (
-                <div className="p-4 bg-[#2C4219] text-white rounded-xl space-y-2">
-                  <p className="text-xs font-bold text-[#C3E28D] flex items-center gap-1.5">
-                    <KeyRound className="w-3.5 h-3.5" /> API Key baru berhasil dibuat!
-                  </p>
-                  <p className="text-[11px] text-[#efe0d2]/80">
-                    Salin sekarang — <b>tidak akan ditampilkan lagi</b>.
-                  </p>
-                  <div className="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg p-2">
-                    <code className="flex-1 text-[11px] font-mono break-all text-[#C3E28D]">
-                      {createdKey.keyValue}
-                    </code>
+              {envApiKeyLoading ? (
+                <div className="text-xs text-[#9CA3AF] py-3 text-center">Memuat kunci...</div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 flex items-center bg-[#F7F7F5] border border-[#c4c8bb]/40 rounded-xl px-3 py-2 gap-2 min-w-0">
+                      <KeyRound className="w-3.5 h-3.5 text-[#2C4219] shrink-0" />
+                      <code className="flex-1 text-[11px] font-mono text-[#2C4219] break-all">
+                        {!envApiKey
+                          ? '—'
+                          : envApiKeyVisible
+                          ? envApiKey
+                          : '•'.repeat(Math.min(envApiKey.length, 40))}
+                      </code>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => handleCopyKey(createdKey.keyValue)}
-                      className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#C3E28D] text-[#172C05] text-[10px] font-bold hover:bg-white transition-colors cursor-pointer"
+                      onClick={() => setEnvApiKeyVisible((v) => !v)}
+                      disabled={!envApiKey}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#F7F7F5] border border-[#c4c8bb]/40 text-[#6B7280] hover:text-[#2C4219] hover:bg-[#efe0d2] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                      title={envApiKeyVisible ? 'Sembunyikan kunci' : 'Tampilkan kunci'}
                     >
-                      <Copy className="w-3 h-3" />
-                      {copiedKey ? 'Tersalin!' : 'Salin'}
+                      {envApiKeyVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      {envApiKeyVisible ? 'Sembunyi' : 'Lihat'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCopyEnvKey}
+                      disabled={!envApiKey}
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${
+                        envApiKeyCopied
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                          : 'bg-[#F7F7F5] border-[#c4c8bb]/40 text-[#6B7280] hover:text-[#2C4219] hover:bg-[#efe0d2]'
+                      }`}
+                      title="Salin kunci API"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      {envApiKeyCopied ? 'Tersalin!' : 'Salin'}
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setCreatedKey(null)}
-                    className="text-[10px] text-[#efe0d2]/70 hover:text-white underline cursor-pointer"
-                  >
-                    Tutup
-                  </button>
+
+                  {envApiKeySource === 'env' && (
+                    <div className="flex items-center gap-2 text-[10px] font-medium bg-[#C3E28D]/20 border border-[#C3E28D]/40 text-[#2C4219] rounded-lg px-3 py-2">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>
+                        Kunci ini dikelola di file <b>.env</b> di sisi server. Untuk menggantinya, ubah variabel{' '}
+                        <code className="bg-white/70 border border-[#c4c8bb]/30 rounded px-1 py-0.5 font-mono">API_KEYS</code> lalu restart backend.
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
-
-              {/* Daftar key */}
-              <div>
-                <p className="text-[10px] font-bold text-[#172C05] uppercase tracking-wider mb-2">
-                  Daftar API Key
-                </p>
-                {keysLoading ? (
-                  <div className="text-xs text-[#9CA3AF] py-4 text-center">Memuat...</div>
-                ) : apiKeys.length === 0 ? (
-                  <div className="text-xs text-[#9CA3AF] py-4 text-center">
-                    Belum ada API key. Buat satu di atas.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {apiKeys.map((k) => (
-                      <div
-                        key={k.id}
-                        className="flex items-center justify-between gap-3 p-3 bg-white border border-[#c4c8bb]/30 rounded-xl"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-[#221A12] truncate flex items-center gap-1.5">
-                            <KeyRound className="w-3 h-3 text-[#2C4219] shrink-0" />
-                            {k.nama}
-                          </p>
-                          <p className="text-[10px] text-[#9CA3AF] font-mono mt-0.5 truncate">
-                            {k.keyPreview}
-                          </p>
-                          <p className="text-[10px] text-[#9CA3AF] mt-0.5">
-                            Dibuat: {new Date(k.createdAt).toLocaleDateString('id-ID')}
-                            {k.lastUsedAt ? ` · Terakhir dipakai: ${new Date(k.lastUsedAt).toLocaleDateString('id-ID')}` : ''}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleKey(k)}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
-                              k.isActive
-                                ? 'bg-[#C3E28D]/40 text-[#2C4219] hover:bg-[#C3E28D]/60'
-                                : 'bg-[#F7F7F5] text-[#9CA3AF] hover:bg-[#efe0d2]'
-                            }`}
-                          >
-                            {k.isActive ? 'Aktif' : 'Nonaktif'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteKey(k)}
-                            title="Hapus API key"
-                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
           </SectionCard>
         </div>

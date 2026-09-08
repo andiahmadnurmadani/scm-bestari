@@ -4,6 +4,7 @@ import {
   createApiKey,
   updateApiKey,
   deleteApiKey,
+  getActiveApiKey,
 } from '../controllers/apiKeyController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
@@ -14,6 +15,7 @@ router.use(authenticateToken);
 
 // CRUD API Key (read-only untuk konsumen API, tapi CRUD key di sini)
 router.get('/', getApiKeys);          // GET /api/keys
+router.get('/active', getActiveApiKey); // GET /api/keys/active — key penuh dari env (utk Pengaturan)
 router.post('/', createApiKey);       // POST /api/keys
 router.put('/:id', updateApiKey);     // PUT /api/keys/:id
 router.delete('/:id', deleteApiKey);  // DELETE /api/keys/:id

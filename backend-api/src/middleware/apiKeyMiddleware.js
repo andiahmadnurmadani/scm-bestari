@@ -17,6 +17,17 @@ export async function authenticateApiKey(req, res, next) {
   }
 
   try {
+    // 1) API key dari ENV (API_KEYS — dipisah koma) → selalu valid untuk akses read-only
+    const envKeys = String(process.env.API_KEYS || '')
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean);
+    if (envKeys.includes(apiKey)) {
+      req.apiKeyId = 'env';
+      return next();
+    }
+
+    // 2) API key dari database (tabel api_keys — dikelola via /api/keys)
     const pool = getPool();
     const [rows] = await pool.execute(
       `SELECT id, nama, is_active, revoked_at FROM api_keys WHERE key_value = ? LIMIT 1`,

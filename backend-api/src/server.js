@@ -82,6 +82,11 @@ app.use(
   })
 );
 
+// Alias pendek: GET /docs → /api/docs (dokumentasi interaktif)
+app.get('/docs', (_req, res) => {
+  res.redirect(301, '/api/docs');
+});
+
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Endpoint tidak ditemukan: ${req.method} ${req.originalUrl}` });

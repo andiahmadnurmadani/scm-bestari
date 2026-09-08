@@ -39,6 +39,58 @@ export async function getApiKeys(_req, res) {
   }
 }
 
+// ── Controller: API Key Aktif dari ENV (untuk halaman Pengaturan) ─────────────
+
+/**
+ * Mengembalikan API key yang dikonfigurasi lewat environment variable API_KEYS
+ * (key pertama bila lebih dari satu, dipisah koma). Endpoint ini dilindungi JWT
+ * sehingga hanya admin login yang bisa melihat key penuh.
+ * Jika env kosong, fallback ke key aktif pertama di tabel api_keys.
+ */
+export async function getActiveApiKey(req, res) {
+  try {
+    const envKeys = String(process.env.API_KEYS || '')
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean);
+
+    if (envKeys.length > 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          nama: 'API Key (env API_KEYS)',
+          keyValue: envKeys[0],
+          isActive: true,
+          source: 'env',
+        },
+      });
+    }
+
+    // Fallback: key aktif pertama di database dengan nilai penuh
+    const [rows] = await getPool().query(
+      `SELECT id, nama, key_value, is_active FROM api_keys
+       WHERE is_active = 1 AND revoked_at IS NULL
+       ORDER BY id ASC LIMIT 1`
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Belum ada API key aktif.' });
+    }
+    return res.status(200).json({
+      success: true,
+      data: {
+        id: String(rows[0].id),
+        nama: rows[0].nama,
+        keyValue: rows[0].key_value,
+        isActive: Boolean(rows[0].is_active),
+        source: 'db',
+      },
+    });
+  } catch (error) {
+    console.error('[getActiveApiKey] Error:', error.message);
+    return res.status(500).json({ success: false, message: 'Gagal mengambil API key aktif.' });
+  }
+}
+
 // ── Controller: Buat API Key Baru ──────────────────────────────────────────────
 
 export async function createApiKey(req, res) {

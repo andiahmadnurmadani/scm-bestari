@@ -16,11 +16,15 @@ import {
   getBatchTrace,
 } from '../controllers/warehouseController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
+import { authenticateTokenOrApiKey } from '../middleware/apiKeyMiddleware.js';
 
 const router = Router();
 
-// Semua route warehouse butuh autentikasi
-router.use(authenticateToken);
+// GET: boleh JWT atau API key (read-only). Tulis (POST/PUT/DELETE): wajib JWT.
+router.use((req, res, next) => {
+  if (req.method === 'GET') return authenticateTokenOrApiKey(req, res, next);
+  return authenticateToken(req, res, next);
+});
 
 // Opsi gudang (untuk dropdown olahan) — HARUS sebelum /:id
 router.get('/options', getWarehouseOptions);
