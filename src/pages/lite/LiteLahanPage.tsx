@@ -33,7 +33,6 @@ export const LiteLahanPage: React.FC = () => {
     lokasiDesa: '',
     kecamatan: '',
     luasHektar: '',
-    varietasSorgum: '',
     pemilikKelompokTani: '',
   });
 
@@ -103,7 +102,11 @@ export const LiteLahanPage: React.FC = () => {
   const openPlantingAdd = (plot: LandPlot) => {
     setPlantingLahan(plot);
     setEditingPlantingId(null);
-    const varietasDefault = plot.varietasSorgum || varietyOptions[0]?.name || '';
+    // Default varietas: penanaman TERAKHIR di lahan ini; fallback varietas lama lahan (bila ada) / master pertama
+    const latestPlanting = [...allPlantings]
+      .filter((p) => String(p.lahanId) === String(plot.id))
+      .sort((a, b) => new Date(b.tanggalTanam).getTime() - new Date(a.tanggalTanam).getTime())[0];
+    const varietasDefault = latestPlanting?.varietas || plot.varietasSorgum || varietyOptions[0]?.name || '';
     setPlantingForm({ tanggalTanam: new Date().toISOString().slice(0, 10), varietas: varietasDefault, jumlahLubang: plot.jumlahLubang ? String(plot.jumlahLubang) : '', petugas: '' });
     setPlantingModalOpen(true);
   };
@@ -185,7 +188,7 @@ export const LiteLahanPage: React.FC = () => {
 
   const handleOpenAdd = () => {
     setEditId(null);
-    setFormData({ namaLahan: '', lokasiDesa: '', kecamatan: '', luasHektar: '', varietasSorgum: '', pemilikKelompokTani: '' });
+    setFormData({ namaLahan: '', lokasiDesa: '', kecamatan: '', luasHektar: '', pemilikKelompokTani: '' });
     setImagePreview(null);
     setImageError(null);
     setIsModalOpen(true);
@@ -198,7 +201,6 @@ export const LiteLahanPage: React.FC = () => {
       lokasiDesa: item.lokasiDesa || '',
       kecamatan: item.kecamatan || '',
       luasHektar: item.luasHektar != null ? String(item.luasHektar) : '',
-      varietasSorgum: item.varietasSorgum || '',
       pemilikKelompokTani: item.pemilikKelompokTani || '',
     });
     setImagePreview(item.fotoUrl || null);
@@ -221,7 +223,6 @@ export const LiteLahanPage: React.FC = () => {
       lokasiDesa: formData.lokasiDesa,
       kecamatan: formData.kecamatan,
       luasHektar: formData.luasHektar ? Number(formData.luasHektar) : null,
-      varietasSorgum: formData.varietasSorgum,
       pemilikKelompokTani: formData.pemilikKelompokTani,
       fotoUrl: imagePreview, // base64 atau null
     };
@@ -518,15 +519,6 @@ export const LiteLahanPage: React.FC = () => {
                 value={formData.luasHektar}
                 onChange={(e) => setFormData({ ...formData, luasHektar: e.target.value })}
                 placeholder="Contoh: 0.5"
-                className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-[#2C4219] mb-1">Varietas Sorgum</label>
-              <input
-                value={formData.varietasSorgum}
-                onChange={(e) => setFormData({ ...formData, varietasSorgum: e.target.value })}
-                placeholder="Contoh: Super 1"
                 className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
               />
             </div>
