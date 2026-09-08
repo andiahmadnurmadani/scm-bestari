@@ -45,6 +45,9 @@ export const LitePanenPage: React.FC = () => {
   const [selectedPlanting, setSelectedPlanting] = useState<Planting | null>(null);
   const [activePlantings, setActivePlantings] = useState<Planting[]>([]);
 
+  // Panen terpilih per grup (dropdown Panen Ke-?)
+  const [selectedHarvestId, setSelectedHarvestId] = useState<string | null>(null);
+
   // Foto hasil panen (opsional)
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -54,12 +57,37 @@ export const LitePanenPage: React.FC = () => {
     try {
       const res = await harvestApi.getAll({ page: 1, limit: 100, search: searchTerm || undefined });
       setDataList(res.data || []);
+      setSelectedHarvestId(null); // reset pilihan grup saat daftar berubah
     } catch (err: any) {
       setToast({ msg: err?.response?.data?.message || 'Gagal memuat data panen.', type: 'error' });
     } finally {
       setLoading(false);
     }
   }, [searchTerm]);
+
+  // Kelompokkan panen berdasarkan penanaman (ratoon 1/3, 2/3, 3/3 dalam satu grup)
+  const groups = React.useMemo(() => {
+    const byKey = new Map<string, HarvestRecord[]>();
+    for (const item of dataList) {
+      const key = item.plantingId ? `planting:${item.plantingId}` : `lahan:${item.namaLahan || 'tanpa-lahan'}`;
+      const arr = byKey.get(key) || [];
+      arr.push(item);
+      byKey.set(key, arr);
+    }
+    return Array.from(byKey.entries())
+      .map(([key, items]) => {
+        // urutkan panen ke-1, ke-2, ke-3 (yang tanpa panenKe dianggap 1)
+        const sorted = [...items].sort((a, b) => (Number((a as any).panenKe) || 1) - (Number((b as any).panenKe) || 1));
+        const head = sorted[0];
+        return { key, items: sorted, head, totalKg: sorted.reduce((s, x) => s + (Number(x.jumlahHasilKg) || 0), 0) };
+      })
+      .sort((a, b) => {
+        // grup terbaru berdasarkan tanggal panen terakhir
+        const ta = Math.max(...a.items.map((x) => new Date(x.tanggalPanen).getTime() || 0));
+        const tb = Math.max(...b.items.map((x) => new Date(x.tanggalPanen).getTime() || 0));
+        return tb - ta;
+      });
+  }, [dataList]);
 
   useEffect(() => {
     fetchData();
@@ -259,46 +287,76 @@ export const LitePanenPage: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-2.5">
-          {dataList.map((item) => (
-            <div key={item.id} className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl overflow-hidden border border-[#c4c8bb]/30 bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center shrink-0">
-                {item.fotoUrl ? (
-                  <img src={item.fotoUrl} alt={item.namaLahan} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                ) : (
-                  <Sprout className="w-5 h-5" />
-                )}
+          {groups.map((group) => {
+            // Panen aktif pada dropdown: default panen pertama (1/3) bila belum ada pilihan
+            const active =
+              group.items.find((x) => x.id === selectedHarvestId) ||
+              group.head;
+            return (
+              <div key={group.key} className="bg-white rounded-2xl border border-[#c4c8bb]/30 overflow-hidden">
+                {/* Header kartu = satu penanaman/lahan, bukan satu panen */}
+                <div className="p-4 flex items-center gap-3 flex-wrap">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden border border-[#c4c8bb]/30 bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center shrink-0">
+                    {group.head.fotoUrl ? (
+                      <img src={group.head.fotoUrl} alt={group.head.namaLahan} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <Sprout className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-[#172C05] truncate flex items-center gap-1.5">
+                      {group.head.namaLahan}
+                      {group.items.length > 1 && (
+                        <span className="inline-block px-1.5 py-0.5 rounded-full bg-[#C3E28D] text-[#2C4219] text-[9px] font-extrabold leading-none shrink-0">
+                          {group.items.length}× panen
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-[11px] text-[#6B7280] flex items-center gap-1 truncate">
+                      <MapPin className="w-3 h-3 shrink-0" />
+                      {(group.head as any).planting?.kodeTanam ? `${(group.head as any).planting.kodeTanam} • ` : ""}{group.head.varietas} • Total {formatBerat(group.totalKg)}
+                    </p>
+                  </div>
+                  {/* Dropdown Panen Ke-? — ratoon disimpan di sini, bukan kartu baru */}
+                  <select
+                    value={active.id}
+                    onChange={(e) => setSelectedHarvestId(e.target.value)}
+                    className="shrink-0 px-2.5 py-1.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-lg text-xs font-bold text-[#2C4219] cursor-pointer"
+                    title="Pilih panen ke berapa"
+                  >
+                    {group.items.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        Panen {Number((g as any).panenKe) || 1}/3 — {formatTanggalId(g.tanggalPanen)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {/* Body kartu = info panen yang sedang dipilih pada dropdown */}
+                <div className="px-4 pb-4 -mt-1 flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                  <div className="text-left shrink-0">
+                    <p className="text-sm font-extrabold text-[#2C4219]">{formatBerat(Number(active.jumlahHasilKg) || 0)}</p>
+                    <p className="text-[10px] text-[#9CA3AF]">{active.kodePanen}</p>
+                  </div>
+                  <p className="text-[11px] text-[#6B7280] flex items-center gap-1 truncate min-w-0 flex-1">
+                    <MapPin className="w-3 h-3 shrink-0" />
+                    {formatTanggalId(active.tanggalPanen)}
+                    {Number((active as any).panenKe) > 1 ? ` • Panen ${Number((active as any).panenKe)}/3` : ''}
+                  </p>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => openDetail(active)} title="Lihat" className="p-2 rounded-lg text-[#2C4219] hover:bg-[#C3E28D]/30 cursor-pointer">
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleOpenEdit(active)} title="Edit" className="p-2 rounded-lg text-amber-700 hover:bg-amber-50 cursor-pointer">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setDeleteTarget(active)} title="Hapus" className="p-2 rounded-lg text-red-600 hover:bg-red-50 cursor-pointer">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-[#172C05] truncate flex items-center gap-1.5">
-                  {item.namaLahan}
-                  {(item as any).panenKe && Number((item as any).panenKe) > 1 && (
-                    <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] font-extrabold leading-none shrink-0 ${Number((item as any).panenKe) === 3 ? 'bg-amber-100 text-amber-700' : 'bg-[#C3E28D] text-[#2C4219]'}`}>
-                      Panen {Number((item as any).panenKe)}/3
-                    </span>
-                  )}
-                </p>
-                <p className="text-[11px] text-[#6B7280] flex items-center gap-1 truncate">
-                  <MapPin className="w-3 h-3 shrink-0" />
-                  {(item as any).planting?.kodeTanam ? `${(item as any).planting.kodeTanam} • ` : ""}{item.varietas} • {formatTanggalId(item.tanggalPanen)}
-                </p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-sm font-extrabold text-[#2C4219]">{formatBerat(Number(item.jumlahHasilKg) || 0)}</p>
-                <p className="text-[10px] text-[#9CA3AF]">{item.kodePanen}</p>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => openDetail(item)} title="Lihat" className="p-2 rounded-lg text-[#2C4219] hover:bg-[#C3E28D]/30 cursor-pointer">
-                  <Eye className="w-4 h-4" />
-                </button>
-                <button onClick={() => handleOpenEdit(item)} title="Edit" className="p-2 rounded-lg text-amber-700 hover:bg-amber-50 cursor-pointer">
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button onClick={() => setDeleteTarget(item)} title="Hapus" className="p-2 rounded-lg text-red-600 hover:bg-red-50 cursor-pointer">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
