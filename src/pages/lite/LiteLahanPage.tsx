@@ -10,6 +10,7 @@ import { useLiteSearch } from '../../components/layout/lite/LiteLayout';
 import { Modal } from '../../components/common/Modal';
 import { Toast } from '../../components/common/Toast';
 import { Button } from '../../components/common/Button';
+import { LiteImageUpload } from '../../components/common/LiteImageUpload';
 
 
 export const LiteLahanPage: React.FC = () => {
@@ -35,6 +36,10 @@ export const LiteLahanPage: React.FC = () => {
     varietasSorgum: '',
     pemilikKelompokTani: '',
   });
+
+  // Foto lahan (opsional)
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   // State Catat Tanam (alur sederhana, selaras dgn Mode Pro)
   const [plantingLahan, setPlantingLahan] = useState<LandPlot | null>(null);
@@ -181,6 +186,8 @@ export const LiteLahanPage: React.FC = () => {
   const handleOpenAdd = () => {
     setEditId(null);
     setFormData({ namaLahan: '', lokasiDesa: '', kecamatan: '', luasHektar: '', varietasSorgum: '', pemilikKelompokTani: '' });
+    setImagePreview(null);
+    setImageError(null);
     setIsModalOpen(true);
   };
 
@@ -194,6 +201,8 @@ export const LiteLahanPage: React.FC = () => {
       varietasSorgum: item.varietasSorgum || '',
       pemilikKelompokTani: item.pemilikKelompokTani || '',
     });
+    setImagePreview(item.fotoUrl || null);
+    setImageError(null);
     setIsModalOpen(true);
   };
 
@@ -210,6 +219,7 @@ export const LiteLahanPage: React.FC = () => {
       luasHektar: formData.luasHektar ? Number(formData.luasHektar) : null,
       varietasSorgum: formData.varietasSorgum,
       pemilikKelompokTani: formData.pemilikKelompokTani,
+      fotoUrl: imagePreview, // base64 atau null
     };
     try {
       if (editId) {
@@ -268,8 +278,12 @@ export const LiteLahanPage: React.FC = () => {
             return (
               <div key={item.id} className="bg-white rounded-2xl border border-[#c4c8bb]/30 overflow-hidden">
                 <div className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center shrink-0">
-                    <Tractor className="w-5 h-5" />
+                  <div className="w-12 h-12 rounded-xl overflow-hidden border border-[#c4c8bb]/30 bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center shrink-0">
+                    {item.fotoUrl ? (
+                      <img src={item.fotoUrl} alt={item.namaLahan} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <Tractor className="w-5 h-5" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-[#172C05] truncate flex items-center gap-1.5">{item.namaLahan}
@@ -521,6 +535,15 @@ export const LiteLahanPage: React.FC = () => {
                 className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
               />
             </div>
+            <div className="sm:col-span-2">
+              <LiteImageUpload
+                id="lite-lahan-foto-input"
+                label="Foto Lahan (opsional)"
+                value={imagePreview}
+                onChange={setImagePreview}
+                error={imageError}
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-2.5 pt-3 border-t border-[#c4c8bb]/20">
@@ -553,6 +576,11 @@ export const LiteLahanPage: React.FC = () => {
                 </div>
               ))}
             </div>
+            {detailTarget.fotoUrl && (
+              <div className="rounded-xl overflow-hidden border border-[#c4c8bb]/30">
+                <img src={detailTarget.fotoUrl} alt={`Foto lahan ${detailTarget.namaLahan}`} className="w-full max-h-60 object-cover" referrerPolicy="no-referrer" />
+              </div>
+            )}
           </div>
         )}
       </Modal>

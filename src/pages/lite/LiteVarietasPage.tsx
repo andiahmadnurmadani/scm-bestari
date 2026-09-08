@@ -4,6 +4,7 @@ import { varietyApi, Variety } from '../../api/endpoints/varietyApi';
 import { Modal } from '../../components/common/Modal';
 import { Toast } from '../../components/common/Toast';
 import { Button } from '../../components/common/Button';
+import { LiteImageUpload } from '../../components/common/LiteImageUpload';
 
 export const LiteVarietasPage: React.FC = () => {
   const [dataList, setDataList] = useState<Variety[]>([]);
@@ -15,6 +16,10 @@ export const LiteVarietasPage: React.FC = () => {
   const [detailTarget, setDetailTarget] = useState<Variety | null>(null);
 
   const [formData, setFormData] = useState({ name: '', lamaPanen: '', description: '' });
+
+  // Foto varietas (opsional)
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -35,6 +40,8 @@ export const LiteVarietasPage: React.FC = () => {
   const handleOpenAdd = () => {
     setEditingId(null);
     setFormData({ name: '', lamaPanen: '', description: '' });
+    setImagePreview(null);
+    setImageError(null);
     setIsModalOpen(true);
   };
 
@@ -45,6 +52,8 @@ export const LiteVarietasPage: React.FC = () => {
       lamaPanen: item.lamaPanen != null ? String(item.lamaPanen) : '',
       description: item.description || '',
     });
+    setImagePreview(item.imageUrl || null);
+    setImageError(null);
     setIsModalOpen(true);
   };
 
@@ -58,6 +67,7 @@ export const LiteVarietasPage: React.FC = () => {
       name: formData.name.trim(),
       lamaPanen: formData.lamaPanen ? Number(formData.lamaPanen) : undefined,
       description: formData.description,
+      imageUrl: imagePreview, // base64 atau null
     };
     try {
       if (editingId) {
@@ -110,8 +120,12 @@ export const LiteVarietasPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {dataList.map((v) => (
             <div key={v.id} className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center shrink-0">
-                <Database className="w-5 h-5" />
+              <div className="w-12 h-12 rounded-xl overflow-hidden border border-[#c4c8bb]/30 bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center shrink-0">
+                {v.imageUrl ? (
+                  <img src={v.imageUrl} alt={v.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <Database className="w-5 h-5" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-[#172C05] truncate">{v.name}</p>
@@ -173,6 +187,13 @@ export const LiteVarietasPage: React.FC = () => {
               className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
             />
           </div>
+          <LiteImageUpload
+            id="lite-varietas-foto-input"
+            label="Foto Varietas (opsional)"
+            value={imagePreview}
+            onChange={setImagePreview}
+            error={imageError}
+          />
           <div className="flex justify-end gap-2.5 pt-3 border-t border-[#c4c8bb]/20">
             <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Batal</Button>
             <Button type="submit" variant="primary">{editingId ? 'Simpan Perubahan' : 'Tambah Varietas'}</Button>
@@ -192,6 +213,11 @@ export const LiteVarietasPage: React.FC = () => {
               <p className="text-[10px] font-bold text-[#6B7280] uppercase">Keterangan</p>
               <p className="text-[13px] text-[#44483e] mt-0.5">{detailTarget.description || '-'}</p>
             </div>
+            {detailTarget.imageUrl && (
+              <div className="rounded-xl overflow-hidden border border-[#c4c8bb]/30">
+                <img src={detailTarget.imageUrl} alt={`Foto varietas ${detailTarget.name}`} className="w-full max-h-60 object-cover" referrerPolicy="no-referrer" />
+              </div>
+            )}
           </div>
         )}
       </Modal>

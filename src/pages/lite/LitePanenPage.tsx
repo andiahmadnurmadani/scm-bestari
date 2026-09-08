@@ -11,6 +11,7 @@ import { useLiteSearch } from '../../components/layout/lite/LiteLayout';
 import { Modal } from '../../components/common/Modal';
 import { Toast } from '../../components/common/Toast';
 import { Button } from '../../components/common/Button';
+import { LiteImageUpload } from '../../components/common/LiteImageUpload';
 
 export const LitePanenPage: React.FC = () => {
   const { searchTerm } = useLiteSearch();
@@ -43,6 +44,10 @@ export const LitePanenPage: React.FC = () => {
   const [plantingsForForm, setPlantingsForForm] = useState<Planting[]>([]);
   const [selectedPlanting, setSelectedPlanting] = useState<Planting | null>(null);
   const [activePlantings, setActivePlantings] = useState<Planting[]>([]);
+
+  // Foto hasil panen (opsional)
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -124,6 +129,8 @@ export const LitePanenPage: React.FC = () => {
     setGudangId('');
     setPlantingsForForm([]);
     setSelectedPlanting(null);
+    setImagePreview(null);
+    setImageError(null);
   };
 
   const handleOpenAdd = () => {
@@ -146,6 +153,8 @@ export const LitePanenPage: React.FC = () => {
     });
     setUsedPanenKe((item as any).panenKe ? [Number((item as any).panenKe)] : []);
     setGudangId('');
+    setImagePreview(item.fotoUrl || null);
+    setImageError(null);
     // Muat daftar penanaman lahan agar dropdown konsisten saat edit
     const lahanId = item.lahanId ? String(item.lahanId) : '';
     setPlantingsForForm([]);
@@ -188,6 +197,7 @@ export const LitePanenPage: React.FC = () => {
       status: 'Selesai',
       catatan: formData.catatan,
       panenKe: Number(formData.panenKe) || 1,
+      fotoUrl: imagePreview, // base64 atau null
       // Bila user memilih gudang → langsung buat batch GAB-... (ringkas: 1 baris total hasil)
       ...(gudangId ? { gudangId, stokBatch: [{ jumlahKg: totalKg, keterangan: 'Hasil panen masuk gudang (Mode Mudah)' }] } : {}),
     };
@@ -242,8 +252,12 @@ export const LitePanenPage: React.FC = () => {
         <div className="space-y-2.5">
           {dataList.map((item) => (
             <div key={item.id} className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center shrink-0">
-                <Sprout className="w-5 h-5" />
+              <div className="w-12 h-12 rounded-xl overflow-hidden border border-[#c4c8bb]/30 bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center shrink-0">
+                {item.fotoUrl ? (
+                  <img src={item.fotoUrl} alt={item.namaLahan} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <Sprout className="w-5 h-5" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-[#172C05] truncate flex items-center gap-1.5">
@@ -426,6 +440,15 @@ export const LitePanenPage: React.FC = () => {
                 className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
               />
             </div>
+            <div className="sm:col-span-2">
+              <LiteImageUpload
+                id="lite-panen-foto-input"
+                label="Foto Hasil Panen (opsional)"
+                value={imagePreview}
+                onChange={setImagePreview}
+                error={imageError}
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-2.5 pt-3 border-t border-[#c4c8bb]/20">
             <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Batal</Button>
@@ -462,6 +485,11 @@ export const LitePanenPage: React.FC = () => {
                 </div>
               ))}
             </div>
+            {detailTarget.fotoUrl && (
+              <div className="rounded-xl overflow-hidden border border-[#c4c8bb]/30">
+                <img src={detailTarget.fotoUrl} alt={`Foto panen ${detailTarget.namaLahan}`} className="w-full max-h-60 object-cover" referrerPolicy="no-referrer" />
+              </div>
+            )}
             {detailTarget.stockBatches && detailTarget.stockBatches.length > 0 && (
               <div className="p-3 bg-[#C3E28D]/15 rounded-xl">
                 <p className="text-xs font-bold text-[#2C4219] mb-1.5">Stok di Gudang</p>
