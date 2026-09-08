@@ -263,7 +263,8 @@ export async function getHarvestById(req, res) {
       `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
               h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
-              p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas
+              p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
+              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
        FROM harvests h
        LEFT JOIN lands l ON h.lahan_id = l.id
        LEFT JOIN plantings p ON h.planting_id = p.id
@@ -415,15 +416,6 @@ export async function createHarvest(req, res) {
       try { await pool.execute(`UPDATE plantings SET status_tanam='Dipanen' WHERE id=? AND (SELECT COUNT(*) FROM harvests WHERE planting_id=? AND panen_ke<=3) >= 3`, [plantingId, plantingId]); } catch {}
     }
 
-    const [newRow] = await pool.execute(
-      `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
-              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.created_at,
-              l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
-              p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas
-       FROM harvests h LEFT JOIN lands l ON h.lahan_id=l.id LEFT JOIN plantings p ON h.planting_id=p.id WHERE h.id = ? LIMIT 1`,
-      [result.insertId]
-    );
-
     // Masukkan stok ke gudang lahan terkait (Opsi B: 1 panen → banyak batch)
     try {
       await replaceHarvestStockBatches(pool, {
@@ -436,6 +428,17 @@ export async function createHarvest(req, res) {
         gudangId: data.gudangId || undefined,
       });
     } catch (e) { console.warn('⚠ Stok masuk gudang dilewati:', e.message); }
+
+    // Ambil data lengkap SETELAH stok masuk agar sudah_masuk_kg akurat
+    const [newRow] = await pool.execute(
+      `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
+              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.created_at,
+              l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
+              p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
+              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
+       FROM harvests h LEFT JOIN lands l ON h.lahan_id=l.id LEFT JOIN plantings p ON h.planting_id=p.id WHERE h.id = ? LIMIT 1`,
+      [result.insertId]
+    );
 
     return res.status(201).json({
       success: true,
@@ -547,7 +550,8 @@ export async function updateHarvest(req, res) {
       `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
               h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
-              p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas
+              p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
+              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
        FROM harvests h LEFT JOIN lands l ON h.lahan_id=l.id LEFT JOIN plantings p ON h.planting_id=p.id WHERE h.id = ? LIMIT 1`,
       [id]
     );
