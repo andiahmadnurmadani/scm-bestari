@@ -9,10 +9,11 @@ import {
   Database,
   HelpCircle,
   LogOut,
-  User,
   BookOpen,
   Headphones,
   Boxes,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { authApi } from '../../../api/endpoints/authApi';
 import { useCms } from '../../../context/CmsContext';
@@ -28,7 +29,12 @@ const navItems = [
   { label: 'Varietas', path: '/lite/varietas', icon: Database },
 ];
 
-export const LiteSidebar: React.FC = () => {
+interface LiteSidebarProps {
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
+export const LiteSidebar: React.FC<LiteSidebarProps> = ({ collapsed = false, onToggleCollapse }) => {
   const navigate = useNavigate();
   const { cms } = useCms();
   const [helpOpen, setHelpOpen] = useState(false);
@@ -41,10 +47,10 @@ export const LiteSidebar: React.FC = () => {
   };
 
   return (
-    <aside className="hidden lg:block fixed left-0 top-0 bottom-0 z-40 h-screen w-60">
+    <aside className={`hidden lg:block fixed left-0 top-0 bottom-0 z-40 h-screen transition-all duration-300 ${collapsed ? 'w-14' : 'w-60'}`}>
       <div className="relative flex flex-col h-full bg-[#FFF8F4] border-r border-[#c4c8bb]/20 p-3 select-none">
         {/* Brand */}
-        <div className="flex items-center justify-between mb-4 px-1">
+        <div className={`flex items-center ${collapsed ? 'justify-center mb-3' : 'justify-between mb-4 px-1'}`}>
           <div className="flex items-center gap-2">
             {cms.logo ? (
               <img
@@ -57,10 +63,12 @@ export const LiteSidebar: React.FC = () => {
                 <Sprout className="w-4 h-4 text-[#C3E28D]" />
               </div>
             )}
-            <div className="flex flex-col">
-              <h1 className="text-sm font-extrabold text-[#172C05] leading-none">{cms.siteName || 'Sorgum SCM'}</h1>
-              <p className="text-[9px] font-bold text-[#44483e] tracking-wider uppercase mt-0.5">Mode Mudah</p>
-            </div>
+            {!collapsed && (
+              <div className="flex flex-col">
+                <h1 className="text-sm font-extrabold text-[#172C05] leading-none whitespace-nowrap">{cms.siteName || 'Sorgum SCM'}</h1>
+                <p className="text-[9px] font-bold text-[#44483e] tracking-wider uppercase mt-0.5">Mode Mudah</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -73,8 +81,9 @@ export const LiteSidebar: React.FC = () => {
                 key={item.path}
                 to={item.path}
                 end={item.end}
+                title={collapsed ? item.label : undefined}
                 className={({ isActive }) =>
-                  `flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] transition-all duration-200 ${
+                  `flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] transition-all duration-200 ${collapsed ? 'justify-center px-1.5' : ''} ${
                     isActive
                       ? 'bg-[#C3E28D] text-[#172C05] font-semibold'
                       : 'text-[#44483e] hover:text-[#172C05] hover:bg-[#efe0d2]/50'
@@ -82,38 +91,40 @@ export const LiteSidebar: React.FC = () => {
                 }
               >
                 <Icon className="w-4 h-4 shrink-0" />
-                <span>{item.label}</span>
+                {!collapsed && <span>{item.label}</span>}
               </NavLink>
             );
           })}
         </nav>
 
+        {/* Tombol ciutkan/perluas sidebar (desktop) — di GARIS perbatasan sidebar & konten */}
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            title={collapsed ? 'Perluas menu' : 'Ciutkan menu'}
+            className="hidden lg:flex absolute right-[-14px] top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-[#2C4219] text-white hover:bg-[#172C05] shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer items-center justify-center shrink-0"
+          >
+            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
+        )}
+
         {/* Bottom */}
         <div className="pt-3 mt-2 border-t border-[#c4c8bb]/30 space-y-0.5">
-          <NavLink
-            to="/lite/profil"
-            className={({ isActive }) =>
-              `w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                isActive ? 'text-[#2C4219] bg-[#C3E28D]/50' : 'text-[#44483e] hover:bg-[#efe0d2]/50'
-              }`
-            }
-          >
-            <User className="w-4 h-4" />
-            <span>Profil Saya</span>
-          </NavLink>
           <button
             onClick={() => setHelpOpen(true)}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#44483e] hover:bg-[#efe0d2]/50 transition-colors cursor-pointer"
+            title={collapsed ? 'Bantuan' : undefined}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-[#44483e] hover:bg-[#efe0d2]/50 transition-colors cursor-pointer ${collapsed ? 'justify-center px-1.5' : ''}`}
           >
-            <HelpCircle className="w-4 h-4" />
-            <span>Bantuan</span>
+            <HelpCircle className="w-4 h-4 shrink-0" />
+            {!collapsed && <span>Bantuan</span>}
           </button>
           <button
             onClick={() => setConfirmLogout(true)}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+            title={collapsed ? 'Keluar' : undefined}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition-colors cursor-pointer ${collapsed ? 'justify-center px-1.5' : ''}`}
           >
-            <LogOut className="w-4 h-4" />
-            <span>Keluar</span>
+            <LogOut className="w-4 h-4 shrink-0" />
+            {!collapsed && <span>Keluar</span>}
           </button>
         </div>
 

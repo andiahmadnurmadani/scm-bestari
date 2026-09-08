@@ -37,7 +37,7 @@ export const LiteLahanPage: React.FC = () => {
     pemilikKelompokTani: '',
   });
 
-  // Foto lahan (opsional)
+  // Foto lahan (WAJIB — konsisten dengan Mode Pro & backend)
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
 
@@ -210,6 +210,10 @@ export const LiteLahanPage: React.FC = () => {
     e.preventDefault();
     if (!formData.namaLahan || !formData.lokasiDesa) {
       setToast({ msg: 'Nama lahan dan desa wajib diisi.', type: 'error' });
+      return;
+    }
+    if (!imagePreview) {
+      setToast({ msg: 'Foto lahan wajib diisi. Silakan unggah gambar lahan terlebih dahulu.', type: 'error' });
       return;
     }
     const payload: any = {
@@ -538,11 +542,12 @@ export const LiteLahanPage: React.FC = () => {
             <div className="sm:col-span-2">
               <LiteImageUpload
                 id="lite-lahan-foto-input"
-                label="Foto Lahan (opsional)"
+                label="Foto Lahan *"
                 value={imagePreview}
                 onChange={setImagePreview}
                 error={imageError}
               />
+              <p className="text-[10px] text-[#6B7280] mt-1">Foto lahan wajib diisi agar mudah dikenali.</p>
             </div>
           </div>
 
