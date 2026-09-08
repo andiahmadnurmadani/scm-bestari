@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Sprout, Pencil, Trash2, Eye, MapPin } from 'lucide-react';
+import { Plus, Sprout, Pencil, Trash2, Eye, MapPin, Warehouse as WarehouseIcon, Clock } from 'lucide-react';
 import { harvestApi } from '../../api/endpoints/harvestApi';
 import { landApi } from '../../api/endpoints/landApi';
 import { plantingApi } from '../../api/endpoints/plantingApi';
@@ -136,6 +136,15 @@ export const LitePanenPage: React.FC = () => {
   const handleOpenAdd = () => {
     resetForm();
     setIsModalOpen(true);
+  };
+
+  // Muat detail lengkap (termasuk batch stok gudang) sebelum menampilkan status masuk gudang
+  const openDetail = async (item: HarvestRecord) => {
+    setDetailTarget(item); // tampilkan segera dari data list
+    try {
+      const res = await harvestApi.getById(item.id);
+      if (res.data) setDetailTarget(res.data);
+    } catch { /* biarkan pakai data list */ }
   };
 
   const handleOpenEdit = async (item: HarvestRecord) => {
@@ -278,7 +287,7 @@ export const LitePanenPage: React.FC = () => {
                 <p className="text-[10px] text-[#9CA3AF]">{item.kodePanen}</p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => setDetailTarget(item)} title="Lihat" className="p-2 rounded-lg text-[#2C4219] hover:bg-[#C3E28D]/30 cursor-pointer">
+                <button onClick={() => openDetail(item)} title="Lihat" className="p-2 rounded-lg text-[#2C4219] hover:bg-[#C3E28D]/30 cursor-pointer">
                   <Eye className="w-4 h-4" />
                 </button>
                 <button onClick={() => handleOpenEdit(item)} title="Edit" className="p-2 rounded-lg text-amber-700 hover:bg-amber-50 cursor-pointer">
@@ -465,49 +474,86 @@ export const LitePanenPage: React.FC = () => {
         subtitle={detailTarget?.kodePanen || ''}
       >
         {detailTarget && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              {[
-                ['Lahan', detailTarget.namaLahan],
-                ['Varietas', detailTarget.varietas],
-                ['Tanggal Panen', formatTanggalId(detailTarget.tanggalPanen, { weekday: true })],
-                ['Jumlah Hasil', formatBerat(Number(detailTarget.jumlahHasilKg) || 0)],
-                ['Mutu', detailTarget.kualitasGrade],
-                ['Penanggung Jawab', detailTarget.petaniPenanggungJawab],
-                ['Status', detailTarget.status],
-                ['Kode Panen', detailTarget.kodePanen],
-                ['Penanaman Asal', detailTarget.planting?.kodeTanam || '-'],
-                ['Panen Ke', detailTarget.panenKe && Number(detailTarget.panenKe) > 1 ? `Panen ${detailTarget.panenKe}/3` : 'Panen 1 (awal)'],
-              ].map(([k, v]) => (
-                <div key={k as string} className="p-3 bg-[#F7F7F5] rounded-xl">
-                  <p className="text-[10px] font-bold text-[#6B7280] uppercase">{k}</p>
-                  <p className="text-[13px] font-semibold text-[#172C05] mt-0.5">{v || '-'}</p>
-                </div>
-              ))}
-            </div>
-            {detailTarget.fotoUrl && (
-              <div className="rounded-xl overflow-hidden border border-[#c4c8bb]/30">
-                <img src={detailTarget.fotoUrl} alt={`Foto panen ${detailTarget.namaLahan}`} className="w-full max-h-60 object-cover" referrerPolicy="no-referrer" />
-              </div>
-            )}
-            {detailTarget.stockBatches && detailTarget.stockBatches.length > 0 && (
-              <div className="p-3 bg-[#C3E28D]/15 rounded-xl">
-                <p className="text-xs font-bold text-[#2C4219] mb-1.5">Stok di Gudang</p>
-                <div className="space-y-1">
-                  {detailTarget.stockBatches.map((b) => (
-                    <div key={b.id} className="flex justify-between text-xs">
-                      <span className="text-[#44483e]">{b.kodeBatchStok}</span>
-                      <span className="font-bold text-[#172C05]">{formatBerat(Number(b.jumlahMasukKg) || 0)}</span>
+              <div className="space-y-3">
+                {/* Status Pemasukan ke Gudang */}
+                {(() => {
+                  const sudahMasuk = (detailTarget.stockBatches?.length || 0) > 0 || Number(detailTarget.sudahMasukKg || 0) > 0;
+                  const masukKg = Number(detailTarget.sudahMasukKg) || 0;
+                  const sisaKg = detailTarget.sisaBelumMasukKg != null
+                    ? Number(detailTarget.sisaBelumMasukKg)
+                    : (Number(detailTarget.jumlahHasilKg) || 0) - masukKg;
+                  const totalKg = Number(detailTarget.jumlahHasilKg) || 0;
+                  return (
+                    <div className={`p-3 rounded-xl border flex items-center gap-3 ${
+                      sudahMasuk
+                        ? 'bg-[#C3E28D]/15 border-[#C3E28D]/40'
+                        : 'bg-amber-50 border-amber-200'
+                    }`}>
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                        sudahMasuk ? 'bg-[#2C4219] text-[#C3E28D]' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {sudahMasuk ? <WarehouseIcon className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs font-extrabold ${sudahMasuk ? 'text-[#2C4219]' : 'text-amber-800'}`}>
+                          {sudahMasuk ? 'Sudah Masuk Gudang' : 'Belum Masuk Gudang'}
+                        </p>
+                        <p className="text-[11px] text-[#6B7280]">
+                          {sudahMasuk
+                            ? `Tersimpan ${formatBerat(masukKg)}${sisaKg > 0 ? ` · sisa ${formatBerat(sisaKg)}` : ''}`
+                            : 'Hasil panen ini belum disimpan ke gudang.'}
+                        </p>
+                      </div>
+                      {sudahMasuk && (
+                        <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-[#2C4219] text-[#C3E28D] shrink-0">
+                          {totalKg > 0 ? Math.round((masukKg / totalKg) * 100) : 0}%
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {[
+                    ['Lahan', detailTarget.namaLahan],
+                    ['Varietas', detailTarget.varietas],
+                    ['Tanggal Panen', formatTanggalId(detailTarget.tanggalPanen, { weekday: true })],
+                    ['Jumlah Hasil', formatBerat(Number(detailTarget.jumlahHasilKg) || 0)],
+                    ['Penanggung Jawab', detailTarget.petaniPenanggungJawab],
+                    ['Status', detailTarget.status],
+                    ['Kode Panen', detailTarget.kodePanen],
+                    ['Penanaman Asal', detailTarget.planting?.kodeTanam || '-'],
+                    ['Panen Ke', detailTarget.panenKe && Number(detailTarget.panenKe) > 1 ? `Panen ${detailTarget.panenKe}/3` : 'Panen 1 (awal)'],
+                  ].map(([k, v]) => (
+                    <div key={k as string} className="p-3 bg-[#F7F7F5] rounded-xl">
+                      <p className="text-[10px] font-bold text-[#6B7280] uppercase">{k}</p>
+                      <p className="text-[13px] font-semibold text-[#172C05] mt-0.5">{v || '-'}</p>
                     </div>
                   ))}
                 </div>
+                {detailTarget.fotoUrl && (
+                  <div className="rounded-xl overflow-hidden border border-[#c4c8bb]/30">
+                    <img src={detailTarget.fotoUrl} alt={`Foto panen ${detailTarget.namaLahan}`} className="w-full max-h-60 object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                )}
+                {detailTarget.stockBatches && detailTarget.stockBatches.length > 0 && (
+                  <div className="p-3 bg-[#C3E28D]/15 rounded-xl">
+                    <p className="text-xs font-bold text-[#2C4219] mb-1.5">Stok di Gudang</p>
+                    <div className="space-y-1">
+                      {detailTarget.stockBatches.map((b) => (
+                        <div key={b.id} className="flex justify-between text-xs">
+                          <span className="text-[#44483e]">{b.kodeBatchStok}</span>
+                          <span className="font-bold text-[#172C05]">{formatBerat(Number(b.jumlahMasukKg) || 0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {detailTarget.catatan && (
+                  <p className="text-xs text-[#6B7280] italic">"{detailTarget.catatan}"</p>
+                )}
               </div>
             )}
-            {detailTarget.catatan && (
-              <p className="text-xs text-[#6B7280] italic">"{detailTarget.catatan}"</p>
-            )}
-          </div>
-        )}
       </Modal>
 
       {/* Delete */}
