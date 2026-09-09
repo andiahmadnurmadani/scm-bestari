@@ -24,8 +24,8 @@ import { Modal } from '../../common/Modal';
 // ── Primary: tampil langsung di bar (4 item) ────────────────────────────────
 const primaryNav = [
   { label: 'Utama', shortLabel: 'Utama', path: '/lite', icon: LayoutDashboard, end: true },
-  { label: 'Lahan', shortLabel: 'Lahan', path: '/lite/lahan', icon: Tractor },
   { label: 'Panen', shortLabel: 'Panen', path: '/lite/panen', icon: Sprout },
+  { label: 'Lahan', shortLabel: 'Lahan', path: '/lite/lahan', icon: Tractor },
   { label: 'Gudang', shortLabel: 'Gudang', path: '/lite/gudang', icon: Warehouse },
 ] as const;
 
