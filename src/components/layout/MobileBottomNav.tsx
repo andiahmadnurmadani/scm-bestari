@@ -5,6 +5,7 @@ import {
   Sprout,
   Tractor,
   Factory,
+  Warehouse,
   Wrench,
   Award,
   Package,
@@ -28,11 +29,12 @@ const primaryNav = [
   { label: 'Dasbor', shortLabel: 'Dasbor', path: '/dashboard', icon: LayoutDashboard, end: true },
   { label: 'Panen', shortLabel: 'Panen', path: '/dashboard/panen', icon: Sprout },
   { label: 'Lahan', shortLabel: 'Lahan', path: '/dashboard/lahan', icon: Tractor },
-  { label: 'Olahan', shortLabel: 'Olahan', path: '/dashboard/produksi', icon: Factory },
+  { label: 'Gudang', shortLabel: 'Gudang', path: '/dashboard/gudang', icon: Warehouse },
 ] as const;
 
 // ── Secondary: masuk sheet "Lainnya" ────────────────────────────────────────
 const secondaryNav = [
+  { label: 'Olahan', sub: 'Hasil Olahan', path: '/dashboard/produksi', icon: Factory, desc: 'Catat hasil produksi' },
   { label: 'Peralatan', sub: 'Sarana & Alat', path: '/dashboard/peralatan', icon: Wrench, desc: 'Stok & kondisi alat' },
   { label: 'Sertifikat', sub: 'Legalitas', path: '/dashboard/sertifikat', icon: Award, desc: 'Halal, P-IRT, Lab' },
   { label: 'Kemasan', sub: 'Stok Kemasan', path: '/dashboard/kemasan', icon: Package, desc: 'Pouch, Box, Botol' },
