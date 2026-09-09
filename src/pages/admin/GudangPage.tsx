@@ -377,9 +377,6 @@ export const GudangPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#2C4219] tracking-tight">Gudang Sorgum</h1>
-          <p className="text-xs text-[#6B7280] mt-1">
-            Penyimpanan hasil panen & stok sorgum per gudang
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={openAdd} icon={<Plus className="w-3.5 h-3.5" />} variant="primary" className="text-xs py-1.5 px-3 w-full sm:w-auto justify-center">

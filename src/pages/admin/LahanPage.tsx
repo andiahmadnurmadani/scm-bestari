@@ -520,7 +520,11 @@ export const LahanPage: React.FC = () => {
             Tidak ada data lahan yang ditemukan.
           </div>
         ) : (
-          landList.map((item) => (
+          landList.map((item) => {
+            const st = getLahanDerivedStatus(item.id);
+            const isActive = st.label !== 'Kosong';
+            const Icon = st.Icon;
+            return (
             <div
               key={item.id}
               className="bg-white rounded-xl shadow-xs border border-[#c4c8bb]/25 p-4 flex flex-col sm:flex-row gap-4 hover:shadow-md transition-all duration-200 group"
@@ -549,21 +553,14 @@ export const LahanPage: React.FC = () => {
                   <h3 className="font-bold text-[#172C05] text-sm leading-snug break-words">
                     {item.namaLahan}
                   </h3>
-                  {(() => {
-                    const st = getLahanDerivedStatus(item.id);
-                    const Icon = st.Icon;
-                    const isActive = st.label !== 'Kosong';
-                    return (
-                      <span title={st.sub} className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide shrink-0 inline-flex items-center gap-1.5 border ${st.style} ${isActive ? 'shadow-sm' : ''} ${st.anim}`}>
-                        <span className="relative flex h-2 w-2">
-                          {isActive && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-60 ${st.dot}`}></span>}
-                          <span className={`relative inline-flex rounded-full h-2 w-2 ${st.dot}`}></span>
-                        </span>
-                        <Icon className="w-3 h-3" />
-                        {st.label}
-                      </span>
-                    );
-                  })()}
+                  <span title={st.sub} className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide shrink-0 inline-flex items-center gap-1.5 border ${st.style} ${isActive ? 'shadow-sm' : ''} ${st.anim}`}>
+                    <span className="relative flex h-2 w-2">
+                      {isActive && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-60 ${st.dot}`}></span>}
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${st.dot}`}></span>
+                    </span>
+                    <Icon className="w-3 h-3" />
+                    {st.label}
+                  </span>
                 </div>
 
                 {/* Info ringkas */}
@@ -625,16 +622,20 @@ export const LahanPage: React.FC = () => {
                   </button>
                   <button
                     type="button"
+                    disabled={isActive}
                     onClick={() => setDeleteTarget(item)}
-                    className="ml-auto min-h-8 w-8 rounded-lg text-red-600 hover:bg-red-50 transition-colors cursor-pointer flex items-center justify-center"
-                    title="Hapus Lahan"
+                    className={`ml-auto min-h-8 w-8 rounded-lg flex items-center justify-center transition-colors ${
+                      isActive ? 'text-[#9CA3AF] cursor-not-allowed' : 'text-red-600 hover:bg-red-50 cursor-pointer'
+                    }`}
+                    title={isActive ? 'Lahan sedang ditanami — tidak dapat dihapus' : 'Hapus Lahan'}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
 

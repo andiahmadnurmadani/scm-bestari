@@ -289,10 +289,98 @@ export async function updateLand(req, res) {
 export async function deleteLand(req, res) {
   try {
     const pool = getPool();
-    const [result] = await pool.execute('DELETE FROM lands WHERE id = ?', [req.params.id]);
+    const { id } = req.params;
 
-    if (result.affectedRows === 0) {
+    // Cek lahan ada
+    const [existing] = await pool.execute('SELECT id, nama_lahan FROM lands WHERE id = ? LIMIT 1', [id]);
+    if (existing.length === 0) {
       return res.status(404).json({ success: false, message: 'Data lahan tidak ditemukan.' });
+    }
+
+    // Cek lahan sedang ditanami (ada penanaman berstatus aktif)
+    // Status "sedang ditanami": Ditanam, Tumbuh, Siap Panen — lahan tidak boleh dihapus
+    const [activePl] = await pool.execute(
+      `SELECT id, kode_tanam, status_tanam, tanggal_tanam
+       FROM plantings
+       WHERE lahan_id = ? AND status_tanam IN ('Ditanam', 'Tumbuh', 'Siap Panen')
+       ORDER BY tanggal_tanam DESC
+       LIMIT 1`,
+      [id]
+    );
+
+    if (activePl.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: `Lahan "${existing[0].nama_lahan}" sedang ditanami (${activePl[0].kode_tanam} - ${activePl[0].status_tanam}). Selesaikan atau isi status panennya terlebih dahulu sebelum lahan dapat dihapus.`,
+      });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // Kumpulkan planting milik lahan ini (semua status, termasuk riwayat Dipanen/Gagal)
+      const [plRows] = await conn.execute('SELECT id FROM plantings WHERE lahan_id = ?', [id]);
+      const plantingIds = plRows.map((r) => r.id);
+      const placeholders = plantingIds.length > 0 ? plantingIds.map(() => '?').join(',') : null;
+
+      // Kumpulkan id harvest yang merujuk planting lahan ini SEBELUM referensi dikosongkan
+      let harvestIds = [];
+      if (placeholders) {
+        const [hRows] = await conn.execute(
+          `SELECT id FROM harvests WHERE planting_id IN (${placeholders})`,
+          plantingIds
+        );
+        harvestIds = hRows.map((r) => r.id);
+      }
+      const harvestPh = harvestIds.length > 0 ? harvestIds.map(() => '?').join(',') : null;
+
+      // Kosongkan referensi lahan/planting di harvests agar tidak jadi data menggantung
+      if (placeholders) {
+        await conn.execute(
+          `UPDATE harvests SET lahan_id = NULL, planting_id = NULL WHERE planting_id IN (${placeholders})`,
+          plantingIds
+        );
+      }
+      await conn.execute('UPDATE harvests SET lahan_id = NULL WHERE lahan_id = ? AND planting_id IS NULL', [id]);
+
+      // Kosongkan referensi lineage di production_batches (via harvest & planting lahan ini)
+      if (harvestPh) {
+        await conn.execute(
+          `UPDATE production_batches SET lahan_id = NULL, planting_id = NULL, harvest_id = NULL WHERE harvest_id IN (${harvestPh})`,
+          harvestIds
+        );
+      }
+      if (placeholders) {
+        await conn.execute(
+          `UPDATE production_batches SET lahan_id = NULL, planting_id = NULL WHERE planting_id IN (${placeholders})`,
+          plantingIds
+        );
+      }
+      // production_batches yang hanya merujuk lahan (tanpa planting/harvest) juga dibersihkan
+      await conn.execute('UPDATE production_batches SET lahan_id = NULL WHERE lahan_id = ?', [id]);
+
+      // Hapus planting riwayat milik lahan ini agar tidak yatim
+      if (placeholders) {
+        await conn.execute(`DELETE FROM plantings WHERE lahan_id = ?`, [id]);
+      }
+
+      // Hapus gudang auto-create terkait lahan agar tidak yatim
+      await conn.execute('DELETE FROM warehouses WHERE lahan_id = ?', [id]);
+
+      // Hapus lahan
+      const [result] = await conn.execute('DELETE FROM lands WHERE id = ?', [id]);
+      if (result.affectedRows === 0) {
+        await conn.rollback();
+        return res.status(404).json({ success: false, message: 'Data lahan tidak ditemukan.' });
+      }
+
+      await conn.commit();
+    } catch (txErr) {
+      await conn.rollback();
+      throw txErr;
+    } finally {
+      conn.release();
     }
 
     return res.status(200).json({ success: true, message: 'Data lahan berhasil dihapus.' });
