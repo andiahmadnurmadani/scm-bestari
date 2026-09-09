@@ -598,9 +598,13 @@ export async function processSosoh(req, res) {
     const delta = kgHasil - kgPakai;
     await pool.execute(`UPDATE warehouses SET total_stok_kg = total_stok_kg + ? WHERE id = ?`, [delta, gid]);
 
-    // Catat jejak sosoh
-    const [sCount] = await pool.execute('SELECT COUNT(*) AS total FROM sosoh_processes');
-    const kodeSosoh = `SOS-${String(Number(sCount[0].total) + 1).padStart(3, '0')}`;
+    // Catat jejak sosoh — kode SOS lanjut dari MAX(id), bukan COUNT(*) (yg bisa duplikat saat baris dihapus)
+    const [sMax] = await pool.execute('SELECT COALESCE(MAX(id), 0) AS mx FROM sosoh_processes');
+    const kodeSosoh = await kodeUnik(
+      (seq) => `SOS-${String(seq).padStart(3, '0')}`,
+      buatCekAda(pool, 'sosoh_processes', 'kode_sosoh'),
+      Number(sMax[0].mx) + 1
+    );
     const rendemen = kgPakai > 0 ? Math.round((kgHasil / kgPakai) * 1000) / 10 : 0;
     await pool.execute(
       `INSERT INTO sosoh_processes (kode_sosoh, gudang_id, batch_gabah_id, batch_sorgum_id, kg_gabah_dipakai, kg_sorgum_hasil, rendemen_persen, operator, keterangan)
