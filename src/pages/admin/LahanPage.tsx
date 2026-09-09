@@ -454,42 +454,57 @@ export const LahanPage: React.FC = () => {
       {/* Top 3 Metric Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
         {/* Card 1: Total Luas Lahan */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#1C3615]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
-            TOTAL LUAS LAHAN
-          </p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {formatLuas(totalHektar)}
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
-            {totalHektar > 0 ? `Tersebar di ${desaCount} desa wilayah binaan` : 'Belum ada data lahan'}
-          </p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center shrink-0">
+            <MapPin className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+              TOTAL LUAS LAHAN
+            </p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
+              {formatLuas(totalHektar)}
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
+              {totalHektar > 0 ? `Tersebar di ${desaCount} desa wilayah binaan` : 'Belum ada data lahan'}
+            </p>
+          </div>
         </div>
 
         {/* Card 2: Jumlah Blok Lahan */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#8C9E5B]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
-            JUMLAH BLOK LAHAN
-          </p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {landList.length} Blok Lahan
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
-            Kelompok Tani & KWT Mitra
-          </p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+            <Layers className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+              JUMLAH BLOK LAHAN
+            </p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
+              {landList.length} Blok Lahan
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
+              Kelompok Tani & KWT Mitra
+            </p>
+          </div>
         </div>
 
         {/* Card 3: Rata-rata Luas per Blok */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#DEB938]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
-            RATA-RATA LUAS / BLOK
-          </p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {landList.length > 0 ? formatLuas(totalHektar / landList.length) : formatLuas(0)}
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
-            {landList.length > 0 ? `Dari ${landList.length} blok lahan` : 'Belum ada data lahan'}
-          </p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+            <Sprout className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+              RATA-RATA LUAS / BLOK
+            </p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
+              {landList.length > 0 ? formatLuas(totalHektar / landList.length) : formatLuas(0)}
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
+              {landList.length > 0 ? `Dari ${landList.length} blok lahan` : 'Belum ada data lahan'}
+            </p>
+          </div>
         </div>
       </div>
 

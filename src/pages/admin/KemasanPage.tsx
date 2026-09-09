@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Package, Plus, Edit3, Trash2, ChevronDown, ChevronUp,
-  ImagePlus, Clock, Beaker, List, X, Upload, ChevronLeft, ChevronRight,
+  Package, PackageX, AlertTriangle, Filter, Plus, Edit3, Trash2,
+  ChevronDown, ChevronUp, ImagePlus, Clock, Beaker, List, X, Upload,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { packagingApi } from '../../api/endpoints/packagingApi';
 import { PackagingMaterial } from '../../types';
@@ -343,40 +344,63 @@ export const KemasanPage: React.FC = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        <div className="bg-white p-3.5 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-4 border-l-[#1C3615]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL ITEM KEMASAN</p>
-          <h3 className="text-lg font-bold text-[#221A12] mt-0.5">{packagingList.length} Kategori Material</h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Standing Pouch, Aluminium & Karung</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center shrink-0">
+            <Package className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL ITEM KEMASAN</p>
+            <h3 className="text-lg font-bold text-[#221A12] mt-0.5 truncate">{packagingList.length} Kategori Material</h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Standing Pouch, Aluminium & Karung</p>
+          </div>
         </div>
-        <div className="bg-white p-3.5 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-4 border-l-[#DEB938]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">STOK MENIPIS (&lt; MINIMAL)</p>
-          <h3 className="text-lg font-bold text-[#221A12] mt-0.5">{packagingList.filter((p) => p.statusStok === 'Stok Menipis').length} Jenis Item</h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Perlu re-stock dalam waktu dekat</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">STOK MENIPIS (&lt; MINIMAL)</p>
+            <h3 className="text-lg font-bold text-[#221A12] mt-0.5 truncate">{packagingList.filter((p) => p.statusStok === 'Stok Menipis').length} Jenis Item</h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Perlu re-stock dalam waktu dekat</p>
+          </div>
         </div>
-        <div className="bg-white p-3.5 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-4 border-l-red-600">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">STOK HABIS (PERLU ORDER)</p>
-          <h3 className="text-lg font-bold text-[#221A12] mt-0.5">{packagingList.filter((p) => p.statusStok === 'Habis').length} Jenis Item</h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Segera lakukan pemesanan ulang</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+            <PackageX className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">STOK HABIS (PERLU ORDER)</p>
+            <h3 className="text-lg font-bold text-[#221A12] mt-0.5 truncate">{packagingList.filter((p) => p.statusStok === 'Habis').length} Jenis Item</h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Segera lakukan pemesanan ulang</p>
+          </div>
         </div>
       </div>
 
       {/* Table Card */}
       <div className="bg-white rounded-xl shadow-2xs border border-[#c4c8bb]/30 overflow-hidden">
-        {/* Category tabs */}
-        <div className="p-3.5 border-b border-[#c4c8bb]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <h3 className="font-semibold text-[#2C4219] text-sm">Daftar Persediaan Material Kemasan</h3>
-          <div className="flex items-center gap-1 bg-[#F7F7F5] p-1 rounded-lg border border-[#c4c8bb]/30 overflow-x-auto custom-scrollbar">
-            {categoriesList.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategoryTab(cat)}
-                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  activeCategoryTab === cat ? 'bg-[#C3E28D] text-[#172C05] shadow-2xs' : 'text-[#44483e] hover:text-[#172C05]'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+        {/* Category filter dropdown */}
+        <div className="p-3.5 sm:p-4 border-b border-[#c4c8bb]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-[#2C4219] text-sm">Daftar Persediaan Material Kemasan</h3>
+            <p className="text-[11px] text-[#6B7280] mt-0.5">
+              {activeCategoryTab === 'Semua'
+                ? 'Menampilkan semua kategori kemasan'
+                : `Menampilkan kategori: ${activeCategoryTab}`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-[#6B7280] shrink-0" />
+            <select
+              value={activeCategoryTab}
+              onChange={(e) => setActiveCategoryTab(e.target.value)}
+              className="px-3 py-2 bg-[#FFF8F4] border border-[#c4c8bb]/30 rounded-lg text-xs font-bold text-[#2C4219] outline-none focus:ring-2 focus:ring-[#2C4219]/20 cursor-pointer shadow-2xs"
+            >
+              {categoriesList.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

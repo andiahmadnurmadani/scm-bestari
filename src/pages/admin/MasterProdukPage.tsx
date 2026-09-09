@@ -186,17 +186,27 @@ export const MasterProdukPage: React.FC = () => {
 
       {/* Summary Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-3xl">
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#1C3615]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL PRODUK</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5">{products.length}</h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Terdaftar di master data</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center shrink-0">
+            <Boxes className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL PRODUK</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 truncate">{products.length}</h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Terdaftar di master data</p>
+          </div>
         </div>
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#8C9E5B]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">AKTIF</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5">
-            {products.filter((p) => p.isActive).length}
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Produk tersedia untuk dipilih di form olahan</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+            <Ruler className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">AKTIF</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 truncate">
+              {products.filter((p) => p.isActive).length}
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Produk tersedia untuk dipilih di form olahan</p>
+          </div>
         </div>
       </div>
 

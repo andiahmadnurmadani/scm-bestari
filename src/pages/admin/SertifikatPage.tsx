@@ -287,28 +287,43 @@ export const SertifikatPage: React.FC = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#1C3615]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">SERTIFIKAT AKTIF</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {certificates.filter((c) => c.status === 'AKTIF').length} Dokumen Legal
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Halal BPJPH, P-IRT & SNI Pangan</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">SERTIFIKAT AKTIF</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
+              {certificates.filter((c) => c.status === 'AKTIF').length} Dokumen Legal
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Halal BPJPH, P-IRT & SNI Pangan</p>
+          </div>
         </div>
 
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#DEB938]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">DALAM PROSES AUDIT</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {certificates.filter((c) => c.status === 'PROSES').length} Dokumen Audit
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Audit Surveillance Organik & HACCP</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+            <FileCheck className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">DALAM PROSES AUDIT</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
+              {certificates.filter((c) => c.status === 'PROSES').length} Dokumen Audit
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Audit Surveillance Organik & HACCP</p>
+          </div>
         </div>
 
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-red-600">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">KADALUARSA / RE-LAB</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {certificates.filter((c) => c.status === 'KADALUARSA').length} Dokumen
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Perlu perpanjangan & re-sampling lab</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+            <AlertCircle className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">KADALUARSA / RE-LAB</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
+              {certificates.filter((c) => c.status === 'KADALUARSA').length} Dokumen
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Perlu perpanjangan & re-sampling lab</p>
+          </div>
         </div>
       </div>
 

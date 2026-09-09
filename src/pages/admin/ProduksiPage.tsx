@@ -294,24 +294,39 @@ export const ProduksiPage: React.FC = () => {
 
       {/* Top 3 Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#1C3615]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL JENIS PRODUK OLAHAN</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">{totalProdukOlahan} Jenis Produk</h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Tepung, Snack & Gula Nira</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center shrink-0">
+            <Package className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL JENIS PRODUK OLAHAN</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">{totalProdukOlahan} Jenis Produk</h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Tepung, Snack & Gula Nira</p>
+          </div>
         </div>
 
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#8C9E5B]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL BATCH OLAHAN</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">{totalProdukOlahan} Batch</h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Siap Konsumsi & Bahan Mentah</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+            <Factory className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL BATCH OLAHAN</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">{totalProdukOlahan} Batch</h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Siap Konsumsi & Bahan Mentah</p>
+          </div>
         </div>
 
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#DEB938]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL VOLUME OUTPUT</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {totalVolumeHasil.toLocaleString('id-ID')} Unit / Kg
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Kapasitas siap edar</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+            <CalendarDays className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL VOLUME OUTPUT</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
+              {totalVolumeHasil.toLocaleString('id-ID')} Unit / Kg
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Kapasitas siap edar</p>
+          </div>
         </div>
       </div>
 

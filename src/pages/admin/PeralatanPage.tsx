@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Wrench, Plus, Eye, Edit3, Trash2, AlertTriangle, Upload, X, MapPin, AlertCircle, PackageX, Hammer, CheckCircle2, Wrench as WrenchIcon } from 'lucide-react';
+import { Wrench, Plus, Eye, Edit3, Trash2, AlertTriangle, Upload, X, MapPin, AlertCircle, PackageX, Hammer, CheckCircle2, Filter, Wrench as WrenchIcon } from 'lucide-react';
 import { equipmentApi } from '../../api/endpoints/equipmentApi';
 import { Equipment } from '../../types';
 import { Button } from '../../components/common/Button';
@@ -252,69 +252,75 @@ export const PeralatanPage: React.FC = () => {
 
       {/* Top 3 Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#1C3615]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL PERALATAN MESIN</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">{equipmentList.length} Unit Peralatan</h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Mesin Olah & Pascapanen</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center shrink-0">
+            <Wrench className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL PERALATAN MESIN</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">{equipmentList.length} Unit Peralatan</h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Mesin Olah & Pascapanen</p>
+          </div>
         </div>
 
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#DB7C26]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">SEDANG DIPAKAI</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {equipmentList.filter((e) => e.status === 'Sedang Digunakan').length} Unit Dipakai
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Beroperasi aktif di lapangan</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">SEDANG DIPAKAI</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
+              {equipmentList.filter((e) => e.status === 'Sedang Digunakan').length} Unit Dipakai
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Beroperasi aktif di lapangan</p>
+          </div>
         </div>
 
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#B42318]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">BUTUH PERBAIKAN / SERVIS</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {equipmentList.filter((e) => e.kondisi === 'Perlu Perbaikan' || e.kondisi === 'Rusak' || e.status === 'Dalam Perawatan').length} Unit Perawatan
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Jadwal perawatan rutin bengkel</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+            <Hammer className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">BUTUH PERBAIKAN / SERVIS</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
+              {equipmentList.filter((e) => e.kondisi === 'Perlu Perbaikan' || e.kondisi === 'Rusak' || e.status === 'Dalam Perawatan').length} Unit Perawatan
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Jadwal perawatan rutin bengkel</p>
+          </div>
         </div>
       </div>
 
       {/* CRUD Equipment Table */}
       <div className="bg-white rounded-xl shadow-2xs border border-[#c4c8bb]/30 overflow-hidden">
-        {/* Filter pill: 1 pilihan aktif, klik langsung memfilter */}
-        <div className="p-3.5 sm:p-4 border-b border-[#c4c8bb]/20 flex flex-col gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-[#2C4219] text-sm mr-1">
-              Daftar Inventaris Sarana Peralatan
-            </h3>
-            <span className="text-xs text-[#6B7280] font-medium">
-              ({loading ? '...' : filteredList.length} unit tampil)
-            </span>
+        {/* Filter dropdown: pilih status, daftar langsung terfilter (client-side) */}
+        <div className="p-3.5 sm:p-4 border-b border-[#c4c8bb]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-[#2C4219] text-sm">
+                Daftar Inventaris Sarana Peralatan
+              </h3>
+              <span className="text-xs text-[#6B7280] font-medium">
+                ({loading ? '...' : filteredList.length} unit tampil)
+              </span>
+            </div>
+            <p className="text-[11px] text-[#6B7280] mt-0.5">
+              Menampilkan status: {activeLabel}
+            </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {FILTERS.map((f) => {
-              const active = f.key === filterKey;
-              const count = equipmentList.filter(filterFn[f.key]).length;
-              return (
-                <button
-                  key={f.key}
-                  type="button"
-                  onClick={() => setFilterKey(f.key)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
-                    active
-                      ? 'bg-[#2C4219] text-white border-[#2C4219] shadow-sm'
-                      : 'bg-[#F7F7F5] text-[#44483e] border-[#c4c8bb]/40 hover:bg-[#efe0d2]/60 hover:border-[#2C4219]/40'
-                  }`}
-                >
-                  {f.icon}
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-[#6B7280] shrink-0" />
+            <select
+              value={filterKey}
+              onChange={(e) => setFilterKey(e.target.value as FilterKey)}
+              className="px-3 py-2 bg-[#FFF8F4] border border-[#c4c8bb]/30 rounded-lg text-xs font-bold text-[#2C4219] outline-none focus:ring-2 focus:ring-[#2C4219]/20 cursor-pointer shadow-2xs"
+            >
+              {FILTERS.map((f) => (
+                <option key={f.key} value={f.key}>
                   {f.label}
-                  <span
-                    className={`px-1.5 rounded-full text-[10px] font-bold ${
-                      active ? 'bg-white/20 text-white' : 'bg-[#efe0d2] text-[#2C4219]'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

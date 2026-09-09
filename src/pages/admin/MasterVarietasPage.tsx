@@ -160,17 +160,27 @@ export const MasterVarietasPage: React.FC = () => {
 
       {/* Summary Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-3xl">
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#1C3615]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL VARIETAS</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5">{varieties.length}</h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Terdaftar di master data</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center shrink-0">
+            <Sprout className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL VARIETAS</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 truncate">{varieties.length}</h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Terdaftar di master data</p>
+          </div>
         </div>
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#8C9E5B]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">RATA-RATA ESTIMASI PANEN</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5">
-            {varieties.length ? Math.round(varieties.reduce((a, v) => a + (v.lamaPanen ?? 100), 0) / varieties.length) : 0} hari
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Umur panen rata-rata varietas</p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+            <Calendar className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">RATA-RATA ESTIMASI PANEN</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 truncate">
+              {varieties.length ? Math.round(varieties.reduce((a, v) => a + (v.lamaPanen ?? 100), 0) / varieties.length) : 0} hari
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Umur panen rata-rata varietas</p>
+          </div>
         </div>
       </div>
 

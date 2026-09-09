@@ -125,7 +125,7 @@ export const GudangPage: React.FC = () => {
         .sort((a, b) => {
           const ta = a.tanggalMasuk ? new Date(a.tanggalMasuk).getTime() : 0;
           const tb = b.tanggalMasuk ? new Date(b.tanggalMasuk).getTime() : 0;
-          return ta - tb; // FIFO konsumsi: batch terlama keluar dulu
+          return ta - tb; // urut batch terlama dulu
         });
       setStockBatchesForOut(
         sorted.map((b) => ({
@@ -372,35 +372,53 @@ export const GudangPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-3 sm:p-6">
+    <div className="space-y-5 pb-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-[#172C05]">Gudang Sorgum</h1>
-          <p className="text-xs text-[#6B7280] mt-0.5">
-            Penyimpanan hasil panen per lahan — stok dipakai urut masuk (FIFO)
+          <h1 className="text-xl sm:text-2xl font-semibold text-[#2C4219] tracking-tight">Gudang Sorgum</h1>
+          <p className="text-xs text-[#6B7280] mt-1">
+            Penyimpanan hasil panen & stok sorgum per gudang
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={openAdd} icon={<Plus className="w-3.5 h-3.5" />} variant="primary" className="text-xs py-1.5 px-3">
+          <Button onClick={openAdd} icon={<Plus className="w-3.5 h-3.5" />} variant="primary" className="text-xs py-1.5 px-3 w-full sm:w-auto justify-center">
             Tambah Gudang
           </Button>
         </div>
       </div>
 
       {/* Stat ringkas */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">JUMLAH GUDANG</p>
-          <h3 className="text-lg font-bold text-[#221A12] mt-1">{warehouses.length} Gudang</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+        <div className="bg-white rounded-xl border border-[#c4c8bb]/30 p-3.5 sm:p-4 flex items-start gap-3 shadow-2xs">
+          <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center shrink-0">
+            <WarehouseIcon className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">JUMLAH GUDANG</p>
+            <h3 className="text-lg font-bold text-[#221A12] mt-0.5 truncate">{warehouses.length} Gudang</h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Unit penyimpanan aktif</p>
+          </div>
         </div>
-        <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL STOK SORGUM</p>
-          <h3 className="text-lg font-bold text-[#2C4219] mt-1">{formatBerat(totalStokSemua)}</h3>
+        <div className="bg-white rounded-xl border border-[#c4c8bb]/30 p-3.5 sm:p-4 flex items-start gap-3 shadow-2xs">
+          <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+            <Sprout className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL STOK SORGUM</p>
+            <h3 className="text-lg font-bold text-[#2C4219] mt-0.5 truncate">{formatBerat(totalStokSemua)}</h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Hasil olahan siap edar</p>
+          </div>
         </div>
-        <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL STOK GABAH</p>
-          <h3 className="text-lg font-bold text-[#8C5A2B] mt-1">{formatBerat(totalStokGabah)}</h3>
+        <div className="bg-white rounded-xl border border-[#c4c8bb]/30 p-3.5 sm:p-4 flex items-start gap-3 shadow-2xs">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+            <Package className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL STOK GABAH</p>
+            <h3 className="text-lg font-bold text-[#8C5A2B] mt-0.5 truncate">{formatBerat(totalStokGabah)}</h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Hasil panen mentah tersimpan</p>
+          </div>
         </div>
       </div>
 
@@ -414,7 +432,7 @@ export const GudangPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((w) => (
-            <div key={w.id} className="bg-white rounded-2xl border border-[#c4c8bb]/30 shadow-2xs hover:shadow-md transition-all p-4">
+            <div key={w.id} className="bg-white rounded-xl border border-[#c4c8bb]/30 shadow-2xs hover:shadow-md transition-all p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="w-8 h-8 rounded-lg bg-[#2C4219] flex items-center justify-center shrink-0">
@@ -618,7 +636,7 @@ export const GudangPage: React.FC = () => {
         </form>
       </Modal>
 
-      {/* Modal Detail Gudang (stok FIFO + riwayat) */}
+      {/* Modal Detail Gudang (stok batch + riwayat) */}
       <Modal
         isOpen={!!detailWarehouse}
         onClose={() => setDetailWarehouse(null)}

@@ -8,7 +8,6 @@ interface StatCardProps {
   change?: string;
   trend?: 'up' | 'down' | 'neutral';
   icon?: React.ReactNode;
-  borderColor?: string;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -19,12 +18,9 @@ export const StatCard: React.FC<StatCardProps> = ({
   change,
   trend,
   icon,
-  borderColor = 'border-[#2C4219]',
 }) => {
   return (
-    <div
-      className={`bg-white p-3 sm:p-4 rounded-xl shadow-2xs border-l-4 ${borderColor} transition-all duration-200 hover:-translate-y-0.5`}
-    >
+    <div className="bg-white p-3 sm:p-4 rounded-xl border border-[#c4c8bb]/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between">
         <p className="text-[10px] font-bold text-[#44483e] uppercase tracking-wider mb-0.5">
           {title}

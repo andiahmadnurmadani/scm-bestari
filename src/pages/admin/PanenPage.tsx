@@ -720,36 +720,51 @@ export const PanenPage: React.FC = () => {
       {/* Row 1: Top Summary Stat Cards (3 Cards Grid) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
         {/* Card 1: Total Hasil Panen */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#1C3615]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL HASIL PANEN</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {loading ? 'Memuat...' : `${formatTonase(statsTotalKg)}`}
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
-            {total} catatan panen tersimpan
-          </p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#C3E28D]/40 text-[#2C4219] flex items-center justify-center shrink-0">
+            <Layers className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL HASIL PANEN</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
+              {loading ? 'Memuat...' : `${formatTonase(statsTotalKg)}`}
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
+              {total} catatan panen tersimpan
+            </p>
+          </div>
         </div>
 
         {/* Card 2: Panen Bulan Ini */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#8C9E5B]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">PANEN BULAN INI</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {loading ? 'Memuat...' : formatTonase(currentMonthStats.kg)}
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
-            {currentMonthStats.count} kegiatan panen bulan ini
-          </p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+            <Calendar className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">PANEN BULAN INI</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
+              {loading ? 'Memuat...' : formatTonase(currentMonthStats.kg)}
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
+              {currentMonthStats.count} kegiatan panen bulan ini
+            </p>
+          </div>
         </div>
 
         {/* Card 3: Status Jadwal Panen */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] border-l-[#DEB938]">
-          <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">STATUS JADWAL PANEN</p>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1">
-            {loading ? 'Memuat...' : nextHarvest ? formatCalDisplay(nextHarvest.tanggalPanen) : 'Belum Ada Jadwal'}
-          </h3>
-          <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
-            {nextHarvest ? `${nextHarvest.namaLahan} • ${formatTonase(nextHarvest.jumlahHasilKg)}` : `${timLapanganCount} penanggung jawab aktif`}
-          </p>
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+            <CalendarDays className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">STATUS JADWAL PANEN</p>
+            <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
+              {loading ? 'Memuat...' : nextHarvest ? formatCalDisplay(nextHarvest.tanggalPanen) : 'Belum Ada Jadwal'}
+            </h3>
+            <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">
+              {nextHarvest ? `${nextHarvest.namaLahan} • ${formatTonase(nextHarvest.jumlahHasilKg)}` : `${timLapanganCount} penanggung jawab aktif`}
+            </p>
+          </div>
         </div>
       </div>
 

@@ -1,119 +1,85 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowUpRight,
-  ArrowDownRight,
-  BarChart3,
-  Coins,
-  ChevronDown,
-  ArrowRight,
-  TrendingUp,
-  Layers,
+  Tractor,
+  Sprout,
+  Warehouse,
+  Factory,
   Award,
-  Filter,
+  Coins,
+  Package,
+  Wrench,
+  ArrowRight,
+  ChevronRight,
+  Plus,
+  Layers,
+  Clock,
+  TrendingUp,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { harvestApi } from '../../api/endpoints/harvestApi';
 import { landApi } from '../../api/endpoints/landApi';
+import { plantingApi } from '../../api/endpoints/plantingApi';
+import { warehouseApi } from '../../api/endpoints/warehouseApi';
 import { productionApi } from '../../api/endpoints/productionApi';
 import { packagingApi } from '../../api/endpoints/packagingApi';
 import { logisticsApi } from '../../api/endpoints/logisticsApi';
 import { certificatesApi } from '../../api/endpoints/certificatesApi';
-import { HarvestRecord, LandPlot, ProductionBatch } from '../../types';
+import { equipmentApi } from '../../api/endpoints/equipmentApi';
 import { useUnitSettings } from '../../context/UnitSettingsContext';
 
 type TimeFilterType = 'Bulanan' | 'Triwulan' | 'Tahunan';
 
-// ── Helper: tampilkan produk terbesar, sisanya digabung ke Lainnya ───────────────
-function compactDonutItems(items: { label: string; total: number }[]) {
-  const sorted = [...items].sort((a, b) => b.total - a.total);
-  const top = sorted.slice(0, 4);
-  const othersTotal = sorted.slice(4).reduce((acc, item) => acc + item.total, 0);
-  return othersTotal > 0 ? [...top, { label: 'Lainnya', total: othersTotal }] : top;
-}
-
-// ── Helper: format tanggal & ekstrak periode ───────────────────────────────────
-function parseHarvestDate(tanggal: string): Date {
+// ── Helper tanggal ─────────────────────────────────────────────────────────────
+function parseDate(tanggal: string): Date {
   const d = new Date(tanggal);
   return isNaN(d.getTime()) ? new Date() : d;
 }
-
 function monthLabel(m: number): string {
-  const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-  return labels[m - 1] || `M${m}`;
+  return ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][m - 1] || `M${m}`;
 }
-
-/** Format tanggal ISO → "Senin, 3 Agustus 2026" (ramah dibaca user). */
-function formatTanggalId(iso: string): string {
+function fmtTanggalId(iso: string): string {
   if (!iso) return '-';
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
-  // Ambil bagian tanggal sebagai UTC — hindari pergeseran +1 hari karena zona waktu.
-  const namaHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-  const namaBulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-  const day = d.getUTCDate();
-  const month = d.getUTCMonth();
-  const year = d.getUTCFullYear();
-  const weekday = namaHari[d.getUTCDay()];
-  return `${weekday}, ${day} ${namaBulan[month]} ${year}`;
+  const hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  return `${hari[d.getUTCDay()]}, ${d.getUTCDate()} ${bulan[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-// ── Metric Card dengan tooltip full-text saat hover ───────────────────────────
-interface MetricCardProps {
-  title: string;
+// Kompak-kan donut: 4 teratas + Lainnya
+function compactDonut(items: { label: string; total: number }[]) {
+  const sorted = [...items].sort((a, b) => b.total - a.total);
+  const top = sorted.slice(0, 4);
+  const rest = sorted.slice(4).reduce((s, i) => s + i.total, 0);
+  return rest > 0 ? [...top, { label: 'Lainnya', total: rest }] : top;
+}
+
+// ── Kartu Statistik ────────────────────────────────────────────────────────────
+interface Stat {
+  label: string;
   value: string;
-  subtitle: string;
-  borderColor: string;
-  subtitleCls?: string;
-  loading?: boolean;
+  unit?: string;
+  icon: React.ElementType;
+  iconBg: string; // kelas warna ikon
+  path: string;
+  hint?: string;
 }
-
-const MetricCard: React.FC<MetricCardProps> = ({
-  title,
-  value,
-  subtitle,
-  borderColor,
-  subtitleCls = 'text-[#2C4219]',
-  loading,
-}) => {
-  return (
-    <div
-      className={`relative group bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs border border-[#c4c8bb]/30 border-l-[4px] ${borderColor} transition-shadow hover:shadow-md`}
-    >
-      <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">{title}</p>
-      {loading ? (
-        <div className="h-6 bg-[#F7F7F5] animate-pulse rounded mt-1" />
-      ) : (
-        <>
-          <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
-            {value}
-          </h3>
-          <p className={`text-xs font-semibold mt-0.5 sm:mt-1 truncate ${subtitleCls}`}>{subtitle}</p>
-        </>
-      )}
-
-      {/* Tooltip full text saat hover — muncul di atas kartu */}
-      {!loading && (
-        <div className="absolute z-30 left-1/2 -translate-x-1/2 bottom-full mb-2.5 hidden group-hover:block w-max max-w-[260px] bg-[#221A12] text-white text-[11px] rounded-lg px-3 py-2 shadow-xl pointer-events-none">
-          <p className="font-bold leading-snug">{value}</p>
-          <p className="opacity-80 mt-0.5 leading-snug">{subtitle}</p>
-          <span className="absolute left-1/2 -translate-x-1/2 top-full border-[5px] border-transparent border-t-[#221A12]" />
-        </div>
-      )}
-    </div>
-  );
-};
 
 export const DashboardPage: React.FC = () => {
-  const { searchTerm } = useAdminSearch();
-  const { formatBerat, beratSuffix } = useUnitSettings();
+  const { formatBerat } = useUnitSettings();
   const [timeFilter, setTimeFilter] = useState<TimeFilterType>('Bulanan');
-  const [activeDonutIdx, setActiveDonutIdx] = useState<number | null>(null);
+  const [activeDonut, setActiveDonut] = useState<number | null>(null);
 
-  // ── Data dari API ────────────────────────────────────────────────────────────
-  const [harvests, setHarvests] = useState<HarvestRecord[]>([]);
-  const [lands, setLands] = useState<LandPlot[]>([]);
-  const [batches, setBatches] = useState<ProductionBatch[]>([]);
+  // ── State data ───────────────────────────────────────────────────────────────
+  const [harvests, setHarvests] = useState<any[]>([]);
+  const [lands, setLands] = useState<any[]>([]);
+  const [plantings, setPlantings] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
+  const [packagings, setPackagings] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [certificates, setCertificates] = useState<any[]>([]);
+  const [equipments, setEquipments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
@@ -122,24 +88,31 @@ export const DashboardPage: React.FC = () => {
     const fetchAll = async () => {
       setLoading(true);
       try {
-        const [hRes, lRes, pRes] = await Promise.all([
-          harvestApi.getAll({ page: 1, limit: 100 }),
-          landApi.getAll({ page: 1, limit: 100 }),
-          productionApi.getAll({ page: 1, limit: 100 }),
+        const [h, l, pl, w, p, pk, lg, c, e] = await Promise.allSettled([
+          harvestApi.getAll({ page: 1, limit: 1000 }),
+          landApi.getAll({ page: 1, limit: 1000 }),
+          plantingApi.getAll({ page: 1, limit: 1000 }),
+          warehouseApi.getAll({ page: 1, limit: 1000 }),
+          productionApi.getAll({ page: 1, limit: 1000 }),
+          packagingApi.getAll({ page: 1, limit: 1000 }),
+          logisticsApi.getFinancialLogs({ page: 1, limit: 1000 }),
+          certificatesApi.getAll({ page: 1, limit: 1000 }),
+          equipmentApi.getAll({ page: 1, limit: 1000 }),
         ]);
-        if (!cancelled) {
-          setHarvests(hRes.data || []);
-          setLands(lRes.data || []);
-          setBatches(pRes.data || []);
-          setLoadError('');
-        }
+        if (cancelled) return;
+        const val = (r: PromiseSettledResult<any>) => (r.status === 'fulfilled' ? r.value.data || [] : []);
+        setHarvests(val(h));
+        setLands(val(l));
+        setPlantings(val(pl));
+        setWarehouses(val(w));
+        setBatches(val(p));
+        setPackagings(val(pk));
+        setExpenses(val(lg));
+        setCertificates(val(c));
+        setEquipments(val(e));
+        setLoadError('');
       } catch {
-        if (!cancelled) {
-          setHarvests([]);
-          setLands([]);
-          setBatches([]);
-          setLoadError('Gagal memuat data dari API. Periksa koneksi backend dan database.');
-        }
+        if (!cancelled) setLoadError('Gagal memuat sebagian data. Periksa koneksi backend.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -150,591 +123,406 @@ export const DashboardPage: React.FC = () => {
     };
   }, []);
 
-  // ── Stat Cards dari data harvest ─────────────────────────────────────────────
-  const landStats = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const h of harvests) {
-      const key = h.namaLahan || 'Lahan Tanpa Nama';
-      map.set(key, (map.get(key) || 0) + Number(h.jumlahHasilKg || 0));
-    }
-    const entries = [...map.entries()].sort((a, b) => b[1] - a[1]);
-    const totalKg = harvests.reduce((acc, h) => acc + Number(h.jumlahHasilKg || 0), 0);
-    const highest = entries[0];
-    const lowest = entries[entries.length - 1];
-    const avg = entries.length > 0 ? Math.round(totalKg / entries.length) : 0;
-    return { entries, totalKg, highest, lowest, avg };
-  }, [harvests]);
+  // ── Hitung statistik ringkas ────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const totalPanenKg = harvests.reduce((s, x) => s + (Number(x.jumlahHasilKg) || 0), 0);
+    const totalStokKg = warehouses.reduce((s, x) => s + (Number(x.totalStokKg) || 0), 0);
+    const lahanAktif = lands.filter((l) => ['Siap Tanam', 'Masa Pertumbuhan', 'Masa Panen', 'AKTIF', 'PEMBESARAN'].includes(l.statusKesiapan)).length;
+    const penanamanAktif = plantings.filter((p) => ['Ditanam', 'Tumbuh', 'Siap Panen'].includes(p.statusTanam)).length;
+    const sertifikatAktif = certificates.filter((c) => c.status === 'AKTIF').length;
+    const kemasanHabis = packagings.filter((p) => p.statusStok === 'Habis' || p.statusStok === 'Stok Menipis').length;
+    const alatPerhatian = equipments.filter((e) => e.status === 'Sedang Digunakan' || e.status === 'Dalam Perawatan' || e.kondisi === 'Perlu Perbaikan' || e.kondisi === 'Rusak').length;
+    // Pengeluaran bulan berjalan
+    const now = new Date();
+    const pengeluaranBulanIni = expenses
+      .filter((x) => {
+        const d = parseDate(x.tanggal);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && x.statusPembayaran !== 'DIBATALKAN';
+      })
+      .reduce((s, x) => s + (Number(x.totalBiayaRp) || 0), 0);
+    const totalProduk = batches.length;
+    return { totalPanenKg, totalStokKg, lahanAktif, penanamanAktif, sertifikatAktif, kemasanHabis, alatPerhatian, pengeluaranBulanIni, totalProduk };
+  }, [harvests, lands, plantings, warehouses, batches, packagings, expenses, certificates, equipments]);
 
-  // ── Grafik hasil panen per periode ───────────────────────────────────────────
+  const fmtRp = (n: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
+
+  const statCards: Stat[] = [
+    { label: 'Lahan Terdaftar', value: String(lands.length), unit: 'lahan', icon: Tractor, iconBg: 'text-[#2C4219] bg-[#C3E28D]/40', path: '/dashboard/lahan', hint: `${stats.lahanAktif} aktif` },
+    { label: 'Penanaman Aktif', value: String(stats.penanamanAktif), unit: 'penanaman', icon: Sprout, iconBg: 'text-emerald-700 bg-emerald-100', path: '/dashboard/lahan', hint: `${plantings.length} total` },
+    { label: 'Total Hasil Panen', value: formatBerat(stats.totalPanenKg), unit: '', icon: Layers, iconBg: 'text-amber-700 bg-amber-100', path: '/dashboard/panen', hint: `${harvests.length} catatan` },
+    { label: 'Stok di Gudang', value: formatBerat(stats.totalStokKg), unit: '', icon: Warehouse, iconBg: 'text-sky-700 bg-sky-100', path: '/dashboard/gudang', hint: `${warehouses.length} gudang` },
+    { label: 'Batch Olahan', value: String(stats.totalProduk), unit: 'batch', icon: Factory, iconBg: 'text-purple-700 bg-purple-100', path: '/dashboard/produksi', hint: 'produk olahan' },
+    { label: 'Sertifikat Aktif', value: String(stats.sertifikatAktif), unit: 'aktif', icon: Award, iconBg: 'text-rose-600 bg-rose-100', path: '/dashboard/sertifikat', hint: `${certificates.length} total` },
+    { label: 'Pengeluaran Bulan Ini', value: fmtRp(stats.pengeluaranBulanIni), unit: '', icon: Coins, iconBg: 'text-orange-600 bg-orange-100', path: '/dashboard/logistik', hint: 'logistik & keuangan' },
+    { label: 'Kemasan Menipis', value: String(stats.kemasanHabis), unit: 'jenis', icon: Package, iconBg: 'text-red-600 bg-red-100', path: '/dashboard/kemasan', hint: 'stok menipis / habis' },
+  ];
+
+  // ── Grafik panen ─────────────────────────────────────────────────────────────
   const chartData = useMemo(() => {
-    if (harvests.length === 0) return { items: [], maxKg: 1, totalKg: 0 };
-
+    if (harvests.length === 0) return { items: [] as { label: string; totalKg: number }[], maxKg: 1, totalKg: 0 };
     const buckets = new Map<string, { label: string; totalKg: number; sortKey: number }>();
-
     for (const h of harvests) {
-      const d = parseHarvestDate(h.tanggalPanen);
-      const kg = Number(h.jumlahHasilKg || 0);
-      let key = '';
-      let label = '';
-      let sortKey = 0;
-
+      const d = parseDate(h.tanggalPanen);
+      const kg = Number(h.jumlahHasilKg) || 0;
+      let key = '', label = '', sortKey = 0;
       if (timeFilter === 'Bulanan') {
         key = `${d.getFullYear()}-${d.getMonth() + 1}`;
         label = monthLabel(d.getMonth() + 1);
-        sortKey = d.getFullYear() * 100 + (d.getMonth() + 1);
+        sortKey = d.getFullYear() * 100 + d.getMonth() + 1;
       } else if (timeFilter === 'Triwulan') {
         const q = Math.floor(d.getMonth() / 3) + 1;
         key = `${d.getFullYear()}-Q${q}`;
-        label = `Q${q} (${['Jan-Mar', 'Apr-Jun', 'Jul-Sep', 'Okt-Des'][q - 1]})`;
+        label = `Q${q}`;
         sortKey = d.getFullYear() * 10 + q;
       } else {
         key = String(d.getFullYear());
         label = String(d.getFullYear());
         sortKey = d.getFullYear();
       }
-
-      if (!buckets.has(key)) buckets.set(key, { label, totalKg: 0, sortKey });
-      buckets.get(key)!.totalKg += kg;
+      const b = buckets.get(key) || { label, totalKg: 0, sortKey };
+      b.totalKg += kg;
+      buckets.set(key, b);
     }
-
-    const items = [...buckets.values()]
-      .sort((a, b) => a.sortKey - b.sortKey)
-      .map((b) => ({ label: b.label, totalKg: b.totalKg }));
-
+    const items = [...buckets.values()].sort((a, b) => a.sortKey - b.sortKey).map((b) => ({ label: b.label, totalKg: b.totalKg }));
     const maxKg = Math.max(...items.map((i) => i.totalKg), 1);
-    const totalKg = items.reduce((acc, i) => acc + i.totalKg, 0);
+    const totalKg = items.reduce((s, i) => s + i.totalKg, 0);
     return { items, maxKg, totalKg };
   }, [harvests, timeFilter]);
 
-  const currentChart = chartData;
-
-  // ── Hasil Panen Per Blok Lahan (progress bars) ───────────────────────────────
-  const landProgress = useMemo(() => {
-    if (landStats.entries.length === 0) return [];
-    const maxVal = Math.max(...landStats.entries.map(([, v]) => v), 1);
-    return landStats.entries.slice(0, 5).map(([nama, kg]) => ({
-      nama,
-      kg,
-      percent: Math.max(8, Math.round((kg / maxVal) * 100)),
-    }));
-  }, [landStats]);
-
-  // ── Donut: Produk Olahan (dari batch produksi) ───────────────────────────────
+  // ── Donut produksi ──────────────────────────────────────────────────────────
   const donutData = useMemo(() => {
     const map = new Map<string, number>();
     for (const b of batches) {
-      const label = b.namaProduk?.trim() || 'Produk Tanpa Nama';
-      map.set(label, (map.get(label) || 0) + Number(b.jumlahHasil || 0));
+      const label = (b.namaProduk || 'Tanpa Nama').trim();
+      map.set(label, (map.get(label) || 0) + (Number(b.jumlahHasil) || 0));
     }
-    const rawItems = [...map.entries()].map(([label, total]) => ({ label, total }));
-    const items = compactDonutItems(rawItems);
-    const grandTotal = rawItems.reduce((acc, i) => acc + i.total, 0);
-    return { items, grandTotal };
+    const raw = [...map.entries()].map(([label, total]) => ({ label, total }));
+    return { items: compactDonut(raw), grandTotal: raw.reduce((s, i) => s + i.total, 0) };
   }, [batches]);
+  const donutColors = ['#2C4219', '#788B4B', '#A8B774', '#DEB938', '#9CA3AF'];
 
-  const donutColors = ['#2C4219', '#788B4B', '#A8B774', '#D0DC9B', '#DEB938'];
+  // ── Aktivitas terbaru (gabungan panen & produksi) ───────────────────────────
+  const recentActivity = useMemo(() => {
+    const items: { id: string; type: 'panen' | 'produksi'; title: string; sub: string; tanggal: string; kg: number; kode: string }[] = [];
+    harvests.slice(0, 100).forEach((h) =>
+      items.push({ id: h.id, type: 'panen', title: h.namaLahan, sub: h.varietas, tanggal: h.tanggalPanen, kg: Number(h.jumlahHasilKg) || 0, kode: h.kodePanen })
+    );
+    batches.slice(0, 100).forEach((b) =>
+      items.push({ id: b.id, type: 'produksi', title: b.namaProduk, sub: b.operatorProduksi || 'Produksi', tanggal: b.tanggalProduksi, kg: Number(b.jumlahHasil) || 0, kode: b.kodeBatch })
+    );
+    return items
+      .sort((a, b) => parseDate(b.tanggal).getTime() - parseDate(a.tanggal).getTime())
+      .slice(0, 7);
+  }, [harvests, batches]);
 
-  // ── Status QC produksi (progress bars) ───────────────────────────────────────
-  const qcStats = useMemo(() => {
-    const total = batches.length;
-    const makeRow = (
-      label: ProductionBatch['statusQC'],
-      color: string,
-      badgeCls: string
-    ) => {
-      const count = batches.filter((b) => b.statusQC === label).length;
-      const percent = total > 0 ? Math.round((count / total) * 100) : 0;
-      return { label, count, percent, color, badge: `${percent}%`, badgeCls };
-    };
-
-    return {
-      total,
-      rows: [
-        makeRow('Lolos QC', '#2C4219', 'bg-[#2C4219] text-white'),
-        makeRow('Pending QC', '#DEB938', 'bg-[#DEB938] text-[#172C05]'),
-        makeRow('Revisi Batch', '#D9534F', 'bg-red-600 text-white'),
-      ],
-    };
-  }, [batches]);
-
-  // ── Recent harvest logs (terbaru) ────────────────────────────────────────────
-  const recentHarvests = useMemo(() => {
-    return [...harvests]
-      .sort((a, b) => parseHarvestDate(b.tanggalPanen).getTime() - parseHarvestDate(a.tanggalPanen).getTime())
-      .slice(0, 6);
-  }, [harvests]);
-
-  const filteredLogs = recentHarvests.filter(
-    (item) =>
-      item.namaLahan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.varietas.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.petaniPenanggungJawab.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.tanggalPanen.toLowerCase().includes(searchTerm.toLowerCase())
+  const loadingBlock = (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+        <div key={i} className="h-[104px] bg-[#F7F7F5] animate-pulse rounded-2xl" />
+      ))}
+    </div>
   );
-
-  const fmtTon = (kg: number) => formatBerat(kg);
 
   return (
     <div className="space-y-5 pb-8">
-      {/* Page Heading */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-[#2C4219] tracking-tight">
-            Dashboard
-          </h1>
-        </div>
-      </div>
-
-      {/* Row 1: Top Metric Summary Cards (4 Equal Cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-        {/* Card 1: Lahan Panen Tertinggi */}
-        <MetricCard
-          title="LAHAN PANEN TERTINGGI"
-          value={landStats.highest ? landStats.highest[0] : 'Belum ada data'}
-          subtitle={landStats.highest ? fmtTon(landStats.highest[1]) : '0 Ton'}
-          borderColor="border-l-[#1C3615]"
-          loading={loading}
-        />
-
-        {/* Card 2: Lahan Panen Terendah */}
-        <MetricCard
-          title="LAHAN PANEN TERENDAH"
-          value={landStats.lowest ? landStats.lowest[0] : 'Belum ada data'}
-          subtitle={landStats.lowest ? fmtTon(landStats.lowest[1]) : '0 Ton'}
-          borderColor="border-l-red-600"
-          subtitleCls="text-red-600"
-          loading={loading}
-        />
-
-        {/* Card 3: Rata-Rata Panen Lahan */}
-        <MetricCard
-          title="RATA-RATA PANEN LAHAN"
-          value={landStats.avg > 0 ? fmtTon(landStats.avg) : '0 Ton'}
-          subtitle={`Rata-rata dari ${landStats.entries.length} lahan tercatat`}
-          borderColor="border-l-[#8C9E5B]"
-          loading={loading}
-        />
-
-        {/* Card 4: Total Volume Hasil SCM */}
-        <MetricCard
-          title="TOTAL VOLUME HASIL SCM"
-          value={landStats.totalKg > 0 ? fmtTon(landStats.totalKg) : '0 Ton'}
-          subtitle={`${harvests.length} catatan panen tercatat`}
-          borderColor="border-l-[#DEB938]"
-          loading={loading}
-        />
-      </div>
-
-      {/* Row 2: Harvest Yield Charts & Breakdown Grid (2 Columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Card: Main Bar Chart "Grafik Produksi Panen Lahan" */}
-        <div className="lg:col-span-8 bg-white p-4 rounded-xl border border-[#c4c8bb]/30 shadow-2xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#c4c8bb]/20 pb-3">
-            <div>
-              <h2 className="text-sm font-semibold text-[#2C4219]">
-                Grafik Hasil Panen Lahan
-              </h2>
-              <p className="text-[11px] text-[#6B7280] font-medium">
-                {timeFilter === 'Bulanan' ? `Jumlah panen per bulan (dalam ${beratSuffix})` : timeFilter === 'Triwulan' ? `Jumlah panen per triwulan (dalam ${beratSuffix})` : `Jumlah panen per tahun (dalam ${beratSuffix})`}
-              </p>
-            </div>
-
-            {/* Dropdown filter */}
-            <div className="relative inline-block">
-              <select
-                value={timeFilter}
-                onChange={(e) => setTimeFilter(e.target.value as TimeFilterType)}
-                className="px-2.5 py-1 rounded-lg bg-[#FFF8F4] border border-[#c4c8bb]/40 text-xs font-semibold text-[#2C4219] hover:bg-[#efe0d2] transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-[#2C4219]/30 appearance-none pr-7 shadow-2xs"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%232C4219' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 0.5rem center',
-                  backgroundSize: '0.9rem',
-                }}
-              >
-                <option value="Bulanan">Bulanan</option>
-                <option value="Triwulan">Triwulan</option>
-                <option value="Tahunan">Tahunan</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Bar Chart Container */}
-          <div className="pt-4">
-            {loading ? (
-              <div className="h-60 sm:h-64 flex items-center justify-center text-[#6B7280] text-xs font-semibold">
-                <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
-                Memuat grafik panen...
-              </div>
-            ) : currentChart.items.length === 0 ? (
-              <div className="h-60 sm:h-64 flex items-center justify-center text-[#9CA3AF] text-xs font-semibold">
-                Belum ada data panen untuk ditampilkan.
-              </div>
-            ) : (
-            <div className="h-60 sm:h-64 flex items-end justify-between gap-3 sm:gap-6 px-2 border-b border-[#c4c8bb]/30 pb-2">
-              {currentChart.items.map((item, idx) => {
-                const isHighest = item.totalKg === currentChart.maxKg && currentChart.items.length > 1;
-                const heightPercent = Math.max(4, (item.totalKg / currentChart.maxKg) * 100);
-                return (
-                  <div key={item.label} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
-                    <div className="w-full flex items-end justify-center h-full relative">
-                      {isHighest && (
-                        <div className="absolute -top-8 bg-[#2C4219] text-[#C3E28D] text-[10px] font-black px-2 py-0.5 rounded-md whitespace-nowrap shadow-xs animate-bounce z-10">
-                          Puncak ({formatBerat(item.totalKg)})
-                        </div>
-                      )}
-                      <div
-                        className={`w-full max-w-[28px] sm:max-w-[42px] rounded-t-xl transition-all duration-500 relative ${
-                          isHighest
-                            ? 'bg-gradient-to-t from-[#172C05] to-[#2C4219] ring-2 ring-[#C3E28D]/50 shadow-md'
-                            : 'bg-gradient-to-t from-[#788B4B] to-[#A8B774] hover:from-[#2C4219] hover:to-[#A8B774]'
-                        }`}
-                        style={{ height: `${heightPercent}%` }}
-                      >
-                        {/* Hover Tooltip */}
-                        <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 bg-[#221A12] text-white text-[11px] font-bold py-1 px-2.5 rounded-lg whitespace-nowrap z-20 transition-opacity shadow-lg">
-                          {formatBerat(item.totalKg)}
-                        </div>
-                      </div>
-                    </div>
-                    <span
-                      className={`text-xs font-bold text-center ${
-                        isHighest ? 'text-[#2C4219] underline decoration-[#C3E28D] decoration-2' : 'text-[#44483e]'
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            )}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-[11px] text-[#74796d] font-semibold mt-3 px-2 gap-1">
-              <span>Total {formatBerat(currentChart.totalKg)} tercatat di sistem</span>
-              <span className="flex items-center gap-2">
-                <span className="inline-block w-3 h-3 bg-[#2C4219] rounded-xs" /> Puncak
-                <span className="inline-block w-3 h-3 bg-[#A8B774] rounded-xs" /> Reguler
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Card: Side Progress Bar Widget "Hasil Panen Per Blok Lahan" */}
-        <div className="lg:col-span-4 bg-white p-4 rounded-xl border border-[#c4c8bb]/30 shadow-2xs space-y-4 flex flex-col justify-between">
+      {/* ── Header Hero ── */}
+      <div className="bg-gradient-to-r from-[#2C4219] via-[#3a5a24] to-[#4a6b2f] rounded-2xl p-4 sm:p-6 text-white relative overflow-hidden">
+        <div className="absolute -right-10 -top-10 w-48 h-48 bg-[#C3E28D]/10 rounded-full" />
+        <div className="absolute right-24 -bottom-8 w-32 h-32 bg-[#C3E28D]/10 rounded-full" />
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="border-b border-[#c4c8bb]/20 pb-3">
-              <h2 className="text-sm font-semibold text-[#2C4219]">
-                Hasil Panen Per Blok Lahan
-              </h2>
-              <p className="text-[11px] text-[#6B7280] font-medium">Hasil panen dari setiap lokasi lahan</p>
-            </div>
-
-            <div className="mt-4 space-y-3.5">
-              {loading ? (
-                <div className="space-y-3">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="h-10 bg-[#F7F7F5] animate-pulse rounded-lg" />
-                  ))}
-                </div>
-              ) : landProgress.length === 0 ? (
-                <p className="text-xs text-[#9CA3AF] text-center py-6">Belum ada data panen per lahan.</p>
-              ) : (
-                landProgress.map((item, idx) => {
-                  const barColor =
-                    idx === 0
-                      ? '#2C4219'
-                      : idx === 1
-                      ? '#788B4B'
-                      : idx === 2
-                      ? '#A8B774'
-                      : idx === 3
-                      ? '#DEB938'
-                      : '#D9534F';
-                  return (
-                    <div key={item.nama} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-[#221A12] truncate pr-2">{item.nama}</span>
-                        <span className="text-[#2C4219] font-bold whitespace-nowrap">{formatBerat(item.kg)}</span>
-                      </div>
-                      <div className="w-full h-2 bg-[#efe0d2]/60 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${item.percent}%`, backgroundColor: barColor }}
-                        />
-                      </div>
-                      <p className="text-[10px] text-[#6B7280] font-medium">
-                        {Math.round((item.percent / 100) * 100)}% dari lahan tertinggi
-                      </p>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+            <p className="text-[11px] sm:text-xs font-bold text-[#C3E28D] uppercase tracking-wider">
+              Ringkasan Keseluruhan
+            </p>
+            <h1 className="text-xl sm:text-2xl font-extrabold mt-1">Dashboard Sorgum SCM</h1>
+            <p className="text-xs text-white/80 mt-1 max-w-xl leading-relaxed">
+              Pantau lahan, panen, gudang, produksi, sertifikat, hingga keuangan KWT dalam satu tampilan.
+            </p>
           </div>
-
-          <div className="pt-3 border-t border-[#c4c8bb]/20">
+          <div className="flex gap-2 shrink-0">
             <Link
-              to="/dashboard/lahan"
-              className="w-full py-2 px-3 rounded-lg bg-[#F7F7F5] hover:bg-[#efe0d2] text-[#2C4219] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-[#c4c8bb]/30"
+              to="/dashboard/panen"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#C3E28D] text-[#172C05] text-xs font-extrabold hover:bg-[#d3ef9f] transition-colors shadow-sm"
             >
-              <span>Kelola Detail Lahan</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5" /> Catat Panen
+            </Link>
+            <Link
+              to="/dashboard/gudang"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/15 text-white text-xs font-bold hover:bg-white/25 transition-colors border border-white/20"
+            >
+              Stok Gudang <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Row 3: Processing Production Charts & Breakdown Grid (2 Columns) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Card: Donut Chart "Grafik Produksi Pengolahan" */}
-        <div className="lg:col-span-6 bg-white p-4 rounded-xl border border-[#c4c8bb]/30 shadow-2xs space-y-4">
-          <div className="border-b border-[#c4c8bb]/20 pb-3">
-            <h2 className="text-sm font-semibold text-[#2C4219]">
-              Grafik Produksi Olahan Sorgum
-            </h2>
-            <p className="text-[11px] text-[#6B7280] font-medium">Pembagian jenis produk olahan dari batch produksi</p>
-          </div>
+      {loadError && (
+        <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-semibold">
+          {loadError}
+        </div>
+      )}
 
-          {loading ? (
-            <div className="flex items-center justify-center py-8 text-[#6B7280] text-xs font-semibold">
-              <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
-              Memuat...
-            </div>
-          ) : loadError ? (
-            <p className="text-xs text-red-600 text-center py-8 font-semibold">{loadError}</p>
-          ) : donutData.items.length === 0 ? (
-            <p className="text-xs text-[#9CA3AF] text-center py-8">Belum ada batch produksi tercatat.</p>
-          ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-            {/* Donut graphic with center stat — interaktif hover */}
-            <div className="sm:col-span-5 flex justify-center relative py-1">
-              <svg className="w-36 h-36 transform -rotate-90" viewBox="0 0 36 36">
-                <path
-                  className="text-[#efe0d2]/40"
-                  strokeWidth="4"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                {donutData.items.map((item, idx) => {
-                  const offset = donutData.items
-                    .slice(0, idx)
-                    .reduce((acc, i) => acc + (i.total / donutData.grandTotal) * 100, 0);
-                  const isActive = activeDonutIdx === idx;
-                  const isDimmed = activeDonutIdx !== null && !isActive;
-                  const segLen = Math.max(0.5, (item.total / donutData.grandTotal) * 100);
-                  // Segmen aktif digeser sedikit ke luar agar menonjol
-                  const shift = isActive ? 1.4 : 0;
-                  const dashOffset = idx === 0 ? 0 : -offset;
-                  return (
-                    <g
-                      key={item.label}
-                      className="cursor-pointer transition-opacity"
-                      opacity={isDimmed ? 0.35 : 1}
-                      onMouseEnter={() => setActiveDonutIdx(idx)}
-                      onMouseLeave={() => setActiveDonutIdx(null)}
-                    >
-                      <path
-                        stroke={donutColors[idx % donutColors.length]}
-                        strokeWidth={isActive ? 5.5 : 4.5}
-                        strokeDasharray={`${segLen}, 100`}
-                        strokeDashoffset={dashOffset}
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        style={{
-                          transition: 'stroke-width 0.2s ease',
-                          transform: shift > 0 ? `translate(${shift}, ${shift})` : undefined,
-                          transformOrigin: 'center',
-                        }}
-                      />
-                      {/* Area klik lebih luas (invisible) untuk kemudahan hover */}
-                      <path
-                        stroke="transparent"
-                        strokeWidth="9"
-                        strokeDasharray={`${segLen}, 100`}
-                        strokeDashoffset={dashOffset}
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                    </g>
-                  );
-                })}
-              </svg>
-
-              {/* Center stat — berubah sesuai segmen yang di-hover */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                {activeDonutIdx !== null && donutData.items[activeDonutIdx] ? (
-                  <>
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#6B7280] max-w-[80px] truncate">
-                      {donutData.items[activeDonutIdx].label}
-                    </span>
-                    <span className="text-base font-extrabold text-[#221A12]">
-                      {donutData.items[activeDonutIdx].total.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-[9px] font-bold text-[#2C4219]">
-                      {Math.round((donutData.items[activeDonutIdx].total / donutData.grandTotal) * 100)}%
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-lg font-extrabold text-[#2C4219]">
-                      {donutData.grandTotal.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-[9px] text-[#6B7280] font-bold uppercase tracking-wider">
-                      Total Unit
-                    </span>
-                  </>
+      {/* ── Kartu Statistik ── */}
+      {loading ? (
+        loadingBlock
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          {statCards.map((s) => {
+            const Icon = s.icon;
+            return (
+              <Link
+                key={s.label}
+                to={s.path}
+                className="group bg-white rounded-2xl border border-[#c4c8bb]/30 p-3.5 sm:p-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
+              >
+                <div className="flex items-center justify-between">
+                  <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${s.iconBg}`}>
+                    <Icon className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[#c4c8bb] group-hover:text-[#2C4219] group-hover:translate-x-0.5 transition-all" />
+                </div>
+                <p className="text-[10px] sm:text-[11px] font-bold text-[#6B7280] uppercase tracking-wider mt-3">
+                  {s.label}
+                </p>
+                <p className="text-base sm:text-lg font-extrabold text-[#172C05] leading-tight truncate mt-0.5">
+                  {s.value}
+                </p>
+                {(s.unit || s.hint) && (
+                  <p className="text-[10px] text-[#9CA3AF] mt-0.5 truncate">
+                    {s.unit ? s.unit : s.hint}
+                    {s.unit && s.hint ? ` • ${s.hint}` : ''}
+                  </p>
                 )}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Baris Grafik Utama ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Grafik Panen */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-[#c4c8bb]/30 p-4 sm:p-5 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#c4c8bb]/15">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-extrabold text-[#172C05]">Grafik Hasil Panen</h2>
+                <p className="text-[11px] text-[#6B7280]">Total panen per periode</p>
               </div>
             </div>
-
-            {/* Legend Grid — highlight saat segmen di-hover */}
-            <div className="sm:col-span-7 space-y-2 text-xs font-medium">
-              {donutData.items.map((item, idx) => {
-                const pct = donutData.grandTotal > 0 ? Math.round((item.total / donutData.grandTotal) * 100) : 0;
-                const isActive = activeDonutIdx === idx;
-                const isDimmed = activeDonutIdx !== null && !isActive;
-                return (
-                  <div
-                    key={item.label}
-                    onMouseEnter={() => setActiveDonutIdx(idx)}
-                    onMouseLeave={() => setActiveDonutIdx(null)}
-                    className={`flex items-center justify-between p-2 rounded-lg transition-all cursor-default ${
-                      isActive
-                        ? 'bg-[#C3E28D]/40 ring-1 ring-[#2C4219]/20 scale-[1.02]'
-                        : isDimmed
-                        ? 'bg-[#F7F7F5] opacity-50'
-                        : 'bg-[#F7F7F5]'
-                    }`}
-                  >
-                    <span className="flex items-center gap-1.5 text-[#221A12]">
-                      <span
-                        className="w-2.5 h-2.5 rounded-sm shrink-0 transition-transform"
-                        style={{ backgroundColor: donutColors[idx % donutColors.length], transform: isActive ? 'scale(1.25)' : undefined }}
-                      />
-                      {item.label}
-                    </span>
-                    <span className="font-bold text-[#2C4219]">
-                      {item.total.toLocaleString('id-ID')} Unit ({pct}%)
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="flex bg-[#F7F7F5] rounded-lg p-0.5 border border-[#c4c8bb]/20">
+              {(['Bulanan', 'Triwulan', 'Tahunan'] as TimeFilterType[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTimeFilter(t)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                    timeFilter === t ? 'bg-[#2C4219] text-[#C3E28D] shadow-sm' : 'text-[#6B7280] hover:text-[#2C4219]'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
             </div>
           </div>
-          )}
+
+          <div className="pt-4">
+            {loading ? (
+              <div className="h-52 flex items-center justify-center text-xs text-[#6B7280] font-semibold">
+                <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin mr-2" />
+                Memuat grafik...
+              </div>
+            ) : chartData.items.length === 0 ? (
+              <div className="h-52 flex items-center justify-center text-xs text-[#9CA3AF] font-semibold">
+                Belum ada data panen.
+              </div>
+            ) : (
+              <div className="h-52 flex items-end justify-between gap-2 sm:gap-4 px-1 border-b border-[#c4c8bb]/25">
+                {chartData.items.map((item, idx) => {
+                  const isTop = item.totalKg === chartData.maxKg && chartData.items.length > 1;
+                  const hPct = Math.max(4, (item.totalKg / chartData.maxKg) * 100);
+                  return (
+                    <div key={item.label} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group">
+                      <div className="relative w-full flex items-end justify-center h-full">
+                        <div
+                          className={`w-full max-w-[30px] sm:max-w-[42px] rounded-t-lg transition-all duration-500 ${
+                            isTop
+                              ? 'bg-gradient-to-t from-[#172C05] to-[#2C4219] ring-2 ring-[#C3E28D]/60 shadow'
+                              : 'bg-gradient-to-t from-[#9ab56a] to-[#c3d99a] group-hover:from-[#2C4219] group-hover:to-[#788B4B]'
+                          }`}
+                          style={{ height: `${hPct}%` }}
+                        >
+                          <div className="opacity-0 group-hover:opacity-100 pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 bg-[#221A12] text-white text-[10px] font-bold py-1 px-2 rounded-md whitespace-nowrap z-10 transition-opacity shadow">
+                            {formatBerat(item.totalKg)}
+                          </div>
+                        </div>
+                      </div>
+                      <span className={`text-[11px] font-bold ${isTop ? 'text-[#2C4219]' : 'text-[#6B7280]'}`}>{item.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex items-center justify-between text-[11px] text-[#74796d] font-semibold mt-2.5 px-1">
+              <span>Total {formatBerat(chartData.totalKg)}</span>
+              <span className="flex items-center gap-2">
+                <span className="inline-block w-2.5 h-2.5 rounded-sm bg-[#2C4219]" /> Puncak
+                <span className="inline-block w-2.5 h-2.5 rounded-sm bg-[#9ab56a]" /> Reguler
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Right Card: Status Progress "Output Produksi Pengolahan" */}
-        <div className="lg:col-span-6 bg-white p-4 rounded-xl border border-[#c4c8bb]/30 shadow-2xs space-y-4 flex flex-col justify-between">
-          <div>
-            <div className="border-b border-[#c4c8bb]/20 pb-3">
-              <h2 className="text-sm font-semibold text-[#2C4219]">
-                Status Hasil Olahan Sorgum
-              </h2>
-              <p className="text-[11px] text-[#6B7280] font-medium">Status QC batch produksi saat ini</p>
+        {/* Donut Produksi */}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-[#c4c8bb]/30 p-4 sm:p-5 shadow-2xs">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-[#c4c8bb]/15">
+            <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center">
+              <Factory className="w-4 h-4" />
             </div>
-
-            <div className="mt-4 space-y-3">
-              {loading ? (
-                <div className="space-y-3">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="h-12 bg-[#F7F7F5] animate-pulse rounded-xl" />
-                  ))}
-                </div>
-              ) : loadError ? (
-                <p className="text-xs text-red-600 text-center py-6 font-semibold">{loadError}</p>
-              ) : batches.length === 0 ? (
-                <p className="text-xs text-[#9CA3AF] text-center py-6">Belum ada batch produksi tercatat.</p>
-              ) : (
-                qcStats.rows.map((row) => (
-                  <div key={row.label} className="p-2.5 bg-[#F7F7F5] rounded-xl border border-[#c4c8bb]/20 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-[#221A12]">
-                        {row.label}
-                        <span className="text-[#6B7280] font-medium ml-1">({row.count} batch)</span>
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full ${row.badgeCls} text-[9px] font-bold`}>
-                        {row.badge}
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-[#efe0d2] rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${row.percent}%`, backgroundColor: row.color }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-[#6B7280] font-medium">
-                      {row.count} dari {qcStats.total} batch produksi
-                    </p>
+            <div>
+              <h2 className="text-sm font-extrabold text-[#172C05]">Produk Olahan</h2>
+              <p className="text-[11px] text-[#6B7280]">Distribusi batch produksi</p>
+            </div>
+          </div>
+          <div className="pt-4">
+            {loading ? (
+              <div className="flex items-center justify-center py-8 text-xs text-[#6B7280]">
+                <span className="inline-block w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mr-2" />
+                Memuat...
+              </div>
+            ) : donutData.items.length === 0 ? (
+              <p className="text-xs text-[#9CA3AF] text-center py-10">Belum ada batch produksi.</p>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="relative shrink-0">
+                  <svg className="w-32 h-32 -rotate-90" viewBox="0 0 36 36">
+                    <path className="text-[#efe0d2]" strokeWidth="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    {donutData.items.map((item, idx) => {
+                      const offset = donutData.items.slice(0, idx).reduce((a, i) => a + (i.total / donutData.grandTotal) * 100, 0);
+                      const active = activeDonut === idx;
+                      const dim = activeDonut !== null && !active;
+                      const seg = Math.max(0.5, (item.total / donutData.grandTotal) * 100);
+                      return (
+                        <g
+                          key={item.label}
+                          className="cursor-pointer transition-opacity"
+                          opacity={dim ? 0.35 : 1}
+                          onMouseEnter={() => setActiveDonut(idx)}
+                          onMouseLeave={() => setActiveDonut(null)}
+                        >
+                          <path
+                            stroke={donutColors[idx % donutColors.length]}
+                            strokeWidth={active ? 5 : 4}
+                            strokeDasharray={`${seg}, 100`}
+                            strokeDashoffset={idx === 0 ? 0 : -offset}
+                            fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            style={{ transition: 'stroke-width 0.2s ease', transform: active ? 'translate(1.2, 1.2)' : undefined, transformOrigin: 'center' }}
+                          />
+                        </g>
+                      );
+                    })}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                    {activeDonut !== null && donutData.items[activeDonut] ? (
+                      <>
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-[#6B7280] max-w-[70px] truncate">{donutData.items[activeDonut].label}</span>
+                        <span className="text-sm font-extrabold text-[#172C05]">{donutData.items[activeDonut].total.toLocaleString('id-ID')}</span>
+                        <span className="text-[9px] font-bold text-[#2C4219]">{Math.round((donutData.items[activeDonut].total / donutData.grandTotal) * 100)}%</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-lg font-extrabold text-[#2C4219]">{donutData.grandTotal.toLocaleString('id-ID')}</span>
+                        <span className="text-[9px] text-[#6B7280] font-bold uppercase tracking-wider">Total Unit</span>
+                      </>
+                    )}
                   </div>
-                ))
-              )}
-            </div>
+                </div>
+                <div className="flex-1 w-full space-y-1.5 min-w-0">
+                  {donutData.items.map((item, idx) => {
+                    const pct = donutData.grandTotal > 0 ? Math.round((item.total / donutData.grandTotal) * 100) : 0;
+                    const active = activeDonut === idx;
+                    return (
+                      <div
+                        key={item.label}
+                        onMouseEnter={() => setActiveDonut(idx)}
+                        onMouseLeave={() => setActiveDonut(null)}
+                        className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg text-xs transition-all cursor-default ${active ? 'bg-[#C3E28D]/30' : 'hover:bg-[#F7F7F5]'}`}
+                      >
+                        <span className="flex items-center gap-1.5 text-[#221A12] font-semibold truncate min-w-0">
+                          <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: donutColors[idx % donutColors.length] }} />
+                          <span className="truncate">{item.label}</span>
+                        </span>
+                        <span className="font-bold text-[#2C4219] shrink-0">{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Row 4: Recent Integrated Table ("Catatan Panen & Produksi Olahan Terbaru") */}
-      <div className="bg-white p-4 rounded-xl border border-[#c4c8bb]/30 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between border-b border-[#c4c8bb]/20 pb-3">
-          <div>
-            <h2 className="text-sm font-semibold text-[#2C4219]">
-              Catatan Panen & Hasil Olahan Terbaru
-            </h2>
+      {/* ── Aktivitas Terbaru ── */}
+      <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 overflow-hidden shadow-2xs">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-[#c4c8bb]/15">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#2C4219]/10 text-[#2C4219] flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-extrabold text-[#172C05]">Aktivitas Terbaru</h2>
+              <p className="text-[11px] text-[#6B7280]">Catatan panen & produksi terakhir</p>
+            </div>
           </div>
-          <Link
-            to="/dashboard/panen"
-            className="text-xs font-semibold text-[#2C4219] hover:text-[#172C05] flex items-center gap-1 transition-colors hover:underline"
-          >
-            <span>Lihat Semua</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+          <Link to="/dashboard/panen" className="inline-flex items-center gap-1 text-xs font-bold text-[#2C4219] hover:underline shrink-0">
+            Lihat Semua <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
-
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left text-xs text-[#221A12] min-w-[640px]">
-            <thead>
-              <tr className="border-b border-[#c4c8bb]/20 text-[#6B7280] font-bold uppercase text-[11px] tracking-wider">
-                <th className="py-2 px-3">Tanggal</th>
-                <th className="py-2 px-3">Lokasi Lahan</th>
-                <th className="py-2 px-3">Varietas</th>
-                <th className="py-2 px-3">Tonase Panen</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#c4c8bb]/15 font-medium">
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="py-6 text-center text-[#6B7280]">
-                    <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
-                    Memuat catatan panen...
-                  </td>
-                </tr>
-              ) : filteredLogs.length > 0 ? (
-                filteredLogs.map((row) => (
-                  <tr key={row.id} className="hover:bg-[#F7F7F5] transition-colors">
-                    <td className="py-2 px-3 text-[#44483e] whitespace-nowrap">
-                      {formatTanggalId(row.tanggalPanen)}
-                    </td>
-                    <td className="py-2 px-3 font-semibold text-[#172C05]">{row.namaLahan}</td>
-                    <td className="py-2 px-3">
-                      <span className="inline-block px-2 py-0.5 rounded bg-[#C3E28D]/30 text-[#172C05] border border-[#b4cf98] text-[10px] font-bold">
-                        {row.varietas}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3 font-bold text-[#2C4219]">{fmtTon(row.jumlahHasilKg)}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="py-6 text-center text-[#6B7280]">
-                    Tidak ada catatan panen yang sesuai pencarian.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <div className="p-8 text-center text-xs text-[#6B7280]">
+            <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin mr-2" />
+            Memuat aktivitas...
+          </div>
+        ) : recentActivity.length === 0 ? (
+          <div className="p-8 text-center">
+            <Layers className="w-8 h-8 text-[#9CA3AF] mx-auto mb-2" />
+            <p className="text-sm text-[#6B7280]">Belum ada aktivitas panen atau produksi.</p>
+            <p className="text-xs text-[#9CA3AF] mt-1">Mulai catat panen dari menu Panen.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#c4c8bb]/10">
+            {recentActivity.map((a) => (
+              <Link
+                key={`${a.type}-${a.id}`}
+                to={a.type === 'panen' ? '/dashboard/panen' : '/dashboard/produksi'}
+                className="flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-[#F7F7F5] transition-colors"
+              >
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  a.type === 'panen' ? 'bg-[#C3E28D]/40 text-[#2C4219]' : 'bg-purple-100 text-purple-700'
+                }`}>
+                  {a.type === 'panen' ? <Sprout className="w-4 h-4" /> : <Factory className="w-4 h-4" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-bold text-[#172C05] truncate">{a.title}</p>
+                  <p className="text-[11px] text-[#6B7280] truncate">
+                    {a.kode} • {a.sub}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[13px] font-extrabold text-[#2C4219]">
+                    {a.type === 'panen' ? formatBerat(a.kg) : `${a.kg.toLocaleString('id-ID')} unit`}
+                  </p>
+                  <p className="text-[10px] text-[#9CA3AF]">{fmtTanggalId(a.tanggal)}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
