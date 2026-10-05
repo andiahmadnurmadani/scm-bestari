@@ -273,7 +273,7 @@ export async function initDatabase() {
     CREATE TABLE IF NOT EXISTS lands (
       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
       kode_lahan VARCHAR(50) NOT NULL UNIQUE,
-      nama_lahan VARCHAR(200) NOT NULL,
+      nama_lahan VARCHAR(200) NOT NULL UNIQUE,
       lokasi_desa VARCHAR(150) NOT NULL,
       kecamatan VARCHAR(150) NOT NULL,
       luas_hektar DECIMAL(12,6) NOT NULL DEFAULT 0,
@@ -322,6 +322,29 @@ export async function initDatabase() {
     console.log('✓ Kolom "lands.luas_hektar" dipastikan DECIMAL(12,6).');
   } catch (alterError) {
     console.warn('⚠ Migrasi lands.luas_hektar dilewati:', alterError.message);
+  }
+  // Migrasi: nama lahan harus UNIK. Tambahkan unique index HANYA bila belum ada
+  // dan tidak ada duplikat (agar tidak gagal di DB yang sudah berisi data lama).
+  try {
+    const [idxRows] = await pool.query(
+      `SELECT COUNT(*) AS total FROM information_schema.STATISTICS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='lands' AND INDEX_NAME='uniq_nama_lahan'`
+    );
+    if (Number(idxRows[0].total) === 0) {
+      const [dupRows] = await pool.query(
+        `SELECT COUNT(*) AS total FROM (
+           SELECT LOWER(TRIM(nama_lahan)) AS n FROM lands GROUP BY LOWER(TRIM(nama_lahan)) HAVING COUNT(*) > 1
+         ) AS d`
+      );
+      if (Number(dupRows[0].total) === 0) {
+        await pool.query(`ALTER TABLE lands ADD UNIQUE INDEX uniq_nama_lahan (nama_lahan)`);
+        console.log('✓ Unique index "uniq_nama_lahan" ditambahkan (nama lahan unik).');
+      } else {
+        console.warn(`⚠ Unique index nama lahan dilewati: ada ${Number(dupRows[0].total)} nama lahan duplikat. Rapikan dulu.`);
+      }
+    }
+  } catch (e) {
+    console.warn('⚠ Migrasi unique index nama lahan dilewati:', e.message);
   }
 
   // Seed lahan awal jika tabel kosong (DINONAKTIFKAN — user minta data kosong)

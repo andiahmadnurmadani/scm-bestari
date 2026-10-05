@@ -137,6 +137,16 @@ export async function createLand(req, res) {
 
     const pool = getPool();
 
+    // Nama lahan harus UNIK (case-insensitive) — cegah nama ganda
+    const namaLahanBersih = String(data.namaLahan).trim();
+    const [dupe] = await pool.execute(
+      'SELECT id FROM lands WHERE LOWER(TRIM(nama_lahan)) = LOWER(?) LIMIT 1',
+      [namaLahanBersih]
+    );
+    if (dupe.length > 0) {
+      return res.status(409).json({ success: false, message: `Nama lahan "${namaLahanBersih}" sudah dipakai. Gunakan nama lain.` });
+    }
+
     // Buat kode lahan otomatis bila tidak disertakan: LUS-03092026 (3 huruf awal nama lahan + tgl daftar)
     let kodeLahan = String(data.kodeLahan || '').trim();
     if (!kodeLahan) {
@@ -211,6 +221,21 @@ export async function updateLand(req, res) {
     const [existing] = await pool.execute('SELECT id FROM lands WHERE id = ? LIMIT 1', [id]);
     if (existing.length === 0) {
       return res.status(404).json({ success: false, message: 'Data lahan tidak ditemukan.' });
+    }
+
+    // Nama lahan harus UNIK (case-insensitive) — kecualikan lahan ini sendiri
+    if (data.namaLahan !== undefined) {
+      const namaBersih = String(data.namaLahan).trim();
+      if (!namaBersih) {
+        return res.status(400).json({ success: false, message: 'Nama lahan wajib diisi.' });
+      }
+      const [dupe] = await pool.execute(
+        'SELECT id FROM lands WHERE LOWER(TRIM(nama_lahan)) = LOWER(?) AND id <> ? LIMIT 1',
+        [namaBersih, id]
+      );
+      if (dupe.length > 0) {
+        return res.status(409).json({ success: false, message: `Nama lahan "${namaBersih}" sudah dipakai. Gunakan nama lain.` });
+      }
     }
 
     // Foto lahan wajib — tolak jika dikirim kosong (menghapus foto)
