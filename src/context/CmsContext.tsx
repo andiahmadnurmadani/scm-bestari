@@ -81,6 +81,11 @@ export interface CmsData {
   footerEmail: string;
   footerCopyright: string;
   footerBottomTagline: string;
+  footerNavTitle: string;        // judul kolom navigasi
+  footerNavLinks: { label: string; href: string }[];
+  footerLegalTitle: string;      // judul kolom legal
+  footerLegalLinks: { label: string; href: string }[];
+  footerContactTitle: string;    // judul kolom kontak
 
   // Navbar
   navLinks: { label: string; section: string }[];
@@ -94,6 +99,17 @@ export interface CmsData {
   productsTitle: string;
   productsSubtitle: string;
   products: CmsProduct[];
+  productPackLabel: string; // label "Tipe Kemasan"
+  productTagLabel: string;  // label "Standar Legalitas"
+
+  // Galeri (hero slideshow)
+  galleryBadge: string; // teks kecil di atas judul gambar
+
+  // Alur lacak (traceability)
+  traceBadge: string;
+  traceTitlePre: string;
+  traceTitleHighlight: string;
+  traceDesc: string;
 
   // Alur rantai pasok
   workflowTitle: string;
@@ -164,6 +180,21 @@ export const defaultCms: CmsData = {
   footerEmail: 'info@sorgumscm.id',
   footerCopyright: '© 2026 Sorgum SCM. Seluruh hak cipta dilindungi.',
   footerBottomTagline: 'Memberdayakan Kelompok Wanita Tani & Petani Lokal',
+  footerNavTitle: 'Navigasi Cepat',
+  footerNavLinks: [
+    { label: 'Monitoring Panen', href: '/#fitur' },
+    { label: 'Kelola Olahan & Sertifikat', href: '/#fitur' },
+    { label: 'Logistik & Keuangan', href: '/#fitur' },
+    { label: 'Portal Dashboard Admin', href: '/login' },
+  ],
+  footerLegalTitle: 'Legal & Privasi',
+  footerLegalLinks: [
+    { label: 'Kebijakan Privasi', href: '#' },
+    { label: 'Syarat & Ketentuan Service', href: '#' },
+    { label: 'Sertifikasi Halal BPJPH', href: '#' },
+    { label: 'Standar Mutu Pangan SNI', href: '#' },
+  ],
+  footerContactTitle: 'Kontak Sentra KWT',
 
   navLinks: [
     { label: 'Beranda', section: 'beranda' },
@@ -183,6 +214,13 @@ export const defaultCms: CmsData = {
   productsBadge: 'Diversifikasi Olahan Pangan',
   productsTitle: 'Produk Turunan Sorgum KWT Berstandar Mutu',
   productsSubtitle: 'Geser untuk menjelajahi berbagai macam olahan sorgum sehat hasil produksi kami.',
+  productPackLabel: 'Tipe Kemasan',
+  productTagLabel: 'Standar Legalitas',
+  galleryBadge: 'Galeri Sorgum KWT',
+  traceBadge: 'Lacak Asal-Usul Produk',
+  traceTitlePre: 'Lacak asal-usulnya —',
+  traceTitleHighlight: 'kenali perjalanan produk Anda',
+  traceDesc: 'Pindai QR pada kemasan untuk melihat jejak lengkap: lahan asal, tanggal tanam, tanggal panen, hingga batch olahan. Transparan untuk konsumen, membanggakan untuk petani.',
   products: [
     {
       name: 'Tepung Sorgum Bioguma',
@@ -315,11 +353,14 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // Simpan otomatis ke backend setiap kali cms berubah (setelah hidrasi awal).
+  // HANYA saat ada token (pengguna login/admin) — halaman publik (landing & QR
+  // lacak) tidak boleh memicu PUT /cms tanpa izin, yang menyebabkan 401 & error.
   useEffect(() => {
     if (!hydrated) return;
+    if (typeof window !== 'undefined' && !localStorage.getItem('token')) return;
     const timer = setTimeout(() => {
       try {
-        void cmsApi.saveContent(cms);
+        void cmsApi.saveContent(cms).catch(() => { /* abaikan: localStorage tetap jadi cadangan */ });
       } catch {
         // Abaikan — konten tetap tersimpan di localStorage sebagai cadangan
       }

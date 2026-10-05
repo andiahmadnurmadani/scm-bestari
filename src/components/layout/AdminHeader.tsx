@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Search, Bell, Settings, Menu, LogOut, User as UserIcon, CheckCheck, Sprout, Layers } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '../../api/endpoints/authApi';
 import { notificationsApi, AppNotification } from '../../api/endpoints/notificationsApi';
 import { Modal } from '../common/Modal';
 import { useCms } from '../../context/CmsContext';
 import { useAppMode } from '../../context/AppModeContext';
+import { mapPathForMode } from '../../utils/modeRouting';
 
 
 interface AdminHeaderProps {
@@ -20,6 +21,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onSearchChange,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { cms } = useCms();
   const { setMode } = useAppMode();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -136,10 +138,10 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           <button
             onClick={() => {
               setMode('lite');
-              navigate('/lite');
+              navigate(mapPathForMode(location.pathname, 'lite'));
             }}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#C3E28D]/50 text-[#2C4219] hover:bg-[#C3E28D] transition-colors cursor-pointer text-[11px] font-bold whitespace-nowrap"
-            title="Beralih ke Mode Mudah (Lite)"
+            title="Beralih ke Mode Mudah (Lite) — tetap di halaman ini"
           >
             <Layers className="w-3.5 h-3.5" />
             <span className="hidden lg:inline">Mode Mudah</span>

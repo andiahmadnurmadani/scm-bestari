@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Search, Bell, User as UserIcon, LogOut, Layers, Sprout } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { notificationsApi, AppNotification } from '../../../api/endpoints/notificationsApi';
 import { authApi } from '../../../api/endpoints/authApi';
 import { useCms } from '../../../context/CmsContext';
 import { useAppMode } from '../../../context/AppModeContext';
+import { mapPathForMode } from '../../../utils/modeRouting';
 import { Modal } from '../../common/Modal';
 import { formatTanggalId } from '../../../utils/dateUtils';
 
@@ -16,6 +17,7 @@ interface LiteHeaderProps {
 
 export const LiteHeader: React.FC<LiteHeaderProps> = ({ searchTerm = '', onSearchChange, pageTitle }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { cms } = useCms();
   const { setMode } = useAppMode();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -100,10 +102,10 @@ export const LiteHeader: React.FC<LiteHeaderProps> = ({ searchTerm = '', onSearc
           <button
             onClick={() => {
               setMode('pro');
-              navigate('/dashboard');
+              navigate(mapPathForMode(location.pathname, 'pro'));
             }}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#C3E28D]/50 text-[#2C4219] hover:bg-[#C3E28D] transition-colors cursor-pointer text-[11px] font-bold whitespace-nowrap"
-            title="Beralih ke Mode Lengkap (Pro)"
+            title="Beralih ke Mode Lengkap (Pro) — tetap di halaman ini"
           >
             <Layers className="w-3.5 h-3.5" />
             <span className="hidden lg:inline">Mode Lengkap</span>

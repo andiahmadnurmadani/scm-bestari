@@ -7,6 +7,7 @@ import { warehouseApi } from '../../api/endpoints/warehouseApi';
 import { HarvestRecord, LandPlot, Planting, Warehouse } from '../../types';
 import { useUnitSettings } from '../../context/UnitSettingsContext';
 import { formatTanggalId } from '../../utils/dateUtils';
+import { buildGroupColorMap, groupColor } from '../../utils/groupColor';
 import { useLiteSearch } from '../../components/layout/lite/LiteLayout';
 import { Modal } from '../../components/common/Modal';
 import { Toast } from '../../components/common/Toast';
@@ -38,6 +39,8 @@ export const LitePanenPage: React.FC = () => {
     petaniPenanggungJawab: '',
     catatan: '',
     panenKe: 1,
+    persenHama: '',
+    jenisHama: '',
   });
   const [usedPanenKe, setUsedPanenKe] = useState<number[]>([]);
   const [gudangId, setGudangId] = useState('');
@@ -88,6 +91,9 @@ export const LitePanenPage: React.FC = () => {
         return tb - ta;
       });
   }, [dataList]);
+
+  // Peta warna per penanaman (grup) — panen 1–3 satu warna, tanam lain beda warna
+  const colorMap = React.useMemo(() => buildGroupColorMap(groups.map((g) => g.key)), [groups]);
 
   useEffect(() => {
     fetchData();
@@ -152,7 +158,7 @@ export const LitePanenPage: React.FC = () => {
 
   const resetForm = () => {
     setEditingId(null);
-    setFormData({ lahanId: '', plantingId: '', namaLahan: '', varietas: '', tanggalPanen: new Date().toISOString().split('T')[0], tonase: '', petaniPenanggungJawab: '', catatan: '', panenKe: 1 });
+    setFormData({ lahanId: '', plantingId: '', namaLahan: '', varietas: '', tanggalPanen: new Date().toISOString().split('T')[0], tonase: '', petaniPenanggungJawab: '', catatan: '', panenKe: 1, persenHama: '', jenisHama: '' });
     setUsedPanenKe([]);
     setGudangId('');
     setPlantingsForForm([]);
@@ -187,6 +193,8 @@ export const LitePanenPage: React.FC = () => {
       petaniPenanggungJawab: item.petaniPenanggungJawab || '',
       catatan: item.catatan || '',
       panenKe: Number((item as any).panenKe) || 1,
+      persenHama: item.persenHama != null ? String(item.persenHama) : '',
+      jenisHama: item.jenisHama || '',
     });
     setUsedPanenKe((item as any).panenKe ? [Number((item as any).panenKe)] : []);
     setGudangId('');
@@ -234,6 +242,8 @@ export const LitePanenPage: React.FC = () => {
       status: 'Selesai',
       catatan: formData.catatan,
       panenKe: Number(formData.panenKe) || 1,
+      persenHama: formData.persenHama !== '' ? Number(formData.persenHama) : null,
+      jenisHama: formData.jenisHama || '',
       fotoUrl: imagePreview, // base64 atau null
       // Bila user memilih gudang → langsung buat batch GAB-... (ringkas: 1 baris total hasil)
       ...(gudangId ? { gudangId, stokBatch: [{ jumlahKg: totalKg, keterangan: 'Hasil panen masuk gudang (Mode Mudah)' }] } : {}),
@@ -292,11 +302,13 @@ export const LitePanenPage: React.FC = () => {
             const active =
               group.items.find((x) => x.id === selectedHarvestId) ||
               group.head;
+            // Warna kelompok: sama untuk panen 1–3 pada penanaman ini, beda untuk tanam lain
+            const gc = groupColor(colorMap.get(group.key) ?? 0);
             return (
-              <div key={group.key} className="bg-white rounded-2xl border border-[#c4c8bb]/30 overflow-hidden">
+              <div key={group.key} className={`bg-white rounded-2xl border border-[#c4c8bb]/30 border-l-4 ${gc.border} overflow-hidden`}>
                 {/* Header kartu = satu penanaman/lahan, bukan satu panen */}
-                <div className="p-4 flex items-center gap-3 flex-wrap">
-                  <div className="w-12 h-12 rounded-xl overflow-hidden border border-[#c4c8bb]/30 bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center shrink-0">
+                <div className={`p-4 flex items-center gap-3 flex-wrap ${gc.soft}`}>
+                  <div className={`w-12 h-12 rounded-xl overflow-hidden border ${gc.border.replace('border-l-', 'border-')} bg-[#C3E28D]/30 text-[#2C4219] flex items-center justify-center shrink-0`}>
                     {group.head.fotoUrl ? (
                       <img src={group.head.fotoUrl} alt={group.head.namaLahan} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
@@ -305,9 +317,10 @@ export const LitePanenPage: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-[#172C05] truncate flex items-center gap-1.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${gc.dot} shrink-0`} />
                       {group.head.namaLahan}
                       {group.items.length > 1 && (
-                        <span className="inline-block px-1.5 py-0.5 rounded-full bg-[#C3E28D] text-[#2C4219] text-[9px] font-extrabold leading-none shrink-0">
+                        <span className={`inline-block px-1.5 py-0.5 rounded-full ${gc.solid} text-[9px] font-extrabold leading-none shrink-0`}>
                           {group.items.length}× panen
                         </span>
                       )}
@@ -460,14 +473,40 @@ export const LitePanenPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#2C4219] mb-1">Jumlah Hasil ({beratSuffix}) *</label>
+              <label className="block text-sm font-bold text-[#2C4219] mb-1">Jumlah Hasil Panen ({beratSuffix}) *</label>
               <input
                 type="number"
                 step="0.01"
+                inputMode="decimal"
                 value={formData.tonase}
                 onChange={(e) => setFormData({ ...formData, tonase: e.target.value })}
-                placeholder={`Contoh: 35.5 ${beratSuffix}`}
-                className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+                placeholder={`Contoh: 35.5`}
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-base"
+              />
+              <p className="text-[13px] text-[#6B7280] mt-1">Total berat sorgum yang dipanen, dalam {beratSuffix}.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-[#2C4219] mb-1">Terkena Hama (%) <span className="font-normal text-[#6B7280]">— opsional</span></label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                inputMode="decimal"
+                value={formData.persenHama}
+                onChange={(e) => setFormData({ ...formData, persenHama: e.target.value })}
+                placeholder="Contoh: 10"
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-base"
+              />
+              <p className="text-[13px] text-[#6B7280] mt-1">Perkiraan bagian hasil panen yang rusak/kena hama. Kosongkan jika tidak ada.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-[#2C4219] mb-1">Jenis Hama <span className="font-normal text-[#6B7280]">— opsional</span></label>
+              <input
+                value={formData.jenisHama}
+                onChange={(e) => setFormData({ ...formData, jenisHama: e.target.value })}
+                placeholder="Contoh: Tikus, Burung, Wereng"
+                className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-base"
               />
             </div>
             <div>
@@ -577,6 +616,7 @@ export const LitePanenPage: React.FC = () => {
                     ['Kode Panen', detailTarget.kodePanen],
                     ['Penanaman Asal', detailTarget.planting?.kodeTanam || '-'],
                     ['Panen Ke', detailTarget.panenKe && Number(detailTarget.panenKe) > 1 ? `Panen ${detailTarget.panenKe}/3` : 'Panen 1 (awal)'],
+                    ['Terkena Hama', detailTarget.persenHama != null ? `${detailTarget.persenHama}%${detailTarget.jenisHama ? ` (${detailTarget.jenisHama})` : ''}` : 'Tidak ada'],
                   ].map(([k, v]) => (
                     <div key={k as string} className="p-3 bg-[#F7F7F5] rounded-xl">
                       <p className="text-[10px] font-bold text-[#6B7280] uppercase">{k}</p>

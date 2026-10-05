@@ -719,7 +719,8 @@ export const LogistikPage: React.FC = () => {
             {/* Tabel Rincian Barang */}
             <div>
               <p className="text-xs font-bold text-[#74796d] uppercase mb-2">Rincian Barang / Jasa</p>
-              <table className="w-full text-xs border-collapse">
+              <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-xs border-collapse min-w-[420px]">
                 <thead>
                   <tr className="text-[#6B7280] font-bold uppercase text-[10px] tracking-wider border-b-2 border-[#2C4219]">
                     <th className="py-2 pr-2 text-left">Item</th>
@@ -758,6 +759,7 @@ export const LogistikPage: React.FC = () => {
                   </tr>
                 </tfoot>
               </table>
+              </div>
             </div>
 
             {/* Catatan & Verifikasi */}

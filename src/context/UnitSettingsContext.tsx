@@ -135,8 +135,10 @@ export const UnitSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       // abaikan
     }
 
-    // 2) backend cms_settings key 'app_units'
+    // 2) backend cms_settings key 'app_units' — hanya bila login (endpoint ini
+    //    perlu token; halaman publik tidak boleh memicunya → hindari 401).
     (async () => {
+      if (typeof window !== 'undefined' && !localStorage.getItem('token')) return;
       try {
         const res: any = await cmsApi.getSetting('app_units');
         const data = res?.data || null;

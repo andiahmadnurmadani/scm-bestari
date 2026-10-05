@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Factory, Plus, Edit3, Trash2, ChevronLeft, ChevronRight, User, MapPin, Sprout, Eye, Warehouse as WarehouseIcon, Package, CalendarDays, Hash } from 'lucide-react';
+import { Factory, Plus, Edit3, Trash2, ChevronLeft, ChevronRight, User, MapPin, Sprout, Eye, Warehouse as WarehouseIcon, Package, CalendarDays, Hash, QrCode } from 'lucide-react';
 import { productionApi } from '../../api/endpoints/productionApi';
 import { productApi, Product } from '../../api/endpoints/productApi';
 import { ProductionBatch } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
+import { ProductTraceTimeline } from '../../components/common/ProductTraceTimeline';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 
 import { useUnitSettings } from '../../context/UnitSettingsContext';
@@ -22,12 +23,17 @@ export const ProduksiPage: React.FC = () => {
   // Master produk (dropdown pilihan produk olahan)
   const [productOptions, setProductOptions] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  // Input produk olahan manual → otomatis masuk Master Produk
+  const [addingNewProduct, setAddingNewProduct] = useState(false);
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductSatuan, setNewProductSatuan] = useState('Pouch');
 
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProductionBatch | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<ProductionBatch | null>(null);
+  const [traceTarget, setTraceTarget] = useState<ProductionBatch | null>(null);
 
   // Pagination State
   const [page, setPage] = useState(1);
@@ -138,6 +144,9 @@ export const ProduksiPage: React.FC = () => {
     setEditId(null);
     setSelectedStockBatch(null);
     setSelectedProductId(null);
+    setAddingNewProduct(false);
+    setNewProductName('');
+    setNewProductSatuan('Pouch');
     setFormData({
       kodeBatch: '', // dibuat otomatis backend: PRD-<nama lahan>-<tgl produksi>-<urutan>
       namaProduk: '',
@@ -160,6 +169,9 @@ export const ProduksiPage: React.FC = () => {
   const handleOpenEdit = (item: ProductionBatch) => {
     setEditId(item.id);
     setSelectedStockBatch(null);
+    setAddingNewProduct(false);
+    setNewProductName('');
+    setNewProductSatuan('Pouch');
     setFormData({
       ...item,
       jumlahHasil: String(item.jumlahHasil ?? ''),
@@ -202,6 +214,14 @@ export const ProduksiPage: React.FC = () => {
 
   // Pilih produk master → isi nama produk & satuan hasil otomatis (terkunci)
   const handleProductChange = (productId: string) => {
+    if (productId === '__BARU__') {
+      setAddingNewProduct(true);
+      setSelectedProductId(null);
+      setNewProductName('');
+      setNewProductSatuan('Pouch');
+      setFormData((prev) => ({ ...prev, productId: null as any, namaProduk: '' }));
+      return;
+    }
     const prod = productOptions.find((x) => String(x.id) === productId) || null;
     setSelectedProductId(prod ? String(prod.id) : null);
     setFormData((prev) => ({
@@ -220,11 +240,6 @@ export const ProduksiPage: React.FC = () => {
     const bahan = formData.bahanDigunakan != null && String(formData.bahanDigunakan).trim() !== ''
       ? Number(formData.bahanDigunakan)
       : 0;
-    // Validasi: produk master wajib dipilih (nama & satuan terkunci mengikuti master)
-    if (!selectedProduct) {
-      setToast({ msg: 'Pilih produk dari master data dulu (nama & satuan otomatis terisi).', type: 'error' });
-      return;
-    }
     // Validasi: bahan tidak boleh melebihi sisa batch stok terpilih
     if (bahan > 0) {
       if (!selectedStockBatch) {
@@ -239,9 +254,43 @@ export const ProduksiPage: React.FC = () => {
         return;
       }
     }
+
+    // Tentukan produk: dari master (dipilih) ATAU produk baru (input manual → otomatis ke Master)
+    let product = productOptions.find((x) => String(x.id) === String(selectedProductId || '')) || null;
+    if (!product) {
+      if (addingNewProduct && newProductName.trim()) {
+        try {
+          const created = await productApi.create({
+            name: newProductName.trim(),
+            satuanHasil: newProductSatuan || 'Pouch',
+            deskripsi: 'Ditambahkan otomatis dari Catat Batch Olahan.',
+          });
+          product = created?.data || null;
+          const pr = await productApi.getAll({ isActive: true });
+          setProductOptions(pr.data || []);
+          if (product?.id) {
+            setSelectedProductId(String(product.id));
+            setFormData((prev) => ({ ...prev, productId: String(product!.id), namaProduk: product!.name, satuan: product!.satuanHasil || 'Pouch' }));
+          }
+        } catch (err: any) {
+          setToast({ msg: err?.response?.data?.message || 'Gagal menyimpan produk baru ke Master Produk.', type: 'error' });
+          return;
+        }
+      } else {
+        setToast({ msg: 'Pilih produk dari master data, atau isi nama produk baru.', type: 'error' });
+        return;
+      }
+    }
+    if (!product) {
+      setToast({ msg: 'Produk tidak valid. Coba pilih ulang.', type: 'error' });
+      return;
+    }
+
     const payload = {
       ...formData,
-      productId: selectedProduct ? String(selectedProduct.id) : null,
+      productId: String(product.id),
+      namaProduk: product.name,
+      satuan: product.satuanHasil || formData.satuan || 'Pouch',
       jumlahHasil: Number(formData.jumlahHasil) || 0,
       bahanDigunakan: bahan > 0 ? bahan : null,
       gudangId: formData.gudangId ? String(formData.gudangId) : null,
@@ -399,6 +448,14 @@ export const ProduksiPage: React.FC = () => {
                         <span>Detail</span>
                       </button>
                       <button
+                        onClick={() => setTraceTarget(item)}
+                        className="min-h-8 px-2.5 py-1.5 text-[#2C4219] bg-[#C3E28D]/30 hover:bg-[#C3E28D]/60 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
+                        title="Lacak asal-usul produk (kapan tanam, panen, dsb)"
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
+                        <span>Lacak</span>
+                      </button>
+                      <button
                         onClick={() => handleOpenEdit(item)}
                         className="min-h-8 px-2.5 py-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
                         title="Edit Batch"
@@ -504,18 +561,60 @@ export const ProduksiPage: React.FC = () => {
                 <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
                   Nama Produk Olahan <span className="text-red-500">*</span>
                 </label>
-                <Combobox
-                  options={productOptions.map((p) => ({
-                    value: String(p.id),
-                    label: p.name,
-                    searchText: `${p.name} ${p.satuanHasil || ''}`,
-                  }))}
-                  value={selectedProductId || ''}
-                  onChange={(v) => handleProductChange(v)}
-                  placeholder="-- Pilih Nama Produk --"
-                  searchPlaceholder="Cari nama produk..."
-                  emptyText="Belum ada produk master. Tambahkan dulu di menu Produk Olahan."
-                />
+                {!addingNewProduct ? (
+                  <>
+                    <Combobox
+                      options={[
+                        ...productOptions.map((p) => ({
+                          value: String(p.id),
+                          label: p.name,
+                          searchText: `${p.name} ${p.satuanHasil || ''}`,
+                        })),
+                        { value: '__BARU__', label: '+ Tambah produk olahan baru…', searchText: 'tambah baru' },
+                      ]}
+                      value={selectedProductId || ''}
+                      onChange={(v) => handleProductChange(v)}
+                      placeholder="-- Pilih Nama Produk --"
+                      searchPlaceholder="Cari nama produk..."
+                      emptyText="Belum ada produk master. Pilih '+ Tambah produk olahan baru…'."
+                    />
+                    <p className="text-[11px] text-[#6B7280] mt-1">
+                      Pilih produk, atau "+ Tambah produk olahan baru…" bila belum terdaftar di Master Produk.
+                    </p>
+                  </>
+                ) : (
+                  <div className="space-y-2.5">
+                    <input
+                      value={newProductName}
+                      onChange={(e) => setNewProductName(e.target.value)}
+                      placeholder="Nama produk, mis. Tepung Sorgum Premium"
+                      autoFocus
+                      className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+                    />
+                    <div>
+                      <label className="block text-xs font-bold text-[#2C4219] mb-1">Satuan Hasil *</label>
+                      <select
+                        value={newProductSatuan}
+                        onChange={(e) => setNewProductSatuan(e.target.value)}
+                        className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+                      >
+                        {['Pouch', 'Kg', 'Botol', 'Box', 'Toples', 'Kemasan'].map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <p className="text-xs text-[#2C4219] font-medium bg-[#C3E28D]/20 border border-[#C3E28D]/40 rounded-lg px-2.5 py-1.5">
+                      ✓ Produk ini otomatis tersimpan ke Master Produk Olahan agar bisa dipakai lagi.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => { setAddingNewProduct(false); setNewProductName(''); setNewProductSatuan('Pouch'); }}
+                      className="text-xs font-bold text-[#2C4219] underline"
+                    >
+                      ← Kembali pilih dari daftar
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -760,6 +859,17 @@ export const ProduksiPage: React.FC = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Modal Lacak Asal-usul Produk */}
+      <Modal
+        isOpen={!!traceTarget}
+        onClose={() => setTraceTarget(null)}
+        title="Lacak Asal-usul Produk"
+        subtitle={traceTarget ? `${traceTarget.kodeBatch} — ${traceTarget.namaProduk}` : ''}
+        maxWidth="lg"
+      >
+        {traceTarget && <ProductTraceTimeline batch={traceTarget} variant="full" showQr />}
       </Modal>
 
       {/* Modal Konfirmasi Hapus */}

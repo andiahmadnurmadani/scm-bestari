@@ -80,6 +80,8 @@ export interface HarvestRecord {
   lahanId?: string | null;
   plantingId?: string | null;
   periodeHari?: number | null;
+  persenHama?: number | null;
+  jenisHama?: string;
   lahan?: { id: string; kodeLahan: string; namaLahan: string; lokasiDesa?: string; luasHektar?: number } | null;
   planting?: Planting | null;
   stokBatch?: { jumlahKg: number; keterangan: string }[];

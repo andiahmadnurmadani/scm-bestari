@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { ChevronDown, HelpCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { useCms } from '../../context/CmsContext';
 
 export const FaqAccordion: React.FC = () => {
@@ -14,19 +13,17 @@ export const FaqAccordion: React.FC = () => {
   };
 
   return (
-    <section id="faq" className="min-h-[calc(100vh-72px)] flex flex-col justify-center py-6 sm:py-8 bg-[#FFF8F4] border-t border-[#c4c8bb]/30">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col justify-center flex-1">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#C3E28D]/40 text-[#172C05] text-[10px] font-bold uppercase tracking-wider mb-1.5">
-            <HelpCircle className="w-3.5 h-3.5 text-[#2C4219]" />
+    <section id="faq" className="bg-[#FFF8F4] border-t border-[#c4c8bb]/25">
+      <div className="max-w-3xl mx-auto px-5 sm:px-8 lg:px-10 py-16 sm:py-24">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#C3E28D]/40 text-[#172C05] text-xs sm:text-sm font-bold">
+            <HelpCircle className="w-4 h-4 text-[#2C4219]" />
             <span>{cms.faqBadge}</span>
           </div>
-          <h2 className="text-lg sm:text-xl font-semibold text-[#2C4219]">
+          <h2 className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#2C4219] leading-tight tracking-tight">
             {cms.faqTitle}
           </h2>
-          <p className="text-[11px] text-[#44483e] font-medium mt-1">
-            {cms.faqSubtitle}
-          </p>
+          <p className="mt-3 text-base sm:text-lg text-[#44483e] leading-relaxed">{cms.faqSubtitle}</p>
         </div>
 
         {/* Accordion List */}
@@ -36,29 +33,32 @@ export const FaqAccordion: React.FC = () => {
             return (
               <div
                 key={index}
-                className="bg-white rounded-xl border border-[#c4c8bb]/30 shadow-2xs overflow-hidden transition-all"
+                className={`bg-white rounded-2xl border transition-all ${
+                  isOpen ? 'border-[#2C4219]/30 shadow-md' : 'border-[#c4c8bb]/30 shadow-sm'
+                }`}
               >
                 <button
                   type="button"
                   onClick={() => toggleItem(index)}
-                  className="w-full py-2.5 px-3.5 text-left flex items-center justify-between gap-3 font-semibold text-xs sm:text-sm text-[#172C05] hover:bg-[#FFF8F4] transition-colors cursor-pointer"
+                  aria-expanded={isOpen}
+                  className="w-full py-5 px-5 sm:px-6 text-left flex items-center justify-between gap-4 font-bold text-base sm:text-lg text-[#172C05] hover:bg-[#FFF8F4] transition-colors cursor-pointer rounded-2xl"
                 >
-                  <span className="flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-full bg-[#2C4219]/10 text-[#2C4219] text-[10px] font-bold flex items-center justify-center shrink-0">
-                      0{index + 1}
+                  <span className="flex items-center gap-3.5">
+                    <span className="w-8 h-8 rounded-full bg-[#2C4219]/10 text-[#2C4219] text-sm font-bold flex items-center justify-center shrink-0">
+                      {index + 1}
                     </span>
                     <span>{faq.question}</span>
                   </span>
                   <ChevronDown
-                    className={`w-4 h-4 text-[#2C4219] shrink-0 transition-transform duration-300 ${
+                    className={`w-5 h-5 text-[#2C4219] shrink-0 transition-transform duration-300 ${
                       isOpen ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
 
                 {isOpen && (
-                  <div className="px-3.5 pb-3 pt-0.5 text-xs text-[#44483e] leading-relaxed border-t border-[#c4c8bb]/15 bg-[#FFF8F4]/50 animate-fadeIn">
-                    <p className="p-2.5 bg-white rounded-lg border border-[#c4c8bb]/20 font-normal">
+                  <div className="px-5 sm:px-6 pb-5 -mt-1">
+                    <p className="text-sm sm:text-base text-[#44483e] leading-relaxed pl-11.5">
                       {faq.answer}
                     </p>
                   </div>

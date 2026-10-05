@@ -39,7 +39,7 @@ function validatePlanting(data) {
   if (!data.lahanId) return 'Lahan wajib dipilih.';
   if (!data.tanggalTanam) return 'Tanggal tanam wajib diisi.';
   if (!data.varietas || !String(data.varietas).trim()) return 'Varietas wajib diisi.';
-  if (!data.petugas || !String(data.petugas).trim()) return 'Petugas penanaman wajib diisi.';
+  // Petugas opsional (DB mengizinkan NULL) — Mode Mudah tidak mewajibkannya.
   if (data.jumlahLubang != null && (isNaN(Number(data.jumlahLubang)) || Number(data.jumlahLubang) < 0)) return 'Jumlah lubang tidak valid.';
   if (data.statusTanam && !statusVals.includes(data.statusTanam)) return 'Status tanam tidak valid.';
   if (data.tanggalTanam && data.estimasiPanen) {

@@ -42,6 +42,7 @@ import { ActionButtons } from '../../components/common/ActionButtons';
 import { Toast } from '../../components/common/Toast';
 import { Combobox } from '../../components/common/Combobox';
 import { useUnitSettings } from '../../context/UnitSettingsContext';
+import { buildGroupColorMap, groupColor, groupKeyOf } from '../../utils/groupColor';
 
 const filterInputCls =
   'w-full px-2.5 py-1.5 bg-[#F7F7F5] border border-[#c4c8bb]/40 rounded-lg text-xs font-medium text-[#221A12] focus:outline-none focus:ring-2 focus:ring-[#2C4219]/30 focus:border-[#2C4219] focus:bg-white transition-all';
@@ -103,6 +104,8 @@ export const PanenPage: React.FC = () => {
     petaniPenanggungJawab: '',
     catatan: '',
     panenKe: 1,
+    persenHama: '',
+    jenisHama: '',
   });
   const [formKodePanen, setFormKodePanen] = useState('');
   const [plantingsForForm, setPlantingsForForm] = useState<Planting[]>([]);
@@ -293,6 +296,8 @@ export const PanenPage: React.FC = () => {
       petaniPenanggungJawab: '',
       catatan: '',
       panenKe: 1,
+      persenHama: '',
+      jenisHama: '',
     });
     setPlantingsForForm([]);
     setSelectedPlanting(null);
@@ -333,6 +338,8 @@ export const PanenPage: React.FC = () => {
       petaniPenanggungJawab: row.petaniPenanggungJawab,
       catatan: row.catatan || '',
       panenKe: (row as any).panenKe || 1,
+      persenHama: (row as any).persenHama != null ? String((row as any).persenHama) : '',
+      jenisHama: (row as any).jenisHama || '',
     });
     // muat plantings untuk lahan terkait agar dropdown penanaman terisi saat edit
     const lahanIdForEdit = (row as any).lahanId;
@@ -414,6 +421,8 @@ export const PanenPage: React.FC = () => {
         .map((b) => ({ jumlahKg: Number(b.jumlahKg), keterangan: b.keterangan.trim() })),
       gudangId: selectedGudangId || null,
       panenKe: Number(formData.panenKe) || 1,
+      persenHama: formData.persenHama !== '' ? Number(formData.persenHama) : null,
+      jenisHama: formData.jenisHama || '',
     };
 
     if (editingId) {
@@ -640,6 +649,32 @@ export const PanenPage: React.FC = () => {
     for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(y, m, d));
     return cells;
   }, [calendarCursor]);
+
+  // Peta warna per penanaman (grup) — panen 1–3 satu warna, tanam lain beda warna
+  const colorMap = React.useMemo(
+    () => buildGroupColorMap(harvestList.map((h) => groupKeyOf(h))),
+    [harvestList]
+  );
+
+  // Urutkan tampilan agar panen 1–3 dari satu penanaman selalu BERDAMPINGAN.
+  // Grup diurutkan berdasarkan tanggal panen terbaru; di dalam grup urut panen ke-1→3.
+  const orderedList = React.useMemo(() => {
+    const byKey = new Map<string, HarvestRecord[]>();
+    for (const h of harvestList) {
+      const k = groupKeyOf(h);
+      if (!byKey.has(k)) byKey.set(k, []);
+      byKey.get(k)!.push(h);
+    }
+    const groups = Array.from(byKey.entries()).map(([key, items]) => {
+      const sorted = [...items].sort(
+        (a, b) => (Number((a as any).panenKe) || 1) - (Number((b as any).panenKe) || 1)
+      );
+      const latest = Math.max(...sorted.map((x) => new Date(x.tanggalPanen).getTime() || 0));
+      return { key, items: sorted, latest };
+    });
+    groups.sort((a, b) => b.latest - a.latest);
+    return groups.flatMap((g) => g.items);
+  }, [harvestList]);
 
   // Data panen pada tanggal terpilih
   const selectedCalDateData = React.useMemo(() => {
@@ -974,14 +1009,19 @@ export const PanenPage: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  harvestList.map((row) => {
+                  orderedList.map((row, idx) => {
+                    const gc = groupColor(colorMap.get(groupKeyOf(row)) ?? 0);
+                    // Pembatas antar-kelompok: grup sebelumnya berbeda
+                    const prevKey = idx > 0 ? groupKeyOf(orderedList[idx - 1]) : null;
+                    const newGroup = idx > 0 && prevKey !== groupKeyOf(row);
                     return (
-                    <tr key={row.id} className="hover:bg-[#F7F7F5] transition-colors">
+                    <tr key={row.id} className={`hover:bg-[#F7F7F5] transition-colors border-l-4 ${gc.border} ${newGroup ? 'border-t-2 border-t-[#c4c8bb]/40' : ''}`}>
                       <td className="py-2.5 px-3 align-middle font-bold text-[#2C4219] whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
+                          <span className={`w-2.5 h-2.5 rounded-full ${gc.dot} shrink-0`} title="Penanda kelompok penanaman" />
                           {row.kodePanen}
                           {(row as any).panenKe && Number((row as any).panenKe) > 1 && (
-                            <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] font-extrabold leading-none ${Number((row as any).panenKe) === 3 ? 'bg-amber-100 text-amber-700' : 'bg-[#C3E28D] text-[#2C4219]'}`}>
+                            <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] font-extrabold leading-none ${gc.solid}`}>
                               Panen {Number((row as any).panenKe)}/3
                             </span>
                           )}
@@ -1396,6 +1436,37 @@ export const PanenPage: React.FC = () => {
                   placeholder={`Contoh: 35.5 ${beratSuffix}`}
                   className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
                   required
+                />
+                <p className="text-[13px] text-[#6B7280] mt-1">Isi total berat gabah yang dipanen, dalam {beratSuffix}.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Terkena Hama (%) <span className="font-normal text-[#6B7280]">— opsional</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={formData.persenHama}
+                  onChange={(e) => setFormData({ ...formData, persenHama: e.target.value })}
+                  placeholder="Contoh: 10"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                />
+                <p className="text-[13px] text-[#6B7280] mt-1">Perkiraan bagian hasil panen yang rusak/kena hama (0–100%).</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Jenis Hama <span className="font-normal text-[#6B7280]">— opsional</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.jenisHama}
+                  onChange={(e) => setFormData({ ...formData, jenisHama: e.target.value })}
+                  placeholder="Contoh: Tikus, Burung, Wereng"
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
                 />
               </div>
 

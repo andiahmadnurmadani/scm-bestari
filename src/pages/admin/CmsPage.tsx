@@ -24,6 +24,7 @@ import {
   MapPin,
   Phone,
   Mail,
+  QrCode,
 } from 'lucide-react';
 import { useCms, CmsHeroImage, CmsProduct, CmsWorkflowStep, CmsFaq } from '../../context/CmsContext';
 import { Toast } from '../../components/common/Toast';
@@ -472,6 +473,9 @@ export const CmsPage: React.FC = () => {
       {activeTab === 'galeri' && (
         <div className="space-y-4">
           <SectionCard title="Galeri Gambar Hero" subtitle="Gambar slideshow di sisi kanan hero — unggah dari perangkat Anda" icon={<ImageIcon className="w-4 h-4" />}>
+            <Field label="Teks Badge Galeri" hint="Teks kecil di atas judul gambar">
+              <input value={cms.galleryBadge} onChange={(e) => update({ galleryBadge: e.target.value })} className={inputCls} placeholder="Galeri Sorgum KWT" />
+            </Field>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {cms.heroImages.map((img, i) => (
                 <div key={i} className="p-4 bg-[#F7F7F5] rounded-xl border border-[#c4c8bb]/20 space-y-3">
@@ -518,6 +522,12 @@ export const CmsPage: React.FC = () => {
               <Field label="Deskripsi Seksi">
                 <input value={cms.productsSubtitle} onChange={(e) => update({ productsSubtitle: e.target.value })} className={inputCls} />
               </Field>
+              <Field label="Label 'Tipe Kemasan'">
+                <input value={cms.productPackLabel} onChange={(e) => update({ productPackLabel: e.target.value })} className={inputCls} />
+              </Field>
+              <Field label="Label 'Standar Legalitas'">
+                <input value={cms.productTagLabel} onChange={(e) => update({ productTagLabel: e.target.value })} className={inputCls} />
+              </Field>
             </div>
           </SectionCard>
 
@@ -558,6 +568,25 @@ export const CmsPage: React.FC = () => {
       {/* ═══ TAB: ALUR PROSES ═══ */}
       {activeTab === 'alur' && (
         <div className="space-y-4">
+          <SectionCard title="Seksi Lacak Asal-Usul (QR)" subtitle="Bagian hijau gelap: 'Lacak asal-usulnya…'" icon={<QrCode className="w-4 h-4" />}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Teks Badge">
+                <input value={cms.traceBadge} onChange={(e) => update({ traceBadge: e.target.value })} className={inputCls} placeholder="Lacak Asal-Usul Produk" />
+              </Field>
+              <Field label="Judul — Kata Awal">
+                <input value={cms.traceTitlePre} onChange={(e) => update({ traceTitlePre: e.target.value })} className={inputCls} placeholder="Lacak asal-usulnya —" />
+              </Field>
+              <Field label="Judul — Kata Highlight (hijau)">
+                <input value={cms.traceTitleHighlight} onChange={(e) => update({ traceTitleHighlight: e.target.value })} className={inputCls} placeholder="kenali perjalanan produk Anda" />
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label="Deskripsi Seksi">
+                  <textarea rows={3} value={cms.traceDesc} onChange={(e) => update({ traceDesc: e.target.value })} className={textareaCls} />
+                </Field>
+              </div>
+            </div>
+          </SectionCard>
+
           <SectionCard title="Alur Rantai Pasok" subtitle="Diagram langkah di bawah kartu fitur" icon={<GitBranch className="w-4 h-4" />}>
             <Field label="Judul Alur">
               <input value={cms.workflowTitle} onChange={(e) => update({ workflowTitle: e.target.value })} className={inputCls} />
@@ -688,6 +717,39 @@ export const CmsPage: React.FC = () => {
               <Field label="Teks Tombol Navbar CTA" hint="Tombol hijau di pojok kanan navbar">
                 <input value={cms.navbarCta} onChange={(e) => update({ navbarCta: e.target.value })} className={inputCls} placeholder="Daftar Sekarang" />
               </Field>
+              <Field label="Teks Tombol Login (mobile)" hint="Tombol Masuk di menu HP">
+                <input value={cms.navbarLogin} onChange={(e) => update({ navbarLogin: e.target.value })} className={inputCls} placeholder="Masuk" />
+              </Field>
+            </div>
+            <div className="mt-4">
+              <label className="block text-[10px] font-bold text-[#172C05] uppercase tracking-wider mb-2">Menu Navigasi (navbar)</label>
+              <div className="space-y-2">
+                {cms.navLinks.map((link, i) => (
+                  <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      value={link.label}
+                      onChange={(e) => {
+                        const navLinks = cms.navLinks.map((l, idx) => (idx === i ? { ...l, label: e.target.value } : l));
+                        update({ navLinks });
+                      }}
+                      className={inputCls}
+                      placeholder="Label menu"
+                    />
+                    <input
+                      value={link.section}
+                      onChange={(e) => {
+                        const navLinks = cms.navLinks.map((l, idx) => (idx === i ? { ...l, section: e.target.value } : l));
+                        update({ navLinks });
+                      }}
+                      className={inputCls}
+                      placeholder="Target (id seksi, mis. fitur)"
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-[9px] text-[#9CA3AF] font-medium mt-1.5">
+                <Lightbulb className="w-3.5 h-3.5 inline-block mr-1 text-amber-600" /> Target harus sama dengan id seksi di halaman: <b>beranda</b>, <b>fitur</b>, <b>produk</b>, <b>faq</b>.
+              </p>
             </div>
           </SectionCard>
 
@@ -723,6 +785,43 @@ export const CmsPage: React.FC = () => {
                 <Field label="Tagline Bawah Footer" hint="Pojok kanan bawah, ditampilkan hijau">
                   <input value={cms.footerBottomTagline} onChange={(e) => update({ footerBottomTagline: e.target.value })} className={inputCls} placeholder="Memberdayakan KWT..." />
                 </Field>
+              </div>
+
+              {/* Judul kolom + link footer */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Field label="Judul Kolom Navigasi">
+                  <input value={cms.footerNavTitle} onChange={(e) => update({ footerNavTitle: e.target.value })} className={inputCls} placeholder="Navigasi Cepat" />
+                </Field>
+                <Field label="Judul Kolom Legal">
+                  <input value={cms.footerLegalTitle} onChange={(e) => update({ footerLegalTitle: e.target.value })} className={inputCls} placeholder="Legal & Privasi" />
+                </Field>
+                <Field label="Judul Kolom Kontak">
+                  <input value={cms.footerContactTitle} onChange={(e) => update({ footerContactTitle: e.target.value })} className={inputCls} placeholder="Kontak Sentra KWT" />
+                </Field>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-[#172C05] uppercase tracking-wider mb-2">Link Kolom Navigasi</label>
+                <div className="space-y-2">
+                  {cms.footerNavLinks.map((l, i) => (
+                    <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input value={l.label} onChange={(e) => update({ footerNavLinks: cms.footerNavLinks.map((x, idx) => (idx === i ? { ...x, label: e.target.value } : x)) })} className={inputCls} placeholder="Label" />
+                      <input value={l.href} onChange={(e) => update({ footerNavLinks: cms.footerNavLinks.map((x, idx) => (idx === i ? { ...x, href: e.target.value } : x)) })} className={inputCls} placeholder="Tautan (mis. /#fitur)" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-[#172C05] uppercase tracking-wider mb-2">Link Kolom Legal</label>
+                <div className="space-y-2">
+                  {cms.footerLegalLinks.map((l, i) => (
+                    <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input value={l.label} onChange={(e) => update({ footerLegalLinks: cms.footerLegalLinks.map((x, idx) => (idx === i ? { ...x, label: e.target.value } : x)) })} className={inputCls} placeholder="Label" />
+                      <input value={l.href} onChange={(e) => update({ footerLegalLinks: cms.footerLegalLinks.map((x, idx) => (idx === i ? { ...x, href: e.target.value } : x)) })} className={inputCls} placeholder="Tautan (mis. /privasi)" />
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Footer preview */}

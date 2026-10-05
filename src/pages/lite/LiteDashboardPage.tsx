@@ -8,8 +8,10 @@ import {
   ChevronRight,
   PackageCheck,
   ArrowDownToLine,
-  ArrowUpFromLine,
   Layers,
+  Droplets,
+  QrCode,
+  Check,
 } from 'lucide-react';
 import { landApi } from '../../api/endpoints/landApi';
 import { harvestApi } from '../../api/endpoints/harvestApi';
@@ -20,7 +22,7 @@ import { formatTanggalId } from '../../utils/dateUtils';
 
 export const LiteDashboardPage: React.FC = () => {
   const { formatBerat } = useUnitSettings();
-  const [stats, setStats] = useState({ lahan: 0, panen: 0, totalPanenKg: 0, gudangStokKg: 0, olahan: 0 });
+  const [stats, setStats] = useState({ lahan: 0, panen: 0, totalPanenKg: 0, gudangStokKg: 0, olahan: 0, gabahKg: 0, sorgumKg: 0 });
   const [recentHarvests, setRecentHarvests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,6 +47,8 @@ export const LiteDashboardPage: React.FC = () => {
           totalPanenKg: harvests.reduce((s, x) => s + (Number(x.jumlahHasilKg) || 0), 0),
           gudangStokKg: warehouses.reduce((s, x) => s + (Number(x.totalStokKg) || 0), 0),
           olahan: productions.length,
+          gabahKg: warehouses.reduce((s, x) => s + (Number(x.stokGabahKg) || 0), 0),
+          sorgumKg: warehouses.reduce((s, x) => s + (Number(x.stokSorgumKg) || 0), 0),
         });
         setRecentHarvests(
           [...harvests]
@@ -70,12 +74,20 @@ export const LiteDashboardPage: React.FC = () => {
     { label: 'Batch Olahan', value: stats.olahan, unit: 'batch', icon: Factory, path: '/lite/produksi', color: 'text-purple-700 bg-purple-100' },
   ];
 
-  const quickActions = [
-    { label: 'Catat Tanam', desc: 'Catat penanaman di lahan dulu', path: '/lite/lahan', icon: Tractor },
-    { label: 'Catat Panen Baru', desc: 'Input hasil panen dari lahan', path: '/lite/panen', icon: Sprout },
-    { label: 'Catat Stok Masuk', desc: 'Simpan hasil panen ke gudang', path: '/lite/gudang', icon: ArrowDownToLine },
-    { label: 'Catat Olahan', desc: 'Produksi dari bahan gudang', path: '/lite/produksi', icon: Factory },
+  // ── Panduan Alur Rantai Pasok (terintegrasi hulu→hilir) ───────────────────
+  // Tiap tahap menandai selesai/belum dari data nyata, sehingga petani selalu
+  // tahu di mana posisinya dan apa langkah berikutnya.
+  const flow = [
+    { key: 'lahan', label: 'Daftarkan Lahan', desc: 'Tambah lahan & foto', path: '/lite/lahan', icon: Tractor, done: stats.lahan > 0 },
+    { key: 'tanam', label: 'Catat Tanam', desc: 'Kapan & varietas apa', path: '/lite/lahan', icon: Sprout, done: stats.lahan > 0 },
+    { key: 'panen', label: 'Catat Panen', desc: 'Hasil & tanggal panen', path: '/lite/panen', icon: PackageCheck, done: stats.panen > 0 },
+    { key: 'gudang', label: 'Simpan ke Gudang', desc: 'Stok gabah masuk', path: '/lite/gudang', icon: ArrowDownToLine, done: stats.gabahKg > 0 || stats.sorgumKg > 0 },
+    { key: 'sosoh', label: 'Sosoh Gabah', desc: 'Gabah jadi sorgum', path: '/lite/gudang', icon: Droplets, done: stats.sorgumKg > 0 },
+    { key: 'olahan', label: 'Buat Olahan', desc: 'Produk jadi dari sorgum', path: '/lite/produksi', icon: Factory, done: stats.olahan > 0 },
+    { key: 'lacak', label: 'Lacak Produk', desc: 'QR asal-usul produk', path: '/lite/produksi', icon: QrCode, done: false },
   ];
+  const nextIdx = flow.findIndex((f) => !f.done);
+  const nextStep = nextIdx >= 0 ? flow[nextIdx] : flow[flow.length - 1];
 
   return (
     <div className="space-y-5 pb-6">
@@ -113,26 +125,63 @@ export const LiteDashboardPage: React.FC = () => {
         })}
       </div>
 
-      {/* Quick actions */}
+      {/* Panduan Alur Rantai Pasok */}
       <div>
-        <h2 className="text-sm font-bold text-[#172C05] mb-2.5">Aksi Cepat</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {quickActions.map((a) => {
-            const Icon = a.icon;
+        <div className="flex items-center justify-between mb-2.5">
+          <h2 className="text-sm font-bold text-[#172C05]">Alur Pengelolaan Sorgum</h2>
+          <span className="text-[10px] font-semibold text-[#6B7280]">Ikuti dari atas ke bawah</span>
+        </div>
+
+        {/* CTA langkah berikutnya */}
+        <Link
+          to={nextStep.path}
+          className="block bg-gradient-to-r from-[#2C4219] to-[#4a6b2f] rounded-2xl p-4 mb-3 text-white hover:shadow-lg transition-shadow"
+        >
+          <p className="text-[10px] font-bold text-[#C3E28D] uppercase tracking-wider">Langkah berikutnya untuk Anda</p>
+          <div className="flex items-center gap-3 mt-1.5">
+            <div className="w-10 h-10 rounded-xl bg-[#C3E28D] text-[#2C4219] flex items-center justify-center shrink-0">
+              <nextStep.icon className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-extrabold">{nextStep.label}</p>
+              <p className="text-[11px] text-white/80 truncate">{nextStep.desc}</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-[#C3E28D] shrink-0" />
+          </div>
+        </Link>
+
+        {/* Stepper tahapan */}
+        <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-2">
+          {flow.map((s, i) => {
+            const Icon = s.icon;
+            const isNext = i === nextIdx;
+            const isLast = i === flow.length - 1;
             return (
               <Link
-                key={a.label}
-                to={a.path}
-                className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4 flex items-center gap-3 hover:border-[#2C4219]/40 hover:shadow-md transition-all group"
+                key={s.key}
+                to={s.path}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+                  isNext ? 'bg-[#C3E28D]/25' : 'hover:bg-[#F7F7F5]'
+                } ${!isLast ? 'border-b border-[#c4c8bb]/15' : ''}`}
               >
-                <div className="w-10 h-10 rounded-xl bg-[#2C4219] text-[#C3E28D] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <Icon className="w-5 h-5" />
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-extrabold ${
+                    s.done
+                      ? 'bg-[#2C4219] text-[#C3E28D]'
+                      : isNext
+                      ? 'bg-[#C3E28D] text-[#2C4219] ring-2 ring-[#2C4219]/30'
+                      : 'bg-[#F7F7F5] text-[#9CA3AF]'
+                  }`}
+                >
+                  {s.done ? <Check className="w-4 h-4" /> : i + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-[#172C05]">{a.label}</p>
-                  <p className="text-[11px] text-[#6B7280] truncate">{a.desc}</p>
+                  <p className={`text-[13px] font-bold ${s.done ? 'text-[#6B7280]' : 'text-[#172C05]'}`}>
+                    {s.label}
+                  </p>
+                  <p className="text-[11px] text-[#6B7280] truncate">{s.desc}</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-[#9CA3AF] group-hover:text-[#2C4219] group-hover:translate-x-0.5 transition-all shrink-0" />
+                <Icon className={`w-4 h-4 shrink-0 ${s.done ? 'text-[#2C4219]' : 'text-[#9CA3AF]'}`} />
               </Link>
             );
           })}

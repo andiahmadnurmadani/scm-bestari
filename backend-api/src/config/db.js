@@ -157,6 +157,8 @@ export async function initDatabase() {
       catatan TEXT NULL,
       foto_url LONGTEXT NULL,
       panen_ke TINYINT NOT NULL DEFAULT 1,
+      persen_hama DECIMAL(5,2) NULL,
+      jenis_hama VARCHAR(200) NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -423,6 +425,8 @@ export async function initDatabase() {
     ['planting_id', 'BIGINT UNSIGNED NULL'],
     ['periode_hari', 'INT NULL'],
     ['panen_ke', 'TINYINT NOT NULL DEFAULT 1'],
+    ['persen_hama', 'DECIMAL(5,2) NULL'],
+    ['jenis_hama', 'VARCHAR(200) NULL'],
   ]) {
     try {
       const [hr] = await pool.query(`SELECT COUNT(*) AS total FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='harvests' AND COLUMN_NAME=?`, [col]);

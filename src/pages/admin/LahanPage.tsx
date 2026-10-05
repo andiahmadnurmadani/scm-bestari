@@ -5,6 +5,7 @@ import MapView from '../../components/MapView';
 import { landApi } from '../../api/endpoints/landApi';
 import { useUnitSettings } from '../../context/UnitSettingsContext';
 import { varietyApi, Variety } from '../../api/endpoints/varietyApi';
+import { todayLocalISO, addDaysISO } from '../../utils/tanggal';
 import { plantingApi } from '../../api/endpoints/plantingApi';
 import { LandPlot, Planting } from '../../types';
 import { Button } from '../../components/common/Button';
@@ -47,15 +48,18 @@ export const LahanPage: React.FC = () => {
   const [plantingLahan, setPlantingLahan] = useState<LandPlot | null>(null);
   const [editingPlanting, setEditingPlanting] = useState<Planting | null>(null);
   const [showPlantingForm, setShowPlantingForm] = useState(false);
-  const [plantingForm, setPlantingForm] = useState<Partial<Planting> & { tanggalTanam?: string; estimasiPanen?: string; jumlahLubang?: string }>({
-    tanggalTanam: new Date().toISOString().slice(0,10),
+  const [plantingForm, setPlantingForm] = useState<Partial<Planting> & { tanggalTanam?: string; estimasiPanen?: string; jumlahLubang?: string; lamaPanen?: string }>({
+    tanggalTanam: todayLocalISO(),
     estimasiPanen: '',
     varietas: '',
     jumlahLubang: '',
     petugas: '',
     statusTanam: 'Ditanam',
     catatan: '',
+    lamaPanen: '',
+
   });
+  const [addingNewVariety, setAddingNewVariety] = useState(false);
 
   // Pagination State
   const [page, setPage] = useState(1);
@@ -158,23 +162,27 @@ export const LahanPage: React.FC = () => {
     if (!plantingLahan) return;
     setEditingPlanting(null);
     setShowPlantingForm(true);
+    setAddingNewVariety(false);
     const varietasDefault = plantingLahan.varietasSorgum || '';
     const v = varieties.find((x) => x.name === varietasDefault);
     const lamaPanen = v?.lamaPanen ?? 100;
-    const est = new Date(); est.setDate(est.getDate() + lamaPanen);
+    const estISO = addDaysISO(todayLocalISO(), lamaPanen) || '';
     setPlantingForm({
-      tanggalTanam: new Date().toISOString().slice(0,10),
-      estimasiPanen: est.toISOString().slice(0,10),
+      tanggalTanam: todayLocalISO(),
+      estimasiPanen: estISO,
       varietas: varietasDefault,
       jumlahLubang: String(plantingLahan.jumlahLubang || ''),
       petugas: '',
       statusTanam: 'Ditanam',
       catatan: '',
+      lamaPanen: '',
+
     });
   };
   const handleOpenPlantingEdit = (p: Planting) => {
     setEditingPlanting(p);
     setShowPlantingForm(true);
+    setAddingNewVariety(false);
     // jumlahLubang di DB sudah ×3 → tampilkan nilai asli (÷3)
     const asli = (p.jumlahLubang ?? 0) / 3;
     setPlantingForm({
@@ -185,6 +193,8 @@ export const LahanPage: React.FC = () => {
       petugas: p.petugas || '',
       statusTanam: p.statusTanam,
       catatan: p.catatan || '',
+      lamaPanen: '',
+
     });
   };
   const handleDeletePlanting = async (id: string) => {
@@ -201,20 +211,45 @@ export const LahanPage: React.FC = () => {
   const handleSavePlanting = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!plantingLahan) return;
+    if (!plantingForm.tanggalTanam || !(plantingForm.varietas || '').trim()) {
+      setToast({ msg: 'Tanggal tanam dan varietas wajib diisi.', type: 'error' });
+      return;
+    }
     if (!plantingForm.petugas.trim()) {
       setToast({ msg: 'Petugas penanaman wajib diisi.', type: 'error' });
+      return;
+    }
+    const varietasBaru = !varieties.some((x) => x.name === (plantingForm.varietas || '').trim());
+    if (varietasBaru && (!plantingForm.lamaPanen || Number(plantingForm.lamaPanen) <= 0)) {
+      setToast({ msg: 'Isi estimasi umur panen (hari) untuk varietas baru.', type: 'error' });
       return;
     }
     try {
       // Estimasi panen otomatis: tanggal tanam + lamaPanen varietas (dari Master Varietas)
       const v = varieties.find((x) => x.name === plantingForm.varietas);
-      const lamaPanen = v?.lamaPanen ?? 100;
-      const est = new Date(plantingForm.tanggalTanam + 'T00:00:00');
-      if (!isNaN(est.getTime())) est.setDate(est.getDate() + lamaPanen);
+      const lamaPanen = v?.lamaPanen ?? (Number(plantingForm.lamaPanen) || 100);
+      const estISO = addDaysISO(plantingForm.tanggalTanam || todayLocalISO(), lamaPanen);
+
+      // Varietas baru → otomatis simpan ke Master Varietas
+      const isNewVariety = !varieties.some((x) => x.name === (plantingForm.varietas || '').trim());
+      if (isNewVariety) {
+        try {
+          await varietyApi.create({
+            name: (plantingForm.varietas || '').trim(),
+            description: 'Ditambahkan otomatis dari Catat Penanaman.',
+            lamaPanen,
+          });
+          const vr = await varietyApi.getAll();
+          setVarieties(vr.data || []);
+        } catch {
+          // Abaikan bila gagal (mis. sudah ada)
+        }
+      }
+
       const payload = {
         lahanId: plantingLahan.id,
         tanggalTanam: plantingForm.tanggalTanam,
-        estimasiPanen: isNaN(est.getTime()) ? null : est.toISOString().slice(0,10),
+        estimasiPanen: estISO,
         varietas: plantingForm.varietas,
         // Jumlah lubang di kali 3 saat disimpan (1 lubang = 3 titik tanam)
         jumlahLubang: Number(plantingForm.jumlahLubang) * 3 || 0,
@@ -786,31 +821,74 @@ export const LahanPage: React.FC = () => {
                 <input type="date" value={plantingForm.tanggalTanam} onChange={(e) => setPlantingForm({ ...plantingForm, tanggalTanam: e.target.value })} className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm" required />
               </div>
               <div>
-                <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">Varietas *</label>
-                <select
-                  value={plantingForm.varietas}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    // Estimasi panen otomatis mengikuti umur panen varietas (Master Varietas)
-                    const v = varieties.find((x) => x.name === val);
-                    const lama = v?.lamaPanen ?? 100;
-                    const est = new Date((plantingForm.tanggalTanam || new Date().toISOString().slice(0,10)) + 'T00:00:00');
-                    if (!isNaN(est.getTime())) est.setDate(est.getDate() + lama);
-                    setPlantingForm({
-                      ...plantingForm,
-                      varietas: val,
-                      estimasiPanen: isNaN(est.getTime()) ? '' : est.toISOString().slice(0,10),
-                    });
-                  }}
-                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
-                  required
-                >
-                  <option value="" disabled>Pilih varietas...</option>
-                  {varieties.map((v) => <option key={v.id} value={v.name}>{v.name}</option>)}
-                </select>
-                <p className="text-[11px] text-[#6B7280] mt-1">
-                  Estimasi panen otomatis mengikuti umur panen varietas (Master Varietas).
-                </p>
+                <label className="block text-sm font-bold text-[#2C4219] uppercase mb-1">Varietas *</label>
+                {!addingNewVariety ? (
+                  <>
+                    <select
+                      value={plantingForm.varietas}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '__BARU__') {
+                          setAddingNewVariety(true);
+                          setPlantingForm({ ...plantingForm, varietas: '', lamaPanen: '' });
+                          return;
+                        }
+                        // Estimasi panen otomatis mengikuti umur panen varietas (Master Varietas)
+                        const v = varieties.find((x) => x.name === val);
+                        const lama = v?.lamaPanen ?? 100;
+                        const estISO = addDaysISO(plantingForm.tanggalTanam || todayLocalISO(), lama);
+                        setPlantingForm({
+                          ...plantingForm,
+                          varietas: val,
+                          estimasiPanen: estISO || '',
+                        });
+                      }}
+                      className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+                      required
+                    >
+                      <option value="" disabled>Pilih varietas...</option>
+                      {varieties.map((v) => <option key={v.id} value={v.name}>{v.name}{v.lamaPanen ? ` (panen ± ${v.lamaPanen} hari)` : ''}</option>)}
+                      <option value="__BARU__">+ Tambah varietas baru…</option>
+                    </select>
+                    <p className="text-[11px] text-[#6B7280] mt-1">
+                      {varieties.length === 0
+                        ? 'Belum ada data varietas. Pilih "+ Tambah varietas baru…" untuk mengisi manual.'
+                        : 'Estimasi panen otomatis mengikuti umur panen varietas (Master Varietas).'}
+                    </p>
+                  </>
+                ) : (
+                  <div className="space-y-2.5">
+                    <input
+                      value={plantingForm.varietas}
+                      onChange={(e) => setPlantingForm({ ...plantingForm, varietas: e.target.value })}
+                      placeholder="Nama varietas, mis. Super 1"
+                      autoFocus
+                      className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+                    />
+                    <div>
+                      <label className="block text-xs font-bold text-[#2C4219] mb-1">Estimasi Umur Panen (hari) *</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={plantingForm.lamaPanen}
+                        onChange={(e) => setPlantingForm({ ...plantingForm, lamaPanen: e.target.value })}
+                        placeholder="Contoh: 100"
+                        className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+                      />
+                      <p className="text-[11px] text-[#6B7280] mt-1">Perkiraan umur tanaman sampai siap panen, dipakai menghitung estimasi tanggal panen.</p>
+                    </div>
+                    <p className="text-xs text-[#2C4219] font-medium bg-[#C3E28D]/20 border border-[#C3E28D]/40 rounded-lg px-2.5 py-1.5">
+                      ✓ Varietas ini otomatis tersimpan ke Master Varietas agar bisa dipakai lagi.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => { setAddingNewVariety(false); setPlantingForm({ ...plantingForm, varietas: '', lamaPanen: '' }); }}
+                      className="text-xs font-bold text-[#2C4219] underline"
+                    >
+                      ← Kembali pilih dari daftar
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div>

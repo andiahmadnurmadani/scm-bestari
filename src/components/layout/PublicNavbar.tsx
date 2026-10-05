@@ -36,38 +36,38 @@ export const PublicNavbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-[#F7F7F5]/95 backdrop-blur-md border-b border-[#c4c8bb]/30 shadow-2xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-10 h-16 sm:h-18 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
           {cms.logo ? (
             <img
               src={cms.logo}
               alt={cms.siteName}
-              className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#c4c8bb]/30 transition-transform group-hover:scale-105 shadow-2xs"
+              className="w-9 h-9 rounded-xl object-cover ring-1 ring-[#c4c8bb]/30 transition-transform group-hover:scale-105 shadow-2xs"
             />
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-[#2C4219] flex items-center justify-center text-white transition-transform group-hover:scale-105 shadow-2xs">
-              <Sprout className="w-4 h-4 text-[#C3E28D]" />
+            <div className="w-9 h-9 rounded-xl bg-[#2C4219] flex items-center justify-center text-white transition-transform group-hover:scale-105 shadow-2xs">
+              <Sprout className="w-5 h-5 text-[#C3E28D]" />
             </div>
           )}
           <div>
-            <span className="text-base font-extrabold text-[#2C4219] tracking-tight block leading-none">
+            <span className="text-lg font-extrabold text-[#2C4219] tracking-tight block leading-none">
               {cms.siteName}
             </span>
-            <span className="text-[9px] font-bold text-[#44483e] uppercase tracking-wider block mt-0.5">
+            <span className="text-[10px] font-bold text-[#44483e] uppercase tracking-wider block mt-0.5">
               {cms.siteTagline}
             </span>
           </div>
         </Link>
 
         {/* Desktop Nav Links */}
-        <nav className="hidden lg:flex items-center gap-6 xl:gap-7">
+        <nav className="hidden lg:flex items-center gap-7 xl:gap-9">
           {navLinks.map((link) => (
             <a
               key={link.label}
               href={`/#${link.section}`}
               onClick={(e) => handleNavClick(e, link.section)}
-              className="text-xs xl:text-sm font-semibold text-[#44483e] hover:text-[#2C4219] transition-colors cursor-pointer"
+              className="text-sm font-semibold text-[#44483e] hover:text-[#2C4219] transition-colors cursor-pointer"
             >
               {link.label}
             </a>
@@ -76,13 +76,13 @@ export const PublicNavbar: React.FC = () => {
 
         {/* CTA Buttons */}
         {location.pathname !== '/login' && (
-          <div className="hidden md:flex items-center gap-2.5">
+          <div className="hidden md:flex items-center gap-3">
             <Link
               to="/login"
-              className="px-3 py-1.5 text-xs font-bold text-[#2C4219] hover:text-[#172C05] flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-4 py-2 text-sm font-bold text-white bg-[#2C4219] rounded-xl hover:bg-[#3a5520] flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
             >
-              <LogIn className="w-3.5 h-3.5" />
-              {cms.navbarLogin}
+              <LogIn className="w-4 h-4" />
+              {cms.navbarCta || cms.navbarLogin}
             </Link>
           </div>
         )}
@@ -120,7 +120,7 @@ export const PublicNavbar: React.FC = () => {
               onClick={() => setMobileMenuOpen(false)}
               className="w-full py-2.5 text-center font-bold text-[#2C4219] border border-[#2C4219] rounded-xl"
             >
-              Masuk
+              {cms.navbarLogin}
             </Link>
           </div>
         </div>

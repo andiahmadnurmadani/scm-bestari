@@ -182,23 +182,8 @@ export async function createLand(req, res) {
       [result.insertId]
     );
 
-    // Auto-create gudang untuk lahan baru (kode: GDG-<slug nama>-01)
-    try {
-      const [wg] = await pool.execute('SELECT id FROM warehouses WHERE lahan_id = ? LIMIT 1', [result.insertId]);
-      if (wg.length === 0) {
-        const slug = slugNama(data.namaLahan);
-        const kodeGudang = await kodeUnik(
-          (seq) => `GDG-${slug}-${String(seq).padStart(2, '0')}`,
-          buatCekAda(pool, 'warehouses', 'kode_gudang')
-        );
-        await pool.execute(
-          `INSERT INTO warehouses (kode_gudang, nama_gudang, lahan_id, lokasi)
-           VALUES (?, ?, ?, ?)`,
-          [kodeGudang, `Gudang ${String(data.namaLahan).trim()}`, result.insertId, String(data.lokasiDesa || '').trim()]
-        );
-        console.log(`✓ Gudang auto-create untuk lahan baru "${data.namaLahan}" (${kodeGudang}).`);
-      }
-    } catch (e) { console.warn('⚠ Auto-create gudang dilewati:', e.message); }
+    // Gudang TIDAK lagi dibuat otomatis saat menambah lahan.
+    // Gudang dibuat manual (opsional) dari menu Gudang, lalu bisa ditautkan ke lahan.
 
     return res.status(201).json({
       success: true,
@@ -365,8 +350,9 @@ export async function deleteLand(req, res) {
         await conn.execute(`DELETE FROM plantings WHERE lahan_id = ?`, [id]);
       }
 
-      // Hapus gudang auto-create terkait lahan agar tidak yatim
-      await conn.execute('DELETE FROM warehouses WHERE lahan_id = ?', [id]);
+      // Gudang tidak dihapus (dibuat manual oleh pengguna & bisa berisi stok).
+      // Cukup lepaskan tautan ke lahan yang dihapus agar tidak menggantung.
+      await conn.execute('UPDATE warehouses SET lahan_id = NULL WHERE lahan_id = ?', [id]);
 
       // Hapus lahan
       const [result] = await conn.execute('DELETE FROM lands WHERE id = ?', [id]);

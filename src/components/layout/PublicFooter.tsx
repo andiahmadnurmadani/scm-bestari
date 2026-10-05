@@ -35,33 +35,37 @@ export const PublicFooter: React.FC = () => {
           {/* Col 2 */}
           <div className="space-y-3">
             <h4 className="text-sm font-bold text-white uppercase tracking-wider">
-              Navigasi Cepat
+              {cms.footerNavTitle}
             </h4>
             <ul className="space-y-2 text-xs text-[#c4c8bb]">
-              <li><a href="/#fitur" className="hover:text-[#C3E28D] transition-colors">Monitoring Panen</a></li>
-              <li><a href="/#fitur" className="hover:text-[#C3E28D] transition-colors">Kelola Olahan &amp; Sertifikat</a></li>
-              <li><a href="/#fitur" className="hover:text-[#C3E28D] transition-colors">Logistik &amp; Keuangan</a></li>
-              <li><Link to="/login" className="hover:text-[#C3E28D] transition-colors">Portal Dashboard Admin</Link></li>
+              {cms.footerNavLinks.map((l, i) => (
+                <li key={i}>
+                  {l.href && l.href.startsWith('/') && !l.href.startsWith('/#') ? (
+                    <Link to={l.href} className="hover:text-[#C3E28D] transition-colors">{l.label}</Link>
+                  ) : (
+                    <a href={l.href} className="hover:text-[#C3E28D] transition-colors">{l.label}</a>
+                  )}
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Col 3 */}
           <div className="space-y-3">
             <h4 className="text-sm font-bold text-white uppercase tracking-wider">
-              Legal &amp; Privasi
+              {cms.footerLegalTitle}
             </h4>
             <ul className="space-y-2 text-xs text-[#c4c8bb]">
-              <li><a href="#" className="hover:text-[#C3E28D] transition-colors">Kebijakan Privasi</a></li>
-              <li><a href="#" className="hover:text-[#C3E28D] transition-colors">Syarat &amp; Ketentuan Service</a></li>
-              <li><a href="#" className="hover:text-[#C3E28D] transition-colors">Sertifikasi Halal BPJPH</a></li>
-              <li><a href="#" className="hover:text-[#C3E28D] transition-colors">Standar Mutu Pangan SNI</a></li>
+              {cms.footerLegalLinks.map((l, i) => (
+                <li key={i}><a href={l.href} className="hover:text-[#C3E28D] transition-colors">{l.label}</a></li>
+              ))}
             </ul>
           </div>
 
           {/* Col 4 — Kontak (editable via CMS) */}
           <div className="space-y-3">
             <h4 className="text-sm font-bold text-white uppercase tracking-wider">
-              Kontak Sentra KWT
+              {cms.footerContactTitle}
             </h4>
             <div className="space-y-2 text-xs text-[#c4c8bb]">
               <p className="flex items-center gap-2">

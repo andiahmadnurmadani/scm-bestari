@@ -21,6 +21,8 @@ function mapRowToHarvest(row) {
     plantingId: row.planting_id != null ? String(row.planting_id) : null,
     periodeHari: row.periode_hari != null ? Number(row.periode_hari) : null,
     panenKe: row.panen_ke != null ? Number(row.panen_ke) : 1,
+    persenHama: row.persen_hama != null ? Number(row.persen_hama) : null,
+    jenisHama: row.jenis_hama || '',
     // lineage tambahan (jika JOIN)
     lahan: row.lahan_id ? { id: String(row.lahan_id), kodeLahan: row.kode_lahan, namaLahan: row.l_nama_lahan, lokasiDesa: row.lokasi_desa, luasHektar: row.luas_hektar != null ? Number(row.luas_hektar) : null } : null,
     planting: row.planting_id ? { id: String(row.planting_id), kodeTanam: row.kode_tanam, tanggalTanam: toISODate(row.tanggal_tanam), estimasiPanen: toISODate(row.estimasi_panen), varietas: row.p_varietas, jumlahLubang: row.jumlah_lubang != null ? Number(row.jumlah_lubang) : null, petugas: row.petugas } : null,
@@ -43,6 +45,7 @@ function validateHarvest(data) {
   if (data.kualitasGrade && !gradeValues.includes(data.kualitasGrade)) return 'Kualitas grade tidak valid.';
   if (data.status && !statusValues.includes(data.status)) return 'Status tidak valid.';
   if (data.lahanId && isNaN(Number(data.lahanId))) return 'Lahan tidak valid.';
+  if (data.persenHama != null && data.persenHama !== '' && (isNaN(Number(data.persenHama)) || Number(data.persenHama) < 0 || Number(data.persenHama) > 100)) return 'Persentase terkena hama harus antara 0–100%.';
   if (data.plantingId && isNaN(Number(data.plantingId))) return 'Data penanaman tidak valid.';
   if (data.panenKe != null) {
     const pk = Number(data.panenKe);
@@ -224,7 +227,7 @@ export async function getHarvests(req, res) {
 
     const [rows] = await pool.query(
       `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
-              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.created_at,
+              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.persen_hama, h.jenis_hama, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
               p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
               COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
@@ -261,7 +264,7 @@ export async function getHarvestById(req, res) {
   try {
     const [rows] = await getPool().execute(
       `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
-              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.created_at,
+              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.persen_hama, h.jenis_hama, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
               p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
               COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
@@ -391,8 +394,9 @@ export async function createHarvest(req, res) {
     const [result] = await pool.execute(
       `INSERT INTO harvests
         (kode_panen, nama_lahan, varietas, tanggal_panen, jumlah_hasil_kg,
-         kualitas_grade, petani_penanggung_jawab, status, catatan, foto_url, lahan_id, planting_id, periode_hari, panen_ke)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         kualitas_grade, petani_penanggung_jawab, status, catatan, foto_url, lahan_id, planting_id, periode_hari, panen_ke,
+         persen_hama, jenis_hama)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         kodePanen,
         String(data.namaLahan).trim(),
@@ -408,6 +412,8 @@ export async function createHarvest(req, res) {
         plantingId,
         periodeHari,
         panenKe,
+        data.persenHama != null && data.persenHama !== '' ? Number(data.persenHama) : null,
+        data.jenisHama ? String(data.jenisHama).trim() : null,
       ]
     );
 
@@ -432,7 +438,7 @@ export async function createHarvest(req, res) {
     // Ambil data lengkap SETELAH stok masuk agar sudah_masuk_kg akurat
     const [newRow] = await pool.execute(
       `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
-              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.created_at,
+              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.persen_hama, h.jenis_hama, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
               p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
               COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
@@ -497,6 +503,8 @@ export async function updateHarvest(req, res) {
       lahanId: 'lahan_id',
       plantingId: 'planting_id',
       panenKe: 'panen_ke',
+      persenHama: 'persen_hama',
+      jenisHama: 'jenis_hama',
     };
 
     const sets = [];
@@ -548,7 +556,7 @@ export async function updateHarvest(req, res) {
 
     const [updatedRow] = await pool.execute(
       `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
-              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.created_at,
+              h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.persen_hama, h.jenis_hama, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
               p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
               COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg

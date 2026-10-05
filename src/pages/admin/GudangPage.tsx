@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Warehouse as WarehouseIcon, Plus, MapPin, Sprout, Package, ArrowDownToLine, ArrowUpFromLine, History, Trash2, Pencil, QrCode, Download, Search, X, ArrowLeftRight, User } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { warehouseApi, BatchTrace, WarehouseHistoryItem } from '../../api/endpoints/warehouseApi';
+import { landApi } from '../../api/endpoints/landApi';
 import { Warehouse, WarehouseStockBatch } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
@@ -55,6 +56,8 @@ export const GudangPage: React.FC = () => {
   });
   // Opsi panen yang belum penuh masuk gudang (dropdown stok masuk)
   const [harvestOptions, setHarvestOptions] = useState<{ id: string; kodePanen: string; varietas: string; namaLahan?: string | null; sisaBelumMasukKg: number }[]>([]);
+  // Daftar lahan untuk penautan gudang (boleh banyak gudang per lahan, atau tanpa lahan)
+  const [lahanOptions, setLahanOptions] = useState<{ id: string; namaLahan: string; kodeLahan?: string }[]>([]);
   // Batch stok yang masih punya sisa di gudang terpilih (dropdown stok keluar)
   const [stockBatchesForOut, setStockBatchesForOut] = useState<{ id: string; kodeBatchStok: string; sisaKg: number; kodePanen?: string | null }[]>([]);
 
@@ -103,6 +106,16 @@ export const GudangPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    // Muat daftar lahan sekali untuk dropdown penautan gudang
+    (async () => {
+      try {
+        const res = await landApi.getAll({ limit: 200 });
+        const rows = (res.data || []) as { id: string | number; namaLahan?: string; kodeLahan?: string }[];
+        setLahanOptions(rows.map((l) => ({ id: String(l.id), namaLahan: l.namaLahan || '(tanpa nama)', kodeLahan: l.kodeLahan })));
+      } catch {
+        setLahanOptions([]);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -529,6 +542,24 @@ export const GudangPage: React.FC = () => {
               placeholder="Contoh: Gudang Lahan A"
               className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-[#172C05] mb-1">Terkait Lahan (opsional)</label>
+            <select
+              value={formData.lahanId}
+              onChange={(e) => setFormData({ ...formData, lahanId: e.target.value })}
+              className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
+            >
+              <option value="">— Gudang umum / dipakai bersama —</option>
+              {lahanOptions.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.kodeLahan ? `${l.kodeLahan} — ` : ''}{l.namaLahan}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-[#6B7280] mt-1">
+              Satu lahan boleh punya lebih dari satu gudang. Pilih "Gudang umum" untuk gudang bersama yang tidak terikat lahan tertentu.
+            </p>
           </div>
           <div>
             <label className="block text-xs font-bold text-[#172C05] mb-1">Kode Gudang</label>

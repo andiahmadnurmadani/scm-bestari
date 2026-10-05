@@ -5,21 +5,17 @@ import {
   Package,
   ArrowDownToLine,
   Factory,
-  History,
   MapPin,
-  User,
-  CalendarDays,
   ShieldCheck,
-  CheckCircle2,
   ScanLine,
   Search,
   ChevronRight,
-  Wallet,
-  FileText,
+  Droplets,
 } from 'lucide-react';
 import { PublicNavbar } from '../../components/layout/PublicNavbar';
 import { PublicFooter } from '../../components/layout/PublicFooter';
-import { formatDateTimeId } from '../../utils/dateUtils';
+import { formatTanggalId } from '../../utils/dateUtils';
+import { shortKode } from '../../utils/kode';
 import axios from 'axios';
 import { getApiBaseUrl } from '../../utils/apiConfig';
 
@@ -31,12 +27,48 @@ interface TraceData {
   panen: { kodePanen: string; namaLahan: string; varietas: string; tanggalPanen: string | null; jumlahHasilKg: number; petaniPenanggungJawab: string; status: string; periodeHari: number | null } | null;
   movements: { id: string; tipe: 'MASUK' | 'KELUAR'; jumlahKg: number; keterangan: string; createdAt: string | null; kodeBatch: string | null; namaProduk: string | null }[];
   produksi: { id: string; kodeBatch: string; namaProduk: string; kategori: string; tanggalProduksi: string | null; jumlahHasil: number; satuan: string; bahanDigunakan: number | null; operatorProduksi: string | null; createdAt: string | null }[];
-  logistik: { id: string; kodeTransaksi: string; tanggal: string | null; kategori: string; keteranganVendor: string | null; totalBiayaRp: number; statusPembayaran: string | null }[];
 }
 
 const formatBerat = (kg: number) => `${Number(kg || 0).toLocaleString('id-ID')} kg`;
 
-const rupiah = (n: number) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
+/** Satu tahap dalam alur visual (ikon besar + judul + ringkasan). */
+const Stage: React.FC<{
+  no: number;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  title: string;
+  subtitle?: string;
+  children?: React.ReactNode;
+  last?: boolean;
+}> = ({ no, icon: Icon, color, title, subtitle, children, last }) => (
+  <div className="relative flex gap-4 sm:gap-5">
+    {/* Garis penghubung + nomor */}
+    <div className="flex flex-col items-center shrink-0">
+      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shadow-sm ${color}`}>
+        <Icon className="w-6 h-6 sm:w-7 sm:h-7" />
+      </div>
+      {!last && <div className="w-1 flex-1 my-1 rounded-full bg-[#c4c8bb]/40" />}
+    </div>
+
+    {/* Kartu isi */}
+    <div className={`flex-1 min-w-0 ${last ? '' : 'pb-7'}`}>
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-black text-[#9CA3AF]">TAHAP {no}</span>
+      </div>
+      <h2 className="text-lg sm:text-xl font-extrabold text-[#172C05] leading-tight">{title}</h2>
+      {subtitle && <p className="text-base text-[#6B7280] mt-0.5">{subtitle}</p>}
+      {children && <div className="mt-3 space-y-2.5">{children}</div>}
+    </div>
+  </div>
+);
+
+/** Baris data sederhana: label kecil + nilai besar & tebal. */
+const Field: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+  <div>
+    <p className="text-sm text-[#6B7280]">{label}</p>
+    <p className="text-base sm:text-lg font-bold text-[#172C05] break-words">{value}</p>
+  </div>
+);
 
 export const TracePage: React.FC = () => {
   const { kodeBatchStok } = useParams<{ kodeBatchStok: string }>();
@@ -61,250 +93,133 @@ export const TracePage: React.FC = () => {
     return () => { mounted = false; };
   }, [kodeBatchStok]);
 
+  const olahanPertama = data?.produksi?.[0];
+
   return (
     <div className="min-h-screen bg-[#F7F7F5] flex flex-col">
       <PublicNavbar />
 
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-2 text-xs text-[#6B7280] mb-4">
+      <main className="flex-1 w-full max-w-2xl mx-auto px-4 sm:px-6 py-8">
+        {/* Header ringkas */}
+        <div className="flex items-center gap-2 text-base text-[#6B7280] mb-5">
           <Link to="/" className="hover:text-[#2C4219] font-medium">Beranda</Link>
-          <ChevronRight className="w-3 h-3" />
-          <span className="text-[#44483e] font-medium">Lacak Batch</span>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-[#44483e] font-medium">Lacak Produk</span>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2C4219] to-[#1d2e0f] rounded-2xl p-5 sm:p-6 text-white mb-5 shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-              <ScanLine className="w-5 h-5 text-[#C3E28D]" />
+        {/* Kartu hero */}
+        <div className="bg-gradient-to-br from-[#2C4219] to-[#1d2e0f] rounded-3xl p-6 sm:p-7 text-white mb-7 shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+              <ScanLine className="w-7 h-7 text-[#C3E28D]" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold text-[#C3E28D] uppercase tracking-wider">Telusuri Asal-usul Produk</p>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg sm:text-xl font-black tracking-tight truncate">
-                  {loading ? 'Memuat...' : data ? `Batch ${data.batch.kodeBatchStok}` : kodeBatchStok}
-                </h1>
-                {data && (
-                  <span className={`shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${data.batch.jenis === 'SORGUM' ? 'bg-[#C3E28D] text-[#172C05]' : 'bg-amber-200 text-amber-900'}`}>
-                    {data.batch.jenis === 'SORGUM' ? 'Sorgum Sosoh' : 'Gabah'}
-                  </span>
-                )}
-              </div>
+              <p className="text-sm font-bold text-[#C3E28D] uppercase tracking-wider">Asal-usul Produk</p>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+                {loading ? 'Memuat…' : data ? (olahanPertama?.namaProduk || `Batch ${shortKode(data.batch.kodeBatchStok)}`) : 'Tidak ditemukan'}
+              </h1>
+              {data && (
+                <span className={`inline-block mt-1.5 text-sm font-black px-3 py-1 rounded-full uppercase ${data.batch.jenis === 'SORGUM' ? 'bg-[#C3E28D] text-[#172C05]' : 'bg-amber-200 text-amber-900'}`}>
+                  {data.batch.jenis === 'SORGUM' ? 'Sorgum Sosoh' : 'Gabah'}
+                </span>
+              )}
             </div>
           </div>
-          {data && (
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              <div className="bg-white/10 rounded-xl p-2.5 text-center">
-                <p className="text-[9px] font-bold uppercase opacity-80">Masuk</p>
-                <p className="text-sm font-black">{formatBerat(data.batch.jumlahMasukKg)}</p>
-              </div>
-              <div className="bg-white/10 rounded-xl p-2.5 text-center">
-                <p className="text-[9px] font-bold uppercase opacity-80">Sisa</p>
-                <p className="text-sm font-black">{formatBerat(data.batch.sisaKg)}</p>
-              </div>
-              <div className="bg-white/10 rounded-xl p-2.5 text-center">
-                <p className="text-[9px] font-bold uppercase opacity-80">Gudang</p>
-                <p className="text-sm font-black truncate">{data.gudang?.kodeGudang || '-'}</p>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Body */}
+        {/* Isi */}
         {loading ? (
-          <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-10 text-center text-sm text-[#6B7280]">
-            <span className="inline-block w-5 h-5 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
-            Memuat riwayat batch...
+          <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-12 text-center text-base text-[#6B7280]">
+            <span className="inline-block w-6 h-6 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
+            Memuat riwayat produk…
           </div>
         ) : error ? (
-          <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-10 text-center">
-            <div className="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3">
-              <Search className="w-6 h-6" />
+          <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-12 text-center">
+            <div className="w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+              <Search className="w-7 h-7" />
             </div>
-            <p className="font-bold text-[#172C05]">Batch Tidak Ditemukan</p>
-            <p className="text-sm text-[#6B7280] mt-1">{error}</p>
-            <Link to="/" className="inline-flex items-center gap-1 mt-4 text-sm font-bold text-[#2C4219] hover:underline">
-              <ChevronRight className="w-4 h-4" /> Kembali ke Beranda
+            <p className="text-lg font-bold text-[#172C05]">Produk Tidak Ditemukan</p>
+            <p className="text-base text-[#6B7280] mt-1">{error}</p>
+            <Link to="/" className="inline-flex items-center gap-1 mt-5 text-base font-bold text-[#2C4219] hover:underline">
+              <ChevronRight className="w-5 h-5" /> Kembali ke Beranda
             </Link>
           </div>
         ) : data ? (
-          <div className="space-y-3">
-            {/* Timeline */}
-            {/* 1. LAHAN & TANAM */}
-            {(data.lahan || data.tanam) && (
-              <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4 sm:p-5">
-                <p className="text-[10px] font-black text-[#2C4219] uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <Sprout className="w-3.5 h-3.5" /> Penanaman & Lahan
-                </p>
-                <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-start gap-2.5">
-                    <MapPin className="w-4 h-4 text-[#2C4219] mt-0.5 shrink-0" />
-                    <div>
-                      <p className="font-bold text-[#172C05]">{data.lahan?.namaLahan || '-'}</p>
-                      <p className="text-xs text-[#6B7280]">
-                        {data.lahan?.kodeLahan ? `Kode ${data.lahan.kodeLahan} ` : ''}
-                        {data.lahan?.lokasiDesa ? `• ${data.lahan.lokasiDesa}` : ''}
+          <div className="bg-white rounded-3xl border border-[#c4c8bb]/30 p-5 sm:p-7">
+            {/* ── ALUR VISUAL: Lahan → Tanam → Panen → Gudang/Sosoh → Olahan ── */}
+            <div>
+              {/* 1. LAHAN */}
+              {data.lahan && (
+                <Stage no={1} icon={MapPin} color="bg-[#2C4219] text-white" title="Lahan" subtitle={data.lahan.lokasiDesa || undefined}>
+                  <Field label="Nama lahan" value={data.lahan.namaLahan} />
+                  <Field label="Kode lahan" value={shortKode(data.lahan.kodeLahan)} />
+                </Stage>
+              )}
+
+              {/* 2. TANAM */}
+              {data.tanam && (
+                <Stage no={2} icon={Sprout} color="bg-[#C3E28D] text-[#172C05]" title="Ditanam" subtitle={data.tanam.petugas ? `Oleh ${data.tanam.petugas}` : undefined}>
+                  <Field label="Tanggal tanam" value={formatTanggalId(data.tanam.tanggalTanam)} />
+                  {data.tanam.estimasiPanen && <Field label="Perkiraan panen" value={formatTanggalId(data.tanam.estimasiPanen)} />}
+                  <Field label="Kode tanam" value={shortKode(data.tanam.kodeTanam)} />
+                </Stage>
+              )}
+
+              {/* 3. PANEN */}
+              {data.panen && (
+                <Stage no={3} icon={Package} color="bg-amber-100 text-amber-800" title="Dipanen" subtitle={data.panen.varietas || undefined}>
+                  <Field label="Tanggal panen" value={formatTanggalId(data.panen.tanggalPanen)} />
+                  <Field label="Jumlah hasil" value={formatBerat(data.panen.jumlahHasilKg)} />
+                  {data.panen.periodeHari != null && <Field label="Umur tanam" value={`${data.panen.periodeHari} hari`} />}
+                  <Field label="Kode panen" value={shortKode(data.panen.kodePanen)} />
+                </Stage>
+              )}
+
+              {/* 4. GUDANG / SOSOH */}
+              <Stage
+                no={4}
+                icon={data.batch.jenis === 'SORGUM' ? Droplets : ArrowDownToLine}
+                color="bg-sky-100 text-sky-700"
+                title={data.batch.jenis === 'SORGUM' ? 'Disosoh & Disimpan' : 'Masuk Gudang'}
+                subtitle={data.gudang?.namaGudang || undefined}
+              >
+                <Field label="Kode batch" value={shortKode(data.batch.kodeBatchStok)} />
+                {data.batch.jenis === 'SORGUM' && data.batch.asalBatch?.kodeBatchStok && (
+                  <Field label="Dari gabah" value={shortKode(data.batch.asalBatch.kodeBatchStok)} />
+                )}
+                <Field label="Waktu" value={formatTanggalId(data.batch.tanggalMasuk)} />
+              </Stage>
+
+              {/* 5. OLAHAN */}
+              <Stage
+                no={5}
+                icon={Factory}
+                color="bg-purple-100 text-purple-700"
+                title="Jadi Produk Olahan"
+                subtitle={olahanPertama ? formatTanggalId(olahanPertama.tanggalProduksi) : undefined}
+                last
+              >
+                {data.produksi.length === 0 ? (
+                  <p className="text-base text-[#9CA3AF]">Batch ini belum diolah menjadi produk.</p>
+                ) : (
+                  data.produksi.map((p) => (
+                    <div key={p.id} className="bg-[#FFF8F4] rounded-2xl border border-[#c4c8bb]/20 p-4">
+                      <p className="text-lg font-extrabold text-[#172C05]">{p.namaProduk}</p>
+                      <p className="text-base text-[#6B7280] mt-0.5">{formatTanggalId(p.tanggalProduksi)}</p>
+                      <p className="text-base text-[#44483e] mt-1.5">
+                        Hasil <b>{Number(p.jumlahHasil).toLocaleString('id-ID')} {p.satuan}</b>
+                        {p.operatorProduksi ? ` • PJ ${p.operatorProduksi}` : ''}
                       </p>
                     </div>
-                  </div>
-                  {data.tanam && (
-                    <div className="flex items-start gap-2.5">
-                      <CalendarDays className="w-4 h-4 text-[#2C4219] mt-0.5 shrink-0" />
-                      <div>
-                        <p className="font-bold text-[#172C05]">{data.tanam.kodeTanam}</p>
-                        <p className="text-xs text-[#6B7280]">
-                          Tanam {formatDateTimeId(data.tanam.tanggalTanam)} • Petugas {data.tanam.petugas || '-'}
-                        </p>
-                        {data.tanam.estimasiPanen && (
-                          <p className="text-xs text-[#6B7280]">Estimasi panen {formatDateTimeId(data.tanam.estimasiPanen)}</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 2. PANEN */}
-            {data.panen && (
-              <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4 sm:p-5">
-                <p className="text-[10px] font-black text-[#2C4219] uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <Package className="w-3.5 h-3.5" /> Panen
-                </p>
-                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                  <div>
-                    <p className="text-xs text-[#6B7280]">Kode Panen</p>
-                    <p className="font-bold text-[#172C05]">{data.panen.kodePanen}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#6B7280]">Tanggal</p>
-                    <p className="font-bold text-[#172C05]">{formatDateTimeId(data.panen.tanggalPanen)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#6B7280]">Varietas</p>
-                    <p className="font-bold text-[#172C05]">{data.panen.varietas || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#6B7280]">Total Hasil</p>
-                    <p className="font-bold text-[#172C05]">{formatBerat(data.panen.jumlahHasilKg)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#6B7280]">Penanggung Jawab</p>
-                    <p className="font-bold text-[#172C05]">{data.panen.petaniPenanggungJawab || '-'}</p>
-                  </div>
-                  {data.panen.periodeHari != null && (
-                    <div>
-                      <p className="text-xs text-[#6B7280]">Umur Panen</p>
-                      <p className="font-bold text-[#172C05]">{data.panen.periodeHari} hari</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 3. MASUK GUDANG */}
-            <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4 sm:p-5">
-              <p className="text-[10px] font-black text-[#2C4219] uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <ArrowDownToLine className="w-3.5 h-3.5" /> Masuk Gudang
-              </p>
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <div>
-                  <p className="text-xs text-[#6B7280]">Kode Batch</p>
-                  <p className="font-bold text-[#2C4219]">{data.batch.kodeBatchStok}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#6B7280]">Jenis</p>
-                  <p className="font-bold text-[#172C05]">
-                    {data.batch.jenis === 'SORGUM' ? 'Sorgum (hasil sosoh)' : 'Gabah (kulit utuh)'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#6B7280]">Gudang</p>
-                  <p className="font-bold text-[#172C05]">{data.gudang?.namaGudang || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#6B7280]">Waktu Masuk</p>
-                  <p className="font-bold text-[#172C05]">{formatDateTimeId(data.batch.tanggalMasuk)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#6B7280]">Jumlah Masuk</p>
-                  <p className="font-bold text-[#172C05]">{formatBerat(data.batch.jumlahMasukKg)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-[#6B7280]">Sisa Saat Ini</p>
-                  <p className="font-bold text-[#172C05]">{formatBerat(data.batch.sisaKg)}</p>
-                </div>
-              </div>
-              {data.batch.jenis === 'SORGUM' && data.batch.asalBatch?.kodeBatchStok && (
-                <div className="mt-3 p-3 bg-[#C3E28D]/20 border border-[#2C4219]/10 rounded-xl text-xs">
-                  <p className="font-bold text-[#172C05]">
-                    Proses Sosoh: <span className="text-[#8C5A2B]">{data.batch.asalBatch.kodeBatchStok}</span> (gabah) →{' '}
-                    <span className="text-[#2C4219]">{data.batch.kodeBatchStok}</span> (sorgum)
-                  </p>
-                  {data.batch.tanggalSosoh && (
-                    <p className="text-[#6B7280] mt-0.5">Selesai disosoh {formatDateTimeId(data.batch.tanggalSosoh)}</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* 4. OLAHAN */}
-            <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4 sm:p-5">
-              <p className="text-[10px] font-black text-[#2C4219] uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <Factory className="w-3.5 h-3.5" /> Digunakan untuk Olahan
-              </p>
-              {data.produksi.length === 0 ? (
-                <p className="text-sm text-[#9CA3AF]">Belum ada olahan dari batch ini.</p>
-              ) : (
-                <div className="space-y-2">
-                  {data.produksi.map((p) => (
-                    <div key={p.id} className="bg-[#FFF8F4] rounded-xl border border-[#c4c8bb]/20 p-3">
-                      <p className="font-bold text-[#172C05]">{p.kodeBatch} — {p.namaProduk}</p>
-                      <p className="text-xs text-[#6B7280] mt-0.5">
-                        Produksi {formatDateTimeId(p.tanggalProduksi)}
-                      </p>
-                      <p className="text-xs text-[#6B7280]">
-                        Hasil {Number(p.jumlahHasil).toLocaleString('id-ID')} {p.satuan} • Bahan {p.bahanDigunakan != null ? `${p.bahanDigunakan} kg` : '-'} • PJ {p.operatorProduksi || '-'}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 5. LOGISTIK */}
-            <div className="bg-white rounded-2xl border border-[#c4c8bb]/30 p-4 sm:p-5">
-              <p className="text-[10px] font-black text-[#2C4219] uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <Wallet className="w-3.5 h-3.5" /> Logistik & Keuangan
-              </p>
-              {data.logistik.length === 0 ? (
-                <p className="text-sm text-[#9CA3AF]">Belum ada transaksi logistik tercatat.</p>
-              ) : (
-                <div className="space-y-2">
-                  {data.logistik.slice(0, 5).map((lg) => (
-                    <div key={lg.id} className="flex items-start gap-2.5 bg-[#F7F7F5] rounded-xl p-3 text-sm">
-                      <FileText className="w-4 h-4 text-[#2C4219] mt-0.5 shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-[#172C05]">{lg.kodeTransaksi} — {lg.keteranganVendor || '-'}</p>
-                        <p className="text-xs text-[#6B7280]">
-                          {lg.kategori} • {lg.tanggal || '-'} • {rupiah(lg.totalBiayaRp)}
-                        </p>
-                      </div>
-                      <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        lg.statusPembayaran === 'LUNAS' ? 'bg-[#C3E28D]/60 text-[#172C05]' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {lg.statusPembayaran || '-'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </Stage>
             </div>
 
             {/* Badge autentikasi */}
-            <div className="flex items-center justify-center gap-2 text-xs text-[#6B7280] pt-2 pb-4">
-              <ShieldCheck className="w-4 h-4 text-[#2C4219]" />
-              Data ini dicatat langsung dari sistem manajemen Sorgum KWT.
+            <div className="flex items-center justify-center gap-2 text-base text-[#6B7280] pt-6 mt-2 border-t border-[#c4c8bb]/20">
+              <ShieldCheck className="w-5 h-5 text-[#2C4219]" />
+              Data dicatat langsung dari sistem Sorgum KWT.
             </div>
           </div>
         ) : null}

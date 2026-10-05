@@ -74,13 +74,10 @@ export async function getPublicBatchTrace(req, res) {
       [b.id]
     );
 
-    // 4. Logistik (publik — tampilkan lengkap sesuai preferensi user)
-    const [logistics] = await pool.execute(
-      `SELECT id, kode_transaksi, tanggal, kategori, keterangan_vendor, total_biaya_rp, status_pembayaran
-       FROM logistics_expenses
-       ORDER BY created_at DESC
-       LIMIT 10`
-    );
+    // 4. Logistik: SENGAJA TIDAK disertakan pada trace publik.
+    //    Endpoint ini tanpa auth & dipindai konsumen, jadi tidak boleh
+    //    membocorkan transaksi keuangan (vendor, nominal, status bayar).
+    //    Riwayat logistik tetap tersedia via API ber-auth di Mode Lengkap.
 
     return res.status(200).json({
       success: true,
@@ -134,15 +131,7 @@ export async function getPublicBatchTrace(req, res) {
           operatorProduksi: p.operator_produksi,
           createdAt: p.created_at,
         })),
-        logistik: logistics.map((lg) => ({
-          id: String(lg.id),
-          kodeTransaksi: lg.kode_transaksi,
-          tanggal: lg.tanggal,
-          kategori: lg.kategori,
-          keteranganVendor: lg.keterangan_vendor,
-          totalBiayaRp: Number(lg.total_biaya_rp || 0),
-          statusPembayaran: lg.status_pembayaran,
-        })),
+        logistik: [],
       },
     });
   } catch (error) {

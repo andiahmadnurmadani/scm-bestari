@@ -6,6 +6,43 @@ html {
   scroll-padding-top: 72px; /* Sticky header height (64px) + 8px buffer */
 }
 
+/* ── Browser surfaces: seleksi teks & focus ring ikut palet brand ────────── */
+::selection {
+  background: #C3E28D;
+  color: #172C05;
+}
+
+:focus-visible {
+  outline: 2px solid #2C4219;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Satu momen gerak: masuk lembut dari keadaan sudah terlihat ─────────── */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reveal    { animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.reveal-2  { animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both; }
+.reveal-3  { animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal, .reveal-2, .reveal-3 { animation: none; }
+}
+
+/* ── Keterbacaan: naikkan lantai ukuran teks (keluhan usability KWT) ────────
+   Banyak teks UI memakai ukuran px arbitrer 8–11px yang terlalu kecil untuk
+   pengguna (banyak lansia). Aturan tak-berlapis ini menang atas utility
+   Tailwind berlapis, sehingga menaikkan lantai tanpa mengubah tata letak. */
+.text-\[8px\], .text-\[9px\] { font-size: 12px; line-height: 1.45; }
+.text-\[10px\], .text-\[10\.5px\] { font-size: 13px; line-height: 1.5; }
+.text-\[11px\] { font-size: 13px; line-height: 1.5; }
+.text-\[13px\] { font-size: 14px; line-height: 1.5; }
+/* Teks isi dasar sedikit lebih besar agar nyaman dibaca */
+.text-xs { font-size: 13px; line-height: 1.5; }
+
 @layer base {
   * {
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -30,6 +67,11 @@ html {
     font-weight: 700;
   }
   h1 { font-weight: 800; }
+  /* Span di dalam heading mewarisi ketebalan heading (jangan dipaksa ringan),
+     agar kata yang di-highlight tidak tampak lebih kecil/tipis. */
+  h1 span, h2 span, h3 span, h4 span, h5 span, h6 span {
+    font-weight: inherit;
+  }
 
   /* Teks isi default: ringan & nyaman dibaca.
      Catatan: utility Tailwind (font-bold dll) tetap menang atas aturan ini

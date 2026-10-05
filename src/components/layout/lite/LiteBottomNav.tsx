@@ -426,10 +426,12 @@ export const LiteBottomNav: React.FC = () => {
           </div>
           <div className="grid gap-2 text-xs">
             {[
-              { t: 'Tambah Lahan & Tanam', d: 'Buka Lahan & Tanaman → Tambah Lahan / Tanam → isi → Simpan.' },
-              { t: 'Catat Panen', d: 'Buka Panen → Catat Panen → pilih lahan & penanaman → isi hasil → Simpan.' },
-              { t: 'Kelola Olahan', d: 'Buka Lainnya → Olahan → Catat Olahan → pilih produk → isi hasil → Simpan.' },
-              { t: 'Lihat Gudang', d: 'Buka tombol Gudang di bar bawah untuk memantau stok hasil panen.' },
+              { t: '1. Tambah Lahan & Tanam', d: 'Buka Lahan & Tanaman → Tambah Lahan / Tanam → isi → Simpan.' },
+              { t: '2. Catat Panen', d: 'Buka Panen → Catat Panen → pilih lahan & penanaman → isi hasil → Simpan.' },
+              { t: '3. Simpan ke Gudang', d: 'Buka Gudang → Stok Masuk → pilih panen → simpan hasil panen.' },
+              { t: '4. Sosoh Gabah', d: 'Buka Gudang → Sosoh → pilih batch gabah → isi hasil sorgum → Proses.' },
+              { t: '5. Buat Olahan', d: 'Buka Lainnya → Olahan → Catat Olahan → pilih produk & bahan sorgum → Simpan.' },
+              { t: '6. Lacak Produk', d: 'Di daftar Olahan, tekan tombol QR (Lacak) untuk melihat asal-usul: kapan ditanam & dipanen.' },
             ].map((x) => (
               <div key={x.t} className="p-3 bg-white rounded-xl border border-[#c4c8bb]/15">
                 <p className="font-bold text-[#172C05]">{x.t}</p>
