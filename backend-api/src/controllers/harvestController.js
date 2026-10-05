@@ -383,7 +383,7 @@ export async function createHarvest(req, res) {
       } else {
         panenKe = Number(data.panenKe);
         if (used.includes(panenKe)) {
-          return res.status(409).json({ success: false, message: `Panen ke-${panenKe} pada penanaman ini sudah tercatat. Pilih nomor lain (maksimal 3).` });
+          return res.status(409).json({ success: false, message: `Panen ke-${panenKe} sudah dipanen. Nomor panen yang masih tersedia: ${[1, 2, 3].filter((n) => !used.includes(n)).join(', ') || 'tidak ada (sudah 3 kali panen)'}.` });
         }
       }
     }
@@ -530,7 +530,7 @@ export async function updateHarvest(req, res) {
           [effPlantingId, pk, id]
         );
         if (dup.length) {
-          return res.status(409).json({ success: false, message: `Panen ke-${pk} pada penanaman ini sudah tercatat. Pilih nomor lain (maksimal 3).` });
+          return res.status(409).json({ success: false, message: `Panen ke-${pk} sudah dipanen pada penanaman ini. Pilih nomor panen lain (maksimal 3).` });
         }
       }
     }

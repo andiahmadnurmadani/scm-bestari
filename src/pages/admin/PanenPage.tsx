@@ -1388,11 +1388,9 @@ export const PanenPage: React.FC = () => {
                     <option value={2}>Panen 2 (ratoon)</option>
                     <option value={3}>Panen 3 (ratoon terakhir)</option>
                   </select>
-                  <p className="text-[11px] text-[#2C4219] mt-1.5 leading-relaxed">
-                    {formData.plantingId
-                      ? usedPanenKe.includes(Number(formData.panenKe))
-                        ? 'Nomor ini sudah terpakai — pilih nomor lain.'
-                        : '🌾 Satu kali tanam bisa dipanen hingga 3 kali.'
+                  <p className={`text-[11px] mt-1.5 leading-relaxed ${formData.plantingId && usedPanenKe.includes(Number(formData.panenKe)) ? 'font-semibold text-red-600' : 'text-[#2C4219]'}`}>
+                    {formData.plantingId && usedPanenKe.includes(Number(formData.panenKe))
+                      ? `Panen ke-${formData.panenKe} sudah dipanen. Pilih nomor panen lain.`
                       : '🌾 Satu kali tanam bisa dipanen hingga 3 kali.'}
                   </p>
                 </div>

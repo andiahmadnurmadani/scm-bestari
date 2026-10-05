@@ -457,7 +457,7 @@ export const LitePanenPage: React.FC = () => {
                 <option value={3}>Panen 3 (ratoon terakhir)</option>
               </select>
               {formData.plantingId && usedPanenKe.includes(Number(formData.panenKe)) && (
-                <p className="text-[11px] font-semibold text-red-600 mt-1">Panen ke-{formData.panenKe} sudah tercatat untuk tanam ini.</p>
+                <p className="text-[11px] font-semibold text-red-600 mt-1">Panen ke-{formData.panenKe} sudah dipanen. Pilih nomor panen lain.</p>
               )}
               {!formData.plantingId && (
                 <p className="text-[11px] text-[#6B7280] mt-1">Pilih penanaman untuk saran panen otomatis.</p>
