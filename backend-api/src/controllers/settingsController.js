@@ -176,6 +176,13 @@ export async function seedDemoData(_req, res) {
         'Gula Cair Nira Sorgum': '/demo/produk_1.webp',
       },
       biji: '/demo/sorghum_grain.webp',
+      // foto kemasan sesuai jenisnya
+      kemasan: {
+        pouch: ['/demo/kemasan_pouch_1.webp', '/demo/kemasan_pouch_2.webp', '/demo/kemasan_pouch_3.webp'],
+        botol: ['/demo/kemasan_botol_1.webp', '/demo/kemasan_botol_2.webp', '/demo/kemasan_pouch_2.webp'],
+        box: ['/demo/kemasan_box_1.webp', '/demo/kemasan_pouch_3.webp', '/demo/kemasan_pouch_1.webp'],
+        karung: ['/demo/kemasan_karung_1.webp', '/demo/kemasan_box_1.webp', '/demo/kemasan_pouch_2.webp'],
+      },
     };
 
     // 1) Master varietas (gambar biji sorgum)
@@ -520,16 +527,13 @@ export async function seedDemoData(_req, res) {
     }
     counts.certificates = certs.length;
 
-    // 7) Data kemasan (dengan 3–4 foto berbeda per item)
+    // 7) Data kemasan (foto relevan sesuai jenis: pouch / botol / box / karung)
     const packs = [
-      ['Standing Pouch 500g', 'Standing Pouch', '500 gram', 2000, 200, 'CV Kemas Jaya', 1500, 'Stok Cukup',
-        ['/demo/produk_4.webp', '/demo/produk_3.webp', '/demo/produk_2.webp']],
-      ['Standing Pouch 1kg', 'Standing Pouch', '1 kg', 1200, 200, 'CV Kemas Jaya', 2200, 'Stok Cukup',
-        ['/demo/produk_3.webp', '/demo/produk_4.webp', '/demo/produk_1.webp']],
-      ['Botol Kaca 250ml', 'Botol Kaca', '250 ml', 300, 100, 'PT Gelas Nusantara', 4500, 'Stok Menipis',
-        ['/demo/produk_1.webp', '/demo/produk_2.webp', '/demo/produk_4.webp']],
-      ['Box Custom Olahan', 'Box Custom', '20x15x8 cm', 500, 150, 'Percetakan Sinar', 3200, 'Stok Cukup',
-        ['/demo/produk_2.webp', '/demo/produk_3.webp', '/demo/produk_1.webp', '/demo/produk_4.webp']],
+      ['Standing Pouch 500g', 'Standing Pouch', '500 gram', 2000, 200, 'CV Kemas Jaya', 1500, 'Stok Cukup', IMG.kemasan.pouch],
+      ['Standing Pouch 1kg', 'Standing Pouch', '1 kg', 1200, 200, 'CV Kemas Jaya', 2200, 'Stok Cukup', IMG.kemasan.pouch],
+      ['Botol Kaca 250ml', 'Botol Kaca', '250 ml', 300, 100, 'PT Gelas Nusantara', 4500, 'Stok Menipis', IMG.kemasan.botol],
+      ['Box Custom Olahan', 'Box Custom', '20x15x8 cm', 500, 150, 'Percetakan Sinar', 3200, 'Stok Cukup', IMG.kemasan.box],
+      ['Karung Bulk 50kg', 'Karung Bulk', '50 kg', 150, 30, 'UD Karung Sejahtera', 8000, 'Stok Cukup', IMG.kemasan.karung],
     ];
     for (let i = 0; i < packs.length; i += 1) {
       const [nama, kategori, kapasitas, stok, minimal, pemasok, harga, status, fotos] = packs[i];

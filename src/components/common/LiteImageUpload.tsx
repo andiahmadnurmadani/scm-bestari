@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { Upload, X, Pencil } from 'lucide-react';
+import { compressImage } from '../../utils/imageCompress';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-const MAX_MB = 2;
+const MAX_MB = 8; // file mentah boleh besar; otomatis dikompres sebelum dikirim
 
 interface LiteImageUploadProps {
   /** id unik input file (dipakai tombol "Ganti"). */
@@ -25,7 +26,7 @@ export const LiteImageUpload: React.FC<LiteImageUploadProps> = ({ id, label, val
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalError(null);
     const file = e.target.files?.[0];
     e.target.value = ''; // reset agar bisa pilih file yang sama lagi
@@ -41,9 +42,9 @@ export const LiteImageUpload: React.FC<LiteImageUploadProps> = ({ id, label, val
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => onChange(reader.result as string);
-    reader.readAsDataURL(file);
+    // Kompres otomatis agar ringan & tidak melebihi batas server
+    const dataUrl = await compressImage(file);
+    onChange(dataUrl);
   };
 
   const showError = localError || error;

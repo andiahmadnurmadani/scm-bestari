@@ -6,6 +6,7 @@ import { landApi } from '../../api/endpoints/landApi';
 import { useUnitSettings } from '../../context/UnitSettingsContext';
 import { varietyApi, Variety } from '../../api/endpoints/varietyApi';
 import { todayLocalISO, addDaysISO } from '../../utils/tanggal';
+import { compressImage } from '../../utils/imageCompress';
 import { plantingApi } from '../../api/endpoints/plantingApi';
 import { LandPlot, Planting } from '../../types';
 import { Button } from '../../components/common/Button';
@@ -287,8 +288,8 @@ export const LahanPage: React.FC = () => {
     setSelectedImage(file);
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
+    reader.onloadend = async () => {
+      const result = await compressImage(file);
       setImagePreview(result);
       setFormData((prev) => ({ ...prev, fotoUrl: result }));
     };

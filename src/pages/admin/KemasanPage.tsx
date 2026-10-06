@@ -11,6 +11,7 @@ import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { nextCode } from '../../utils/kodeGenerator';
+import { compressImage } from '../../utils/imageCompress';
 import { Toast } from '../../components/common/Toast';
 
 // ── Extended types ─────────────────────────────────────────────────────────────
@@ -267,24 +268,21 @@ export const KemasanPage: React.FC = () => {
     setPage(targetPage);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, slot: number) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, slot: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      setFormExtra((prev) => {
-        const images = prev.imagesDataUrl ? [...prev.imagesDataUrl] : [];
-        // Slot 0 = gambar utama (imageDataUrl untuk backward compat), 1..3 = gambar tambahan
-        if (slot === 0) {
-          images[0] = dataUrl;
-          return { ...prev, imagesDataUrl: images.slice(0, 4), imageDataUrl: dataUrl };
-        }
-        images[slot] = dataUrl;
-        return { ...prev, imagesDataUrl: images.slice(0, 4) };
-      });
-    };
-    reader.readAsDataURL(file);
+    // Kompres dulu agar tidak melebihi batas server (cegah "Koneksi Terputus")
+    const dataUrl = await compressImage(file);
+    setFormExtra((prev) => {
+      const images = prev.imagesDataUrl ? [...prev.imagesDataUrl] : [];
+      // Slot 0 = gambar utama (imageDataUrl untuk backward compat), 1..3 = gambar tambahan
+      if (slot === 0) {
+        images[0] = dataUrl;
+        return { ...prev, imagesDataUrl: images.slice(0, 4), imageDataUrl: dataUrl };
+      }
+      images[slot] = dataUrl;
+      return { ...prev, imagesDataUrl: images.slice(0, 4) };
+    });
   };
 
   const removeImage = (slot: number) => {

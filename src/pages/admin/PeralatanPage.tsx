@@ -8,6 +8,7 @@ import { Modal } from '../../components/common/Modal';
 import { Toast } from '../../components/common/Toast';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { nextCode } from '../../utils/kodeGenerator';
+import { compressImage } from '../../utils/imageCompress';
 
 // ── Filter pill sederhana: 1 pilihan aktif, langsung memfilter tabel ──────────
 type FilterKey = 'dipakai' | 'tersedia' | 'perbaikan' | 'perawatan' | 'semua';
@@ -145,8 +146,8 @@ export const PeralatanPage: React.FC = () => {
     setSelectedImage(file);
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
+    reader.onloadend = async () => {
+      const result = await compressImage(file);
       setImagePreview(result);
       setFormData((prev) => ({ ...prev, fotoUrl: result }));
     };

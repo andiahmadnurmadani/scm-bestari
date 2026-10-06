@@ -15,6 +15,7 @@ import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { Toast } from '../../components/common/Toast';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
+import { compressImage } from '../../utils/imageCompress';
 
 // Opsi satuan hasil — SAMA dengan opsi dropdown Satuan Hasil di form Olahan
 export const SATUAN_HASIL_OPTIONS = ['Pouch', 'Kg', 'Botol', 'Box', 'Toples', 'Kemasan'];
@@ -108,7 +109,7 @@ export const MasterProdukPage: React.FC = () => {
     }
     setSelectedImage(file);
     const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.onloadend = async () => setImagePreview(await compressImage(file));
     reader.readAsDataURL(file);
   };
 

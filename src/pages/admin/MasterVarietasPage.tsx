@@ -5,6 +5,7 @@ import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { Toast } from '../../components/common/Toast';
 import { useAdminSearch } from '../../components/layout/AdminLayout';
+import { compressImage } from '../../utils/imageCompress';
 
 export const MasterVarietasPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
@@ -86,7 +87,7 @@ export const MasterVarietasPage: React.FC = () => {
     }
     setSelectedImage(file);
     const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.onloadend = async () => setImagePreview(await compressImage(file));
     reader.readAsDataURL(file);
   };
 
