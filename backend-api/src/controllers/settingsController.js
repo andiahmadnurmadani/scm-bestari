@@ -148,15 +148,34 @@ export async function seedDemoData(_req, res) {
     };
 
     const counts = {};
-    // Gambar demo yang relevan (disajikan dari folder publik /demo/*.webp).
+    // Kumpulan gambar demo yang RELEVAN & BERBEDA (disajikan dari /demo/*.webp).
     // Path relatif agar bekerja baik di dev (Vite) maupun produksi (nginx).
     const IMG = {
-      lahan: '/demo/sorghum_field.webp',      // hamparan lahan sorgum
-      biji: '/demo/sorghum_grain.webp',       // biji/gabah sorgum
-      beras: '/demo/beras_sorgum.webp',       // beras sorgum
-      tepung: '/demo/tepung_sorgum.webp',     // tepung sorgum
-      keripik: '/demo/rengginang_sorgum.webp',// camilan/rengginang sorgum
-      gula: '/demo/gula_sorgum.webp',         // gula cair nira sorgum
+      // foto lahan sorgum (berbeda-beda per lahan)
+      lahan: [
+        '/demo/lahan_mexico.webp',
+        '/demo/lahan_elsalvador.webp',
+        '/demo/lahan_ethiopia.webp',
+        '/demo/lahan_mesir.webp',
+        '/demo/lahan_panen1.webp',
+        '/demo/lahan_siappanen.webp',
+      ],
+      // foto panen / gabah (bergilir)
+      panen: [
+        '/demo/panen_1.webp',
+        '/demo/panen_2.webp',
+        '/demo/panen_3.webp',
+        '/demo/panen_4.webp',
+        '/demo/sorghum_grain.webp',
+      ],
+      // foto produk olahan
+      produk: {
+        'Tepung Sorgum': '/demo/produk_3.webp',
+        'Beras Sorgum': '/demo/produk_4.webp',
+        'Keripik Sorgum': '/demo/produk_2.webp',
+        'Gula Cair Nira Sorgum': '/demo/produk_1.webp',
+      },
+      biji: '/demo/sorghum_grain.webp',
     };
 
     // 1) Master varietas (gambar biji sorgum)
@@ -173,13 +192,13 @@ export async function seedDemoData(_req, res) {
 
     // 2) Master produk olahan (gambar sesuai jenis produk)
     const products = [
-      ['Tepung Sorgum', 'Pouch', 'Tepung halus dari biji sorgum sosoh.', IMG.tepung],
-      ['Beras Sorgum', 'Pouch', 'Beras sorgum sosoh siap masak.', IMG.beras],
-      ['Keripik Sorgum', 'Pouch', 'Keripik renyah berbahan tepung sorgum.', IMG.keripik],
-      ['Gula Cair Nira Sorgum', 'Botol', 'Gula cair dari nira batang sorgum manis.', IMG.gula],
+      ['Tepung Sorgum', 'Pouch', 'Tepung halus dari biji sorgum sosoh.'],
+      ['Beras Sorgum', 'Pouch', 'Beras sorgum sosoh siap masak.'],
+      ['Keripik Sorgum', 'Pouch', 'Keripik renyah berbahan tepung sorgum.'],
+      ['Gula Cair Nira Sorgum', 'Botol', 'Gula cair dari nira batang sorgum manis.'],
     ];
-    for (const [name, satuan_hasil, deskripsi, foto] of products) {
-      await ins('products', { name, satuan_hasil, deskripsi, foto_url: foto, is_active: 1 });
+    for (const [name, satuan_hasil, deskripsi] of products) {
+      await ins('products', { name, satuan_hasil, deskripsi, foto_url: IMG.produk[name] || IMG.biji, is_active: 1 });
     }
     counts.products = products.length;
 
@@ -226,7 +245,10 @@ export async function seedDemoData(_req, res) {
 
     const sorgumBatches = []; // untuk produksi olahan
 
-    for (const L of landDefs) {
+    for (let li = 0; li < landDefs.length; li += 1) {
+      const L = landDefs[li];
+      // Gambar berbeda per lahan (bergilir dari daftar)
+      const fotoLahan = IMG.lahan[li % IMG.lahan.length];
       const firstTanam = addDays(today, L.seasons[0].tanamOffset);
       const tglDaftar = addDays(firstTanam, -5);
       const kodeLahan = await buatKode('lands', 'kode_lahan', `${slugNama(L.nama)}-${tanggalKode(tglDaftar)}`);
@@ -244,7 +266,7 @@ export async function seedDemoData(_req, res) {
         status_kesiapan: L.statusKesiapan,
         status_badge: 'Aktif',
         panen_lalu_ton: 0,
-        foto_url: IMG.lahan,
+        foto_url: fotoLahan,
         latitude: -6.95 + Math.random() * 0.05,
         longitude: 107.6 + Math.random() * 0.05,
       });
@@ -289,7 +311,7 @@ export async function seedDemoData(_req, res) {
           petugas: L.petugas,
           status_tanam: statusTanam,
           catatan: `Musim tanam ke-${musim} (data demo).`,
-          foto_url: IMG.lahan,
+          foto_url: fotoLahan,
         });
         counts.plantings += 1;
 
@@ -299,6 +321,8 @@ export async function seedDemoData(_req, res) {
           const hasilKg = Math.round(L.luas * 2200) - (k - 1) * Math.round(L.luas * 350);
           const kodePanen = await buatKode('harvests', 'kode_panen', `${slugNama(L.nama)}-${tanggalKode(tglPanen)}-0${k}`);
           const periodeHari = Math.round((tglPanen - tglTanam) / 86400000);
+          // Gambar panen berbeda-beda (bergilir)
+          const fotoPanen = IMG.panen[(counts.harvests) % IMG.panen.length];
           const hid = await ins('harvests', {
             kode_panen: kodePanen,
             nama_lahan: L.nama,
@@ -309,7 +333,7 @@ export async function seedDemoData(_req, res) {
             petani_penanggung_jawab: L.petugas,
             status: 'Tersimpan di Gudang',
             catatan: `Panen ke-${k}, musim ${musim} (data demo).`,
-            foto_url: IMG.biji,
+            foto_url: fotoPanen,
             panen_ke: k,
             persen_hama: k === 1 ? 3.5 : 6,
             jenis_hama: k === 1 ? 'Burung' : 'Ulat grayak',
@@ -468,7 +492,7 @@ export async function seedDemoData(_req, res) {
         tanggal_pengadaan: iso(addDays(today, -400 + i * 20)),
         spesifikasi: 'Unit contoh (data demo).',
         terakhir_servis: iso(addDays(today, -30)),
-        foto_url: IMG.lahan,
+        foto_url: IMG.lahan[i % IMG.lahan.length],
       });
     }
     counts.equipment = equipments.length;
