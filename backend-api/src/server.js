@@ -21,6 +21,7 @@ import cmsRoutes from './routes/cmsRoutes.js';
 import notificationsRoutes from './routes/notificationsRoutes.js';
 import apiKeyRoutes from './routes/apiKeyRoutes.js';
 import warehouseRoutes from './routes/warehouseRoutes.js';
+import settingsRoutes from './routes/settingsRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
 import { openApiSpec } from './openapi.js';
 import { apiReference } from '@scalar/express-api-reference';
@@ -69,6 +70,7 @@ app.use('/api/cms', cmsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/keys', apiKeyRoutes);
 app.use('/api/warehouse', warehouseRoutes);
+app.use('/api/settings', settingsRoutes);
 app.use('/api/public', publicRoutes);
 
 // ── Dokumentasi API (Scalar) ─────────────────────────────────────────────────

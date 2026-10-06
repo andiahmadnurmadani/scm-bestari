@@ -713,40 +713,9 @@ export async function initDatabase() {
   `);
   console.log('✓ Tabel "sosoh_processes" siap.');
 
-  // Auto-create gudang untuk lahan yang sudah ada (backfill) — format GDG-<desa>-01
-  try {
-    const [lahanRows] = await pool.query('SELECT id, kode_lahan, nama_lahan, lokasi_desa FROM lands');
-    for (const l of lahanRows) {
-      const [wg] = await pool.query('SELECT id FROM warehouses WHERE lahan_id = ? LIMIT 1', [l.id]);
-      if (wg.length === 0) {
-        // slug 3 huruf dari NAMA lahan (huruf awal tiap kata)
-        const bersih = String(l.nama_lahan || '')
-          .replace(/[^a-zA-Z ]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-        const kata = bersih.split(' ').filter(Boolean);
-        let slug = (kata.map((k) => k[0]).join('') || 'XXX').toUpperCase().replace(/[^A-Z]/g, '');
-        if (slug.length < 3) {
-          const sisa = kata.map((k) => k.slice(1)).join('').replace(/[^A-Za-z]/g, '');
-          slug = (slug + sisa).toUpperCase().slice(0, 3);
-        }
-        slug = (slug + 'XXX').slice(0, 3);
-        // cari urutan terakhir utk slug ini
-        const [gdgRows] = await pool.query(
-          `SELECT COUNT(*) AS total FROM warehouses WHERE kode_gudang LIKE ?`,
-          [`GDG-${slug}-%`]
-        );
-        const seq = Number(gdgRows[0].total || 0) + 1;
-        const kodeGudang = `GDG-${slug}-${String(seq).padStart(2, '0')}`;
-        await pool.query(
-          `INSERT INTO warehouses (kode_gudang, nama_gudang, lahan_id, lokasi)
-           VALUES (?, ?, ?, ?)`,
-          [kodeGudang, `Gudang ${l.nama_lahan}`, l.id, l.lokasi_desa || null]
-        );
-        console.log(`✓ Gudang auto-create untuk lahan "${l.nama_lahan}" (${kodeGudang}).`);
-      }
-    }
-  } catch (e) { console.warn('⚠ Backfill gudang dilewati:', e.message); }
+  // Auto-create gudang untuk lahan DINONAKTIFKAN — sesuai permintaan user:
+  // gudang dibuat manual & opsional (1 lahan boleh banyak gudang / gudang umum).
+  // (blok backfill lama dihapus agar tidak lagi membuat gudang otomatis)
 
   // Auto-migrasi: tabel certificates (kelola sertifikat)
   await pool.query(`
