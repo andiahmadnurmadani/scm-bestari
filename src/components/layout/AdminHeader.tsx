@@ -214,11 +214,11 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             )}
           </div>
 
-          {/* Settings gear */}
+          {/* Settings gear — Manajemen Konten + Pengaturan Data */}
           <Link
             to="/dashboard/cms"
             className="p-1.5 rounded-full hover:bg-[#efe0d2] transition-colors cursor-pointer text-[#44483e] min-w-[34px] min-h-[34px] flex items-center justify-center"
-            title="Manajemen Konten Website"
+            title="Pengaturan Website & Data"
           >
             <Settings className="w-4 h-4" />
           </Link>

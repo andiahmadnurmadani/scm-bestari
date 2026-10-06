@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   LayoutDashboard,
   Heading1,
@@ -25,9 +25,11 @@ import {
   Phone,
   Mail,
   QrCode,
+  Database,
 } from 'lucide-react';
 import { useCms, CmsHeroImage, CmsProduct, CmsWorkflowStep, CmsFaq } from '../../context/CmsContext';
 import { Toast } from '../../components/common/Toast';
+import { DataSettingsPanel } from '../../components/common/DataSettingsPanel';
 
 // ── Reusable sub-components ───────────────────────────────────────────────────
 
@@ -210,9 +212,23 @@ const HeroPreview: React.FC<{
 
 export const CmsPage: React.FC = () => {
   const { cms, update, updateStat, updateFeatureCard, updateHeroImage, updateProduct, updateWorkflowStep, updateFaq, reset } = useCms();
-  const [activeTab, setActiveTab] = useState<'umum' | 'hero' | 'stats' | 'fitur' | 'cta' | 'galeri' | 'produk' | 'alur' | 'faq'>('hero');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  type TabId = 'umum' | 'hero' | 'stats' | 'fitur' | 'cta' | 'galeri' | 'produk' | 'alur' | 'faq' | 'data';
+  const [activeTab, setActiveTab] = useState<TabId>(
+    (tabParam === 'data' ? 'data' : 'hero') as TabId
+  );
   const [saved, setSaved] = useState('');
   const [resetConfirm, setResetConfirm] = useState(false);
+
+  // Pindah tab + simpan di URL agar bisa dibuka langsung (mis. /dashboard/cms?tab=data)
+  const goTab = (id: TabId) => {
+    setActiveTab(id);
+    const next = new URLSearchParams(searchParams);
+    if (id === 'hero') next.delete('tab');
+    else next.set('tab', id);
+    setSearchParams(next, { replace: true });
+  };
 
   const handleSave = () => {
     setSaved('Konten berhasil disimpan! Buka landing page untuk melihat hasilnya.');
@@ -239,6 +255,7 @@ export const CmsPage: React.FC = () => {
     { id: 'faq' as const, label: 'FAQ', icon: <HelpCircle className="w-3.5 h-3.5" /> },
     { id: 'cta' as const, label: 'Banner CTA', icon: <Megaphone className="w-3.5 h-3.5" /> },
     { id: 'umum' as const, label: 'Umum', icon: <Settings2 className="w-3.5 h-3.5" /> },
+    { id: 'data' as const, label: 'Pengaturan Data', icon: <Database className="w-3.5 h-3.5" /> },
   ];
 
 
@@ -276,7 +293,7 @@ export const CmsPage: React.FC = () => {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => goTab(tab.id)}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === tab.id
                 ? 'bg-[#2C4219] text-white shadow-sm'
@@ -844,8 +861,11 @@ export const CmsPage: React.FC = () => {
         </div>
       )}
 
+      {/* ═══ TAB: PENGATURAN DATA ═══ */}
+      {activeTab === 'data' && <DataSettingsPanel />}
 
-      {/* Action bar */}
+      {/* Action bar (khusus tab konten — disembunyikan di tab Pengaturan Data) */}
+      {activeTab !== 'data' && (
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-[#c4c8bb]/20">
         <button
           onClick={handleReset}
@@ -877,6 +897,7 @@ export const CmsPage: React.FC = () => {
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 };

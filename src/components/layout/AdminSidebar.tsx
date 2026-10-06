@@ -77,7 +77,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { label: 'Logistik', path: '/dashboard/logistik', icon: Truck },
     { label: 'Varietas Sorgum', path: '/dashboard/master/varietas', icon: Database },
     { label: 'Produk Olahan', path: '/dashboard/master/produk', icon: Boxes },
-    { label: 'Pengaturan Data', path: '/dashboard/settings', icon: Settings },
   ];
 
   const sidebarContent = (

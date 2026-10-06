@@ -26,7 +26,6 @@ import { ProfilePage } from './pages/admin/ProfilePage';
 import { CmsPage } from './pages/admin/CmsPage';
 import { MasterVarietasPage } from './pages/admin/MasterVarietasPage';
 import { MasterProdukPage } from './pages/admin/MasterProdukPage';
-import { SettingsPage } from './pages/admin/SettingsPage';
 
 // Lite Mode Layout & Pages
 import { LiteLayout } from './components/layout/lite/LiteLayout';
@@ -92,7 +91,8 @@ export default function App() {
                   <Route path="cms" element={<CmsPage />} />
                   <Route path="master/varietas" element={<MasterVarietasPage />} />
                   <Route path="master/produk" element={<MasterProdukPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
+                  {/* Redirect lama: /dashboard/settings → tab Pengaturan Data di CMS */}
+                  <Route path="settings" element={<Navigate to="/dashboard/cms?tab=data" replace />} />
                   {/* Backward compat: keep old integrasi route */}
                   <Route path="integrasi" element={<Navigate to="/dashboard/cms" replace />} />
                 </Route>

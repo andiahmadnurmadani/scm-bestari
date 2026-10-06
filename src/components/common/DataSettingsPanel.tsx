@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Settings as SettingsIcon,
   Database,
   Trash2,
   Sprout,
@@ -21,7 +20,13 @@ import { settingsApi, ClearDataResult, SeedDataResult } from '../../api/endpoint
 import { Toast } from '../../components/common/Toast';
 import { Modal } from '../../components/common/Modal';
 
-// ── Kartu bagian (konsisten dgn CmsPage) ──────────────────────────────────────
+/**
+ * Panel "Pengaturan Data" — dipakai di dalam halaman Manajemen Konten (/dashboard/cms).
+ * Berisi 2 fitur:
+ *  1. Kosongkan Data  → hapus semua data operasional & master (user + landing page aman)
+ *  2. Isi Data Contoh → seeder sekali klik (data lengkap & saling terhubung)
+ */
+
 const SectionCard: React.FC<{
   title: string;
   subtitle?: string;
@@ -42,7 +47,7 @@ const SectionCard: React.FC<{
 
 type ToastState = { msg: string; type: 'success' | 'error' } | null;
 
-export const SettingsPage: React.FC = () => {
+export const DataSettingsPanel: React.FC = () => {
   const navigate = useNavigate();
   const [toast, setToast] = useState<ToastState>(null);
 
@@ -55,12 +60,12 @@ export const SettingsPage: React.FC = () => {
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState<SeedDataResult | null>(null);
 
-  // ── Kosongkan data ──
   const doClear = async () => {
     setClearing(true);
     try {
       const res = await settingsApi.clearData();
       setClearResult(res);
+      setSeedResult(null);
       setToast({ msg: `Berhasil! ${res.totalDeleted} baris data dikosongkan.`, type: 'success' });
       setClearOpen(false);
       setClearConfirm('');
@@ -71,12 +76,12 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  // ── Isi data contoh ──
   const doSeed = async () => {
     setSeeding(true);
     try {
       const res = await settingsApi.seedData();
       setSeedResult(res);
+      setClearResult(null);
       setToast({ msg: 'Data contoh berhasil diisi!', type: 'success' });
       setSeedOpen(false);
     } catch (e) {
@@ -88,25 +93,14 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+    <div className="space-y-5">
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Judul */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-[#2C4219] flex items-center justify-center shrink-0">
-            <SettingsIcon className="w-5 h-5 text-[#C3E28D]" />
-          </div>
-          <div>
-            <h1 className="text-lg font-extrabold text-[#172C05]">Pengaturan Data</h1>
-            <p className="text-xs text-[#6B7280] font-medium">
-              Kosongkan data untuk memulai dari nol, atau isi data contoh untuk mencoba aplikasi.
-            </p>
-          </div>
-        </div>
-      </div>
+      <p className="text-xs text-[#6B7280] font-medium">
+        Kelola isi data aplikasi: kosongkan untuk memulai dari nol, atau isi data contoh untuk mencoba semua fitur.
+      </p>
 
-      <div className="space-y-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* ── 1. Kosongkan Data ── */}
         <SectionCard
           title="Kosongkan Data"
@@ -130,15 +124,13 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => { setClearOpen(true); setClearConfirm(''); }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
-            >
-              <Trash2 className="w-4 h-4" /> Kosongkan Semua Data
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => { setClearOpen(true); setClearConfirm(''); }}
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
+          >
+            <Trash2 className="w-4 h-4" /> Kosongkan Semua Data
+          </button>
 
           {clearResult && (
             <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
@@ -170,10 +162,10 @@ export const SettingsPage: React.FC = () => {
         >
           <p className="text-xs text-[#44483E] leading-relaxed">
             Sekali klik, aplikasi terisi data contoh lengkap dari <b>lahan → tanam → panen → gudang → sosoh → produksi olahan</b>,
-            plus master varietas, produk, peralatan, sertifikat, kemasan, logistik, dan notifikasi. Cocok untuk demo atau uji coba.
+            plus master varietas, produk, peralatan, sertifikat, kemasan, logistik, dan notifikasi.
           </p>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {[
               { icon: <Tractor className="w-4 h-4" />, label: 'Lahan & Tanam' },
               { icon: <Sprout className="w-4 h-4" />, label: 'Panen' },
@@ -187,15 +179,13 @@ export const SettingsPage: React.FC = () => {
             ))}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setSeedOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#2C4219] text-white rounded-xl text-sm font-bold hover:bg-[#213213] active:scale-[0.98] transition-all cursor-pointer shadow-sm"
-            >
-              <Database className="w-4 h-4" /> Isi Data Contoh
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setSeedOpen(true)}
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#2C4219] text-white rounded-xl text-sm font-bold hover:bg-[#213213] active:scale-[0.98] transition-all cursor-pointer shadow-sm"
+          >
+            <Database className="w-4 h-4" /> Isi Data Contoh
+          </button>
 
           <p className="text-[11px] text-[#9CA3AF]">
             Catatan: pengisian data contoh hanya bisa bila data masih kosong. Kosongkan data dulu bila sudah ada isinya.
@@ -206,7 +196,7 @@ export const SettingsPage: React.FC = () => {
               <p className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4" /> Data contoh berhasil diisi!
               </p>
-              <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-1">
+              <div className="mt-2 grid grid-cols-2 gap-1">
                 {Object.entries(seedResult.counts).map(([k, v]) => (
                   <div key={k} className="text-[11px] text-emerald-700 flex justify-between gap-2">
                     <span className="capitalize">{k}</span>
@@ -324,5 +314,3 @@ export const SettingsPage: React.FC = () => {
     </div>
   );
 };
-
-export default SettingsPage;
