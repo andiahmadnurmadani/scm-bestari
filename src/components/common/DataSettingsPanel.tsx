@@ -161,7 +161,7 @@ export const DataSettingsPanel: React.FC = () => {
           icon={<Database className="w-4 h-4" />}
         >
           <p className="text-xs text-[#44483E] leading-relaxed">
-            Sekali klik, aplikasi terisi data contoh lengkap dari <b>lahan → tanam → panen → gudang → sosoh → produksi olahan</b>,
+            Sekali klik, aplikasi terisi data contoh lengkap dari <b>lahan → beberapa musim tanam → panen (ratoon 1-3) → gudang → sosoh → produksi olahan</b>,
             plus master varietas, produk, peralatan, sertifikat, kemasan, logistik, dan notifikasi.
           </p>
 
@@ -302,8 +302,9 @@ export const DataSettingsPanel: React.FC = () => {
           <div className="flex items-start gap-3 p-3.5 bg-[#F7F7F5] border border-[#c4c8bb]/30 rounded-xl">
             <Package className="w-5 h-5 text-[#2C4219] shrink-0 mt-0.5" />
             <p className="text-xs text-[#44483E] leading-relaxed">
-              Akan dibuat: 3 lahan dengan riwayat tanam & panen berulang, gudang + stok gabah, proses sosoh jadi sorgum,
-              batch produksi olahan, serta data pendukung lainnya. Semua saling terhubung sehingga fitur <b>lacak batch</b> bisa dicoba.
+              Akan dibuat: 4 lahan dengan <b>beberapa musim tanam</b> & panen berulang (ratoon), gudang + stok gabah,
+              proses sosoh jadi sorgum, batch produksi olahan, serta data pendukung lainnya.
+              Semua saling terhubung sehingga fitur <b>lacak batch</b> bisa dicoba.
             </p>
           </div>
           <p className="text-[11px] text-[#9CA3AF]">

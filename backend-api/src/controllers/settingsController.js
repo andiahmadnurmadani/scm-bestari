@@ -134,6 +134,19 @@ export async function seedDemoData(_req, res) {
       return r.insertId;
     };
 
+    // Pastikan kode unik (kalau bentrok, tambah -02, -03, …)
+    const buatKode = async (table, col, base) => {
+      let kode = base;
+      let n = 1;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const [r] = await pool.execute(`SELECT id FROM ${table} WHERE ${col} = ? LIMIT 1`, [kode]);
+        if (r.length === 0) return kode;
+        n += 1;
+        kode = `${base}-${String(n).padStart(2, '0')}`;
+      }
+    };
+
     const counts = {};
     const IMG = 'data:image/svg+xml;utf8,' + encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#C3E28D"/><text x="50%" y="50%" font-family="sans-serif" font-size="28" fill="#2C4219" text-anchor="middle" dy=".3em">Sorgum</text></svg>'
@@ -163,11 +176,40 @@ export async function seedDemoData(_req, res) {
     }
     counts.products = products.length;
 
-    // 3) Lahan + penanaman + panen + gudang + stok + sosoh
+    // 3) Lahan + penanaman (beberapa musim tanam) + panen + gudang + stok + sosoh
+    // Tiap lahan boleh punya >1 penanaman (musim). Tiap penanaman punya panen
+    // ratoon 1..3 — di UI, panen dari penanaman yang sama berwarna sama.
     const landDefs = [
-      { nama: 'Lahan Blok A', desa: 'Bojongmanggu', kec: 'Bojongmanggu', luas: 1.2, varietas: 'Sorgum Bioguma 1', lama: 100, tanamOffset: -200, panenCount: 3, petugas: 'Asep Sunandar', sosoh: true },
-      { nama: 'Lahan Blok B', desa: 'Lengkong', kec: 'Lengkong', luas: 0.8, varietas: 'Sorgum Numbu', lama: 95, tanamOffset: -160, panenCount: 2, petugas: 'Dedi Mulyana', sosoh: true },
-      { nama: 'Lahan Blok C', desa: 'Padawaas', kec: 'Padawaas', luas: 1.5, varietas: 'Sorgum Suri 4 (Manis)', lama: 115, tanamOffset: -130, panenCount: 1, petugas: 'Rina Herawati', sosoh: false },
+      {
+        nama: 'Lahan Blok A', desa: 'Bojongmanggu', kec: 'Bojongmanggu', luas: 1.2,
+        varietas: 'Sorgum Bioguma 1', lama: 100, petugas: 'Asep Sunandar', statusKesiapan: 'Masa Panen',
+        seasons: [
+          { tanamOffset: -390, panenCount: 3, sosohFirst: true },
+          { tanamOffset: -170, panenCount: 2, sosohFirst: true },
+        ],
+      },
+      {
+        nama: 'Lahan Blok B', desa: 'Lengkong', kec: 'Lengkong', luas: 0.8,
+        varietas: 'Sorgum Numbu', lama: 95, petugas: 'Dedi Mulyana', statusKesiapan: 'Masa Panen',
+        seasons: [
+          { tanamOffset: -300, panenCount: 2, sosohFirst: true },
+          { tanamOffset: -110, panenCount: 1, sosohFirst: true },
+        ],
+      },
+      {
+        nama: 'Lahan Blok C', desa: 'Padawaas', kec: 'Padawaas', luas: 1.5,
+        varietas: 'Sorgum Suri 4 (Manis)', lama: 115, petugas: 'Rina Herawati', statusKesiapan: 'Masa Panen',
+        seasons: [
+          { tanamOffset: -140, panenCount: 1, sosohFirst: false },
+        ],
+      },
+      {
+        nama: 'Lahan Blok D', desa: 'Cikancung', kec: 'Cikancung', luas: 1.0,
+        varietas: 'Sorgum Kawali', lama: 100, petugas: 'Bambang Sutrisno', statusKesiapan: 'Masa Pertumbuhan',
+        seasons: [
+          { tanamOffset: -35, panenCount: 0, sosohFirst: false },
+        ],
+      },
     ];
 
     counts.lands = 0; counts.plantings = 0; counts.harvests = 0;
@@ -176,8 +218,9 @@ export async function seedDemoData(_req, res) {
     const sorgumBatches = []; // untuk produksi olahan
 
     for (const L of landDefs) {
-      const tglDaftar = addDays(today, L.tanamOffset - 5);
-      const kodeLahan = `${slugNama(L.nama)}-${tanggalKode(tglDaftar)}`;
+      const firstTanam = addDays(today, L.seasons[0].tanamOffset);
+      const tglDaftar = addDays(firstTanam, -5);
+      const kodeLahan = await buatKode('lands', 'kode_lahan', `${slugNama(L.nama)}-${tanggalKode(tglDaftar)}`);
       const lahanId = await ins('lands', {
         kode_lahan: kodeLahan,
         nama_lahan: L.nama,
@@ -189,7 +232,7 @@ export async function seedDemoData(_req, res) {
         jenis_tanah: 'Latosol',
         jumlah_lubang: Math.round(L.luas * 16000),
         pemilik_kelompok_tani: 'KWT Sorgum Sejahtera',
-        status_kesiapan: 'Masa Panen',
+        status_kesiapan: L.statusKesiapan,
         status_badge: 'Aktif',
         panen_lalu_ton: 0,
         foto_url: IMG,
@@ -198,27 +241,8 @@ export async function seedDemoData(_req, res) {
       });
       counts.lands += 1;
 
-      // Penanaman
-      const tglTanam = addDays(today, L.tanamOffset);
-      const tglEstimasi = addDays(tglTanam, L.lama);
-      const kodeTanam = `${slugNama(L.nama)}-${tanggalKode(tglTanam)}-01`;
-      const plantingId = await ins('plantings', {
-        kode_tanam: kodeTanam,
-        lahan_id: lahanId,
-        tanggal_tanam: iso(tglTanam),
-        estimasi_panen: iso(tglEstimasi),
-        varietas: L.varietas,
-        jumlah_lubang: Math.round(L.luas * 16000),
-        luas_tanam: L.luas,
-        petugas: L.petugas,
-        status_tanam: 'Dipanen',
-        catatan: 'Penanaman contoh (data demo).',
-        foto_url: IMG,
-      });
-      counts.plantings += 1;
-
       // Gudang untuk lahan ini
-      const kodeGudang = `GDG-${slugNama(L.nama)}-01`;
+      const kodeGudang = await buatKode('warehouses', 'kode_gudang', `GDG-${slugNama(L.nama)}-01`);
       const gudangId = await ins('warehouses', {
         kode_gudang: kodeGudang,
         nama_gudang: `Gudang ${L.nama}`,
@@ -229,105 +253,128 @@ export async function seedDemoData(_req, res) {
       });
       counts.warehouses += 1;
 
-      // Panen 1..N (ratoon) + stok masuk
-      const harvestsForLand = [];
-      for (let k = 1; k <= L.panenCount; k += 1) {
-        const tglPanen = addDays(tglTanam, L.lama + (k - 1) * 45);
-        const hasilKg = Math.round(L.luas * 2200) - (k - 1) * Math.round(L.luas * 350);
-        const kodePanen = `${slugNama(L.nama)}-${tanggalKode(tglPanen)}-0${k}`;
-        const periodeHari = Math.round((tglPanen - tglTanam) / 86400000);
-        const hid = await ins('harvests', {
-          kode_panen: kodePanen,
-          nama_lahan: L.nama,
-          varietas: L.varietas,
-          tanggal_panen: iso(tglPanen),
-          jumlah_hasil_kg: hasilKg,
-          kualitas_grade: k === 1 ? 'Grade A (Premium)' : 'Grade B (Standar)',
-          petani_penanggung_jawab: L.petugas,
-          status: 'Tersimpan di Gudang',
-          catatan: `Panen ke-${k} (data demo).`,
-          foto_url: IMG,
-          panen_ke: k,
-          persen_hama: k === 1 ? 3.5 : 6,
-          jenis_hama: k === 1 ? 'Burung' : 'Ulat grayak',
+      // Beberapa musim penanaman per lahan
+      for (let s = 0; s < L.seasons.length; s += 1) {
+        const S = L.seasons[s];
+        const musim = s + 1;
+        const tglTanam = addDays(today, S.tanamOffset);
+        const tglEstimasi = addDays(tglTanam, L.lama);
+        const sudahPanen = S.panenCount > 0;
+        const kodeTanam = await buatKode('plantings', 'kode_tanam', `${slugNama(L.nama)}-${tanggalKode(tglTanam)}-${String(musim).padStart(2, '0')}`);
+        const plantingId = await ins('plantings', {
+          kode_tanam: kodeTanam,
           lahan_id: lahanId,
-          planting_id: plantingId,
-          periode_hari: periodeHari,
+          tanggal_tanam: iso(tglTanam),
+          estimasi_panen: iso(tglEstimasi),
+          varietas: L.varietas,
+          jumlah_lubang: Math.round(L.luas * 16000),
+          luas_tanam: L.luas,
+          petugas: L.petugas,
+          status_tanam: sudahPanen ? 'Dipanen' : 'Tumbuh',
+          catatan: `Musim tanam ke-${musim} (data demo).`,
+          foto_url: IMG,
         });
-        counts.harvests += 1;
-        harvestsForLand.push({ hid, kodePanen, hasilKg, tglPanen, k });
+        counts.plantings += 1;
 
-        // Stok masuk (GABAH) — seluruh hasil panen
-        const kodeBatchGabah = `GAB-${kodePanen}`;
-        const sbId = await ins('warehouse_stock_batches', {
-          gudang_id: gudangId,
-          harvest_id: hid,
-          kode_batch_stok: kodeBatchGabah,
-          jumlah_masuk_kg: hasilKg,
-          sisa_kg: hasilKg,
-          tanggal_masuk: dt(addDays(tglPanen, 1), 8),
-          jenis: 'GABAH',
-        });
-        counts.stockBatches += 1;
-        await ins('warehouse_movements', {
-          gudang_id: gudangId,
-          tipe: 'MASUK',
-          jumlah_kg: hasilKg,
-          keterangan: `Hasil panen ${kodePanen}`,
-          harvest_id: hid,
-          stock_batch_id: sbId,
-        });
-        counts.movements += 1;
+        // Panen 1..N (ratoon) untuk musim ini
+        for (let k = 1; k <= S.panenCount; k += 1) {
+          const tglPanen = addDays(tglTanam, L.lama + (k - 1) * 45);
+          const hasilKg = Math.round(L.luas * 2200) - (k - 1) * Math.round(L.luas * 350);
+          const kodePanen = await buatKode('harvests', 'kode_panen', `${slugNama(L.nama)}-${tanggalKode(tglPanen)}-0${k}`);
+          const periodeHari = Math.round((tglPanen - tglTanam) / 86400000);
+          const hid = await ins('harvests', {
+            kode_panen: kodePanen,
+            nama_lahan: L.nama,
+            varietas: L.varietas,
+            tanggal_panen: iso(tglPanen),
+            jumlah_hasil_kg: hasilKg,
+            kualitas_grade: k === 1 ? 'Grade A (Premium)' : 'Grade B (Standar)',
+            petani_penanggung_jawab: L.petugas,
+            status: 'Tersimpan di Gudang',
+            catatan: `Panen ke-${k}, musim ${musim} (data demo).`,
+            foto_url: IMG,
+            panen_ke: k,
+            persen_hama: k === 1 ? 3.5 : 6,
+            jenis_hama: k === 1 ? 'Burung' : 'Ulat grayak',
+            lahan_id: lahanId,
+            planting_id: plantingId,
+            periode_hari: periodeHari,
+          });
+          counts.harvests += 1;
 
-        // Sosoh panen pertama → SORGUM
-        if (L.sosoh && k === 1) {
-          const kgGabah = Math.round(hasilKg * 0.7);
-          const kgHasil = Math.round(kgGabah * 0.65);
-          const kodeBatchSorgum = `SRG-${kodePanen}`;
-          const sbSorgumId = await ins('warehouse_stock_batches', {
+          // Stok masuk (GABAH) — seluruh hasil panen
+          const kodeBatchGabah = await buatKode('warehouse_stock_batches', 'kode_batch_stok', `GAB-${kodePanen}`);
+          const sbId = await ins('warehouse_stock_batches', {
             gudang_id: gudangId,
             harvest_id: hid,
-            kode_batch_stok: kodeBatchSorgum,
-            jumlah_masuk_kg: kgHasil,
-            sisa_kg: kgHasil,
-            tanggal_masuk: dt(addDays(tglPanen, 3), 10),
-            jenis: 'SORGUM',
-            asal_batch_id: sbId,
-            tanggal_sosoh: dt(addDays(tglPanen, 3), 10),
-            operator_sosoh: L.petugas,
+            kode_batch_stok: kodeBatchGabah,
+            jumlah_masuk_kg: hasilKg,
+            sisa_kg: hasilKg,
+            tanggal_masuk: dt(addDays(tglPanen, 1), 8),
+            jenis: 'GABAH',
           });
           counts.stockBatches += 1;
-          // Kurangi batch gabah
-          await pool.execute('UPDATE warehouse_stock_batches SET sisa_kg = sisa_kg - ? WHERE id = ?', [kgGabah, sbId]);
-          const rendemen = Math.round((kgHasil / kgGabah) * 1000) / 10;
-          await ins('sosoh_processes', {
-            kode_sosoh: `SOS-${String(counts.sosoh + 1).padStart(3, '0')}`,
+          await ins('warehouse_movements', {
             gudang_id: gudangId,
-            batch_gabah_id: sbId,
-            batch_sorgum_id: sbSorgumId,
-            kg_gabah_dipakai: kgGabah,
-            kg_sorgum_hasil: kgHasil,
-            rendemen_persen: rendemen,
-            operator: L.petugas,
-            keterangan: 'Sosoh contoh (data demo).',
+            tipe: 'MASUK',
+            jumlah_kg: hasilKg,
+            keterangan: `Hasil panen ${kodePanen}`,
+            harvest_id: hid,
+            stock_batch_id: sbId,
           });
-          counts.sosoh += 1;
-          await ins('warehouse_movements', {
-            gudang_id: gudangId, tipe: 'KELUAR', jumlah_kg: kgGabah,
-            keterangan: `Gabah ${kodeBatchGabah} disosoh menjadi ${kodeBatchSorgum}`,
-            stock_batch_id: sbId, harvest_id: hid,
-          });
-          await ins('warehouse_movements', {
-            gudang_id: gudangId, tipe: 'MASUK', jumlah_kg: kgHasil,
-            keterangan: `Hasil sosoh ${kodeBatchGabah} → ${kodeBatchSorgum}`,
-            stock_batch_id: sbSorgumId, harvest_id: hid,
-          });
-          counts.movements += 2;
+          counts.movements += 1;
 
-          sorgumBatches.push({
-            id: sbSorgumId, gudangId, lahanId, plantingId, harvestId: hid,
-            kodePanen, kodeBatch: kodeBatchSorgum, namaLahan: L.nama, varietas: L.varietas, tglPanen, kg: kgHasil,
-          });
+          // Sosoh panen pertama musim ini → SORGUM
+          if (S.sosohFirst && k === 1) {
+            const kgGabah = Math.round(hasilKg * 0.7);
+            const kgHasil = Math.round(kgGabah * 0.65);
+            const kodeBatchSorgum = await buatKode('warehouse_stock_batches', 'kode_batch_stok', `SRG-${kodePanen}`);
+            const sbSorgumId = await ins('warehouse_stock_batches', {
+              gudang_id: gudangId,
+              harvest_id: hid,
+              kode_batch_stok: kodeBatchSorgum,
+              jumlah_masuk_kg: kgHasil,
+              sisa_kg: kgHasil,
+              tanggal_masuk: dt(addDays(tglPanen, 3), 10),
+              jenis: 'SORGUM',
+              asal_batch_id: sbId,
+              tanggal_sosoh: dt(addDays(tglPanen, 3), 10),
+              operator_sosoh: L.petugas,
+            });
+            counts.stockBatches += 1;
+            // Kurangi batch gabah
+            await pool.execute('UPDATE warehouse_stock_batches SET sisa_kg = sisa_kg - ? WHERE id = ?', [kgGabah, sbId]);
+            const rendemen = Math.round((kgHasil / kgGabah) * 1000) / 10;
+            const kodeSosoh = await buatKode('sosoh_processes', 'kode_sosoh', `SOS-${String(counts.sosoh + 1).padStart(3, '0')}`);
+            await ins('sosoh_processes', {
+              kode_sosoh: kodeSosoh,
+              gudang_id: gudangId,
+              batch_gabah_id: sbId,
+              batch_sorgum_id: sbSorgumId,
+              kg_gabah_dipakai: kgGabah,
+              kg_sorgum_hasil: kgHasil,
+              rendemen_persen: rendemen,
+              operator: L.petugas,
+              keterangan: `Sosoh musim ${musim} (data demo).`,
+            });
+            counts.sosoh += 1;
+            await ins('warehouse_movements', {
+              gudang_id: gudangId, tipe: 'KELUAR', jumlah_kg: kgGabah,
+              keterangan: `Gabah ${kodeBatchGabah} disosoh menjadi ${kodeBatchSorgum}`,
+              stock_batch_id: sbId, harvest_id: hid,
+            });
+            await ins('warehouse_movements', {
+              gudang_id: gudangId, tipe: 'MASUK', jumlah_kg: kgHasil,
+              keterangan: `Hasil sosoh ${kodeBatchGabah} → ${kodeBatchSorgum}`,
+              stock_batch_id: sbSorgumId, harvest_id: hid,
+            });
+            counts.movements += 2;
+
+            sorgumBatches.push({
+              id: sbSorgumId, gudangId, lahanId, plantingId, harvestId: hid,
+              kodePanen, kodeBatch: kodeBatchSorgum, namaLahan: L.nama, varietas: L.varietas, tglPanen, kg: kgHasil,
+            });
+          }
         }
       }
     }
@@ -335,9 +382,11 @@ export async function seedDemoData(_req, res) {
     // 4) Produksi olahan dari batch SORGUM
     counts.production = 0;
     const produksiDefs = [
-      { produk: 'Beras Sorgum', satuan: 'Pouch', perKg: 2, tanggalOffset: -40 },
-      { produk: 'Tepung Sorgum', satuan: 'Pouch', perKg: 2.5, tanggalOffset: -20 },
-      { produk: 'Keripik Sorgum', satuan: 'Pouch', perKg: 3, tanggalOffset: -8 },
+      { produk: 'Beras Sorgum', satuan: 'Pouch', perKg: 2, tanggalOffset: -60 },
+      { produk: 'Tepung Sorgum', satuan: 'Pouch', perKg: 2.5, tanggalOffset: -45 },
+      { produk: 'Keripik Sorgum', satuan: 'Pouch', perKg: 3, tanggalOffset: -30 },
+      { produk: 'Beras Sorgum', satuan: 'Pouch', perKg: 2, tanggalOffset: -15 },
+      { produk: 'Gula Cair Nira Sorgum', satuan: 'Botol', perKg: 1.5, tanggalOffset: -7 },
     ];
     for (let i = 0; i < Math.min(produksiDefs.length, sorgumBatches.length); i += 1) {
       const P = produksiDefs[i];
@@ -345,7 +394,7 @@ export async function seedDemoData(_req, res) {
       const qtyBahan = Math.min(B.kg, Math.round(B.kg * 0.5));
       const jumlahHasil = Math.round(qtyBahan * P.perKg);
       const tglProduksi = addDays(today, P.tanggalOffset);
-      const kodeBatch = `PRD-${slugNama(B.namaLahan)}-${tanggalKode(tglProduksi)}-0${i + 1}`;
+      const kodeBatch = await buatKode('production_batches', 'kode_batch', `PRD-${slugNama(B.namaLahan)}-${tanggalKode(tglProduksi)}-0${i + 1}`);
       const [pr] = await pool.execute(
         `SELECT id, satuan_hasil FROM products WHERE name = ? LIMIT 1`, [P.produk]
       );
