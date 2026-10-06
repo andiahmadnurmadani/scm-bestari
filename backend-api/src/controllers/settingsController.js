@@ -200,14 +200,16 @@ export async function seedDemoData(_req, res) {
         nama: 'Lahan Blok C', desa: 'Padawaas', kec: 'Padawaas', luas: 1.5,
         varietas: 'Sorgum Suri 4 (Manis)', lama: 115, petugas: 'Rina Herawati', statusKesiapan: 'Masa Panen',
         seasons: [
-          { tanamOffset: -140, panenCount: 1, sosohFirst: false },
+          { tanamOffset: -250, panenCount: 1, sosohFirst: false },
+          { tanamOffset: -120, panenCount: 0, sosohFirst: false },
         ],
       },
       {
         nama: 'Lahan Blok D', desa: 'Cikancung', kec: 'Cikancung', luas: 1.0,
         varietas: 'Sorgum Kawali', lama: 100, petugas: 'Bambang Sutrisno', statusKesiapan: 'Masa Pertumbuhan',
         seasons: [
-          { tanamOffset: -35, panenCount: 0, sosohFirst: false },
+          // Penanaman baru (baru ditanam) → status "Ditanam", sama seperti input manual
+          { tanamOffset: -5, panenCount: 0, sosohFirst: false },
         ],
       },
     ];
@@ -260,6 +262,14 @@ export async function seedDemoData(_req, res) {
         const tglTanam = addDays(today, S.tanamOffset);
         const tglEstimasi = addDays(tglTanam, L.lama);
         const sudahPanen = S.panenCount > 0;
+        // Status tanam dihitung dari umur tanam agar konsisten dengan input manual:
+        // baru ditanam → "Ditanam"; sedang tumbuh → "Tumbuh"; mendekati/lewat umur → "Siap Panen".
+        const umurHari = Math.round((today - tglTanam) / 86400000);
+        let statusTanam;
+        if (sudahPanen) statusTanam = 'Dipanen';
+        else if (umurHari >= L.lama) statusTanam = 'Siap Panen';
+        else if (umurHari >= 15) statusTanam = 'Tumbuh';
+        else statusTanam = 'Ditanam';
         const kodeTanam = await buatKode('plantings', 'kode_tanam', `${slugNama(L.nama)}-${tanggalKode(tglTanam)}-${String(musim).padStart(2, '0')}`);
         const plantingId = await ins('plantings', {
           kode_tanam: kodeTanam,
@@ -270,7 +280,7 @@ export async function seedDemoData(_req, res) {
           jumlah_lubang: Math.round(L.luas * 16000),
           luas_tanam: L.luas,
           petugas: L.petugas,
-          status_tanam: sudahPanen ? 'Dipanen' : 'Tumbuh',
+          status_tanam: statusTanam,
           catatan: `Musim tanam ke-${musim} (data demo).`,
           foto_url: IMG,
         });
