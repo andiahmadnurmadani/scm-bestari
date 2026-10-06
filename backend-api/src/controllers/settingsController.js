@@ -148,11 +148,18 @@ export async function seedDemoData(_req, res) {
     };
 
     const counts = {};
-    const IMG = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#C3E28D"/><text x="50%" y="50%" font-family="sans-serif" font-size="28" fill="#2C4219" text-anchor="middle" dy=".3em">Sorgum</text></svg>'
-    );
+    // Gambar demo yang relevan (disajikan dari folder publik /demo/*.webp).
+    // Path relatif agar bekerja baik di dev (Vite) maupun produksi (nginx).
+    const IMG = {
+      lahan: '/demo/sorghum_field.webp',      // hamparan lahan sorgum
+      biji: '/demo/sorghum_grain.webp',       // biji/gabah sorgum
+      beras: '/demo/beras_sorgum.webp',       // beras sorgum
+      tepung: '/demo/tepung_sorgum.webp',     // tepung sorgum
+      keripik: '/demo/rengginang_sorgum.webp',// camilan/rengginang sorgum
+      gula: '/demo/gula_sorgum.webp',         // gula cair nira sorgum
+    };
 
-    // 1) Master varietas
+    // 1) Master varietas (gambar biji sorgum)
     const varieties = [
       ['Sorgum Bioguma 1', 'Varietas unggul Balitbangtan, cocok untuk pangan, umur ±100 hari.', 100],
       ['Sorgum Numbu', 'Varietas lokal adaptif, baik untuk tepung dan pakan.', 95],
@@ -160,19 +167,19 @@ export async function seedDemoData(_req, res) {
       ['Sorgum Kawali', 'Varietas unggul dengan biji besar, hasil melimpah.', 100],
     ];
     for (const [name, description, lama_panen] of varieties) {
-      await ins('varieties', { name, description, image_url: IMG, lama_panen, is_active: 1 });
+      await ins('varieties', { name, description, image_url: IMG.biji, lama_panen, is_active: 1 });
     }
     counts.varieties = varieties.length;
 
-    // 2) Master produk olahan
+    // 2) Master produk olahan (gambar sesuai jenis produk)
     const products = [
-      ['Tepung Sorgum', 'Pouch', 'Tepung halus dari biji sorgum sosoh.'],
-      ['Beras Sorgum', 'Pouch', 'Beras sorgum sosoh siap masak.'],
-      ['Keripik Sorgum', 'Pouch', 'Keripik renyah berbahan tepung sorgum.'],
-      ['Gula Cair Nira Sorgum', 'Botol', 'Gula cair dari nira batang sorgum manis.'],
+      ['Tepung Sorgum', 'Pouch', 'Tepung halus dari biji sorgum sosoh.', IMG.tepung],
+      ['Beras Sorgum', 'Pouch', 'Beras sorgum sosoh siap masak.', IMG.beras],
+      ['Keripik Sorgum', 'Pouch', 'Keripik renyah berbahan tepung sorgum.', IMG.keripik],
+      ['Gula Cair Nira Sorgum', 'Botol', 'Gula cair dari nira batang sorgum manis.', IMG.gula],
     ];
-    for (const [name, satuan_hasil, deskripsi] of products) {
-      await ins('products', { name, satuan_hasil, deskripsi, foto_url: IMG, is_active: 1 });
+    for (const [name, satuan_hasil, deskripsi, foto] of products) {
+      await ins('products', { name, satuan_hasil, deskripsi, foto_url: foto, is_active: 1 });
     }
     counts.products = products.length;
 
@@ -237,7 +244,7 @@ export async function seedDemoData(_req, res) {
         status_kesiapan: L.statusKesiapan,
         status_badge: 'Aktif',
         panen_lalu_ton: 0,
-        foto_url: IMG,
+        foto_url: IMG.lahan,
         latitude: -6.95 + Math.random() * 0.05,
         longitude: 107.6 + Math.random() * 0.05,
       });
@@ -282,7 +289,7 @@ export async function seedDemoData(_req, res) {
           petugas: L.petugas,
           status_tanam: statusTanam,
           catatan: `Musim tanam ke-${musim} (data demo).`,
-          foto_url: IMG,
+          foto_url: IMG.lahan,
         });
         counts.plantings += 1;
 
@@ -302,7 +309,7 @@ export async function seedDemoData(_req, res) {
             petani_penanggung_jawab: L.petugas,
             status: 'Tersimpan di Gudang',
             catatan: `Panen ke-${k}, musim ${musim} (data demo).`,
-            foto_url: IMG,
+            foto_url: IMG.biji,
             panen_ke: k,
             persen_hama: k === 1 ? 3.5 : 6,
             jenis_hama: k === 1 ? 'Burung' : 'Ulat grayak',
@@ -461,6 +468,7 @@ export async function seedDemoData(_req, res) {
         tanggal_pengadaan: iso(addDays(today, -400 + i * 20)),
         spesifikasi: 'Unit contoh (data demo).',
         terakhir_servis: iso(addDays(today, -30)),
+        foto_url: IMG.lahan,
       });
     }
     counts.equipment = equipments.length;
