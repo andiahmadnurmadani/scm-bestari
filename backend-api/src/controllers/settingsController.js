@@ -520,15 +520,19 @@ export async function seedDemoData(_req, res) {
     }
     counts.certificates = certs.length;
 
-    // 7) Data kemasan
+    // 7) Data kemasan (dengan 3–4 foto berbeda per item)
     const packs = [
-      ['Standing Pouch 500g', 'Standing Pouch', '500 gram', 2000, 200, 'CV Kemas Jaya', 1500, 'Stok Cukup'],
-      ['Standing Pouch 1kg', 'Standing Pouch', '1 kg', 1200, 200, 'CV Kemas Jaya', 2200, 'Stok Cukup'],
-      ['Botol Kaca 250ml', 'Botol Kaca', '250 ml', 300, 100, 'PT Gelas Nusantara', 4500, 'Stok Menipis'],
-      ['Box Custom Olahan', 'Box Custom', '20x15x8 cm', 500, 150, 'Percetakan Sinar', 3200, 'Stok Cukup'],
+      ['Standing Pouch 500g', 'Standing Pouch', '500 gram', 2000, 200, 'CV Kemas Jaya', 1500, 'Stok Cukup',
+        ['/demo/produk_4.webp', '/demo/produk_3.webp', '/demo/produk_2.webp']],
+      ['Standing Pouch 1kg', 'Standing Pouch', '1 kg', 1200, 200, 'CV Kemas Jaya', 2200, 'Stok Cukup',
+        ['/demo/produk_3.webp', '/demo/produk_4.webp', '/demo/produk_1.webp']],
+      ['Botol Kaca 250ml', 'Botol Kaca', '250 ml', 300, 100, 'PT Gelas Nusantara', 4500, 'Stok Menipis',
+        ['/demo/produk_1.webp', '/demo/produk_2.webp', '/demo/produk_4.webp']],
+      ['Box Custom Olahan', 'Box Custom', '20x15x8 cm', 500, 150, 'Percetakan Sinar', 3200, 'Stok Cukup',
+        ['/demo/produk_2.webp', '/demo/produk_3.webp', '/demo/produk_1.webp', '/demo/produk_4.webp']],
     ];
     for (let i = 0; i < packs.length; i += 1) {
-      const [nama, kategori, kapasitas, stok, minimal, pemasok, harga, status] = packs[i];
+      const [nama, kategori, kapasitas, stok, minimal, pemasok, harga, status, fotos] = packs[i];
       await ins('packaging_materials', {
         kode_kemasan: `PKG-${String(i + 1).padStart(2, '0')}`,
         nama_kemasan: nama,
@@ -540,6 +544,13 @@ export async function seedDemoData(_req, res) {
         pemasok,
         harga_per_unit_rp: harga,
         status_stok: status,
+        extra_data: JSON.stringify({
+          komposisi: '',
+          nilaiGizi: {},
+          akg: [],
+          riwayat: [],
+          imagesDataUrl: fotos,
+        }),
       });
     }
     counts.packaging = packs.length;

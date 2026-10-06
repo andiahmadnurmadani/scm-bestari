@@ -45,9 +45,12 @@ function normalizeImages(data) {
   }
   if (!Array.isArray(raw)) return [];
 
-  return raw
-    .filter((u) => typeof u === 'string' && u.startsWith('data:image/'))
-    .slice(0, 4); // maksimal 4 foto
+  // Terima base64 (data:image/...) MAUPUN URL gambar (http/https/relatif /demo/..)
+  const isValidImageRef = (u) =>
+    typeof u === 'string' &&
+    (u.startsWith('data:image/') || u.startsWith('http://') || u.startsWith('https://') || u.startsWith('/'));
+
+  return raw.filter(isValidImageRef).slice(0, 4); // maksimal 4 foto
 }
 
 /** Hitung status stok otomatis berdasarkan stok tersedia & minimal. */
