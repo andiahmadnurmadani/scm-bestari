@@ -405,7 +405,7 @@ export const GudangPage: React.FC = () => {
             <WarehouseIcon className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">JUMLAH GUDANG</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Jumlah Gudang</p>
             <h3 className="text-lg font-bold text-[#221A12] mt-0.5 truncate">{warehouses.length} Gudang</h3>
             <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Unit penyimpanan aktif</p>
           </div>
@@ -415,7 +415,7 @@ export const GudangPage: React.FC = () => {
             <Sprout className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL STOK SORGUM</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Total Stok Sorgum</p>
             <h3 className="text-lg font-bold text-[#2C4219] mt-0.5 truncate">{formatBerat(totalStokSemua)}</h3>
             <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Hasil olahan siap edar</p>
           </div>
@@ -425,7 +425,7 @@ export const GudangPage: React.FC = () => {
             <Package className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL STOK GABAH</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Total Stok Gabah</p>
             <h3 className="text-lg font-bold text-[#8C5A2B] mt-0.5 truncate">{formatBerat(totalStokGabah)}</h3>
             <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Hasil panen mentah tersimpan</p>
           </div>

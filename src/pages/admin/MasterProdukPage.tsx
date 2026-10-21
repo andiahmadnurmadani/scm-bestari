@@ -192,7 +192,7 @@ export const MasterProdukPage: React.FC = () => {
             <Boxes className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL PRODUK</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Total Produk</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 truncate">{products.length}</h3>
             <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Terdaftar di master data</p>
           </div>
@@ -202,7 +202,7 @@ export const MasterProdukPage: React.FC = () => {
             <Ruler className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">AKTIF</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Aktif</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 truncate">
               {products.filter((p) => p.isActive).length}
             </h3>
@@ -232,12 +232,12 @@ export const MasterProdukPage: React.FC = () => {
           <table className="w-full text-left text-xs min-w-[640px] border-collapse">
             <thead>
               <tr className="bg-[#F7F7F5] text-[#6B7280] font-bold uppercase text-[11px] tracking-wider border-y border-[#c4c8bb]/20">
-                <th className="py-2.5 px-3 text-center align-middle w-[72px] whitespace-nowrap">GAMBAR</th>
-                <th className="py-2.5 px-3 align-middle whitespace-nowrap">NAMA PRODUK</th>
-                <th className="py-2.5 px-3 align-middle min-w-[240px]">DESKRIPSI</th>
-                <th className="py-2.5 px-3 text-center align-middle w-[140px] whitespace-nowrap">SATUAN HASIL</th>
-                <th className="py-2.5 px-3 text-center align-middle w-[90px] whitespace-nowrap">STATUS</th>
-                <th className="py-2.5 px-3 text-center align-middle w-[168px] whitespace-nowrap">AKSI</th>
+                <th className="py-2.5 px-3 text-center align-middle w-[72px] whitespace-nowrap">Gambar</th>
+                <th className="py-2.5 px-3 align-middle whitespace-nowrap">Nama Produk</th>
+                <th className="py-2.5 px-3 align-middle min-w-[240px]">Deskripsi</th>
+                <th className="py-2.5 px-3 text-center align-middle w-[140px] whitespace-nowrap">Satuan Hasil</th>
+                <th className="py-2.5 px-3 text-center align-middle w-[90px] whitespace-nowrap">Status</th>
+                <th className="py-2.5 px-3 text-center align-middle w-[168px] whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 font-medium text-[#221A12]">

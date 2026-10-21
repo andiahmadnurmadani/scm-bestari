@@ -359,7 +359,7 @@ export const CmsPage: React.FC = () => {
               <div className="flex items-center gap-2 px-4 py-3 bg-[#F7F7F5] border-b border-[#c4c8bb]/20">
                 <Eye className="w-3.5 h-3.5 text-[#2C4219]" />
                 <span className="text-xs font-bold text-[#172C05]">Preview Langsung</span>
-                <span className="ml-auto text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold">LIVE</span>
+                <span className="ml-auto text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold">Live</span>
               </div>
               <div className="p-4">
                 <HeroPreview

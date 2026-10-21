@@ -13,6 +13,9 @@ import { compressImage } from '../../utils/imageCompress';
 // ── Filter pill sederhana: 1 pilihan aktif, langsung memfilter tabel ──────────
 type FilterKey = 'dipakai' | 'tersedia' | 'perbaikan' | 'perawatan' | 'semua';
 
+// Kategori sarana & peralatan (Pengeringan & Mesin Olah Tanah sudah tidak dipakai)
+const KATEGORI_ALAT = ['Pascapanen', 'Pengolahan Produk', 'Pengemasan'];
+
 const FILTERS: { key: FilterKey; label: string; icon?: React.ReactNode }[] = [
   { key: 'dipakai', label: 'Sedang Dipakai', icon: <PackageX className="w-3.5 h-3.5" /> },
   { key: 'tersedia', label: 'Tersedia', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
@@ -70,7 +73,7 @@ export const PeralatanPage: React.FC = () => {
   const [formData, setFormData] = useState<Partial<Equipment>>({
     kodeAlat: '',
     namaPeralatan: '',
-    kategori: 'Mesin Olah Tanah',
+    kategori: 'Pascapanen',
     jumlahStok: '',
     kondisi: 'Sangat Baik',
     status: 'Tersedia',
@@ -258,7 +261,7 @@ export const PeralatanPage: React.FC = () => {
             <Wrench className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL PERALATAN MESIN</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Total Peralatan Mesin</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">{equipmentList.length} Unit Peralatan</h3>
             <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Mesin Olah & Pascapanen</p>
           </div>
@@ -269,7 +272,7 @@ export const PeralatanPage: React.FC = () => {
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">SEDANG DIPAKAI</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Sedang Dipakai</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {equipmentList.filter((e) => e.status === 'Sedang Digunakan').length} Unit Dipakai
             </h3>
@@ -282,7 +285,7 @@ export const PeralatanPage: React.FC = () => {
             <Hammer className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">BUTUH PERBAIKAN / SERVIS</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Butuh Perbaikan / Servis</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {equipmentList.filter((e) => e.kondisi === 'Perlu Perbaikan' || e.kondisi === 'Rusak' || e.status === 'Dalam Perawatan').length} Unit Perawatan
             </h3>
@@ -329,14 +332,14 @@ export const PeralatanPage: React.FC = () => {
           <table className="w-full text-left border-collapse text-xs min-w-[680px]">
             <thead>
               <tr className="bg-[#F7F7F5] text-[#6B7280] font-bold uppercase text-[11px] tracking-wider border-b border-[#c4c8bb]/20">
-                <th className="py-2 px-3 pl-4">KODE ALAT</th>
-                <th className="py-2 px-3">NAMA PERALATAN</th>
-                <th className="py-2 px-3">KATEGORI</th>
-                <th className="py-2 px-3">JUMLAH STOK</th>
-                <th className="py-2 px-3">KONDISI</th>
-                <th className="py-2 px-3">STATUS</th>
-                <th className="py-2 px-3">TEMPAT PENYIMPANAN</th>
-                <th className="py-2 px-3 pr-4 text-center">AKSI</th>
+                <th className="py-2 px-3 pl-4">Kode Alat</th>
+                <th className="py-2 px-3">Nama Peralatan</th>
+                <th className="py-2 px-3">Kategori</th>
+                <th className="py-2 px-3">Jumlah Stok</th>
+                <th className="py-2 px-3">Kondisi</th>
+                <th className="py-2 px-3">Status</th>
+                <th className="py-2 px-3">Tempat Penyimpanan</th>
+                <th className="py-2 px-3 pr-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 text-[#221A12] font-medium">
@@ -563,11 +566,12 @@ export const PeralatanPage: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
                   className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold cursor-pointer"
                 >
-                  <option value="Mesin Olah Tanah">Mesin Olah Tanah</option>
-                  <option value="Pascapanen">Pascapanen</option>
-                  <option value="Pengolahan Produk">Pengolahan Produk</option>
-                  <option value="Pengeringan">Pengeringan</option>
-                  <option value="Pengemasan">Pengemasan</option>
+                  {formData.kategori && !KATEGORI_ALAT.includes(formData.kategori) && (
+                    <option value={formData.kategori}>{formData.kategori} (lama)</option>
+                  )}
+                  {KATEGORI_ALAT.map((k) => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
                 </select>
               </div>
               <div className="sm:col-span-2">

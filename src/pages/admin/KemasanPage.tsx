@@ -347,7 +347,7 @@ export const KemasanPage: React.FC = () => {
             <Package className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL ITEM KEMASAN</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Total Item Kemasan</p>
             <h3 className="text-lg font-bold text-[#221A12] mt-0.5 truncate">{packagingList.length} Kategori Material</h3>
             <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Standing Pouch, Aluminium & Karung</p>
           </div>
@@ -367,7 +367,7 @@ export const KemasanPage: React.FC = () => {
             <PackageX className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">STOK HABIS (PERLU ORDER)</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Stok Habis (Perlu Order)</p>
             <h3 className="text-lg font-bold text-[#221A12] mt-0.5 truncate">{packagingList.filter((p) => p.statusStok === 'Habis').length} Jenis Item</h3>
             <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Segera lakukan pemesanan ulang</p>
           </div>
@@ -408,12 +408,12 @@ export const KemasanPage: React.FC = () => {
             <thead>
               <tr className="bg-[#F7F7F5] text-[#6B7280] font-bold uppercase text-[11px] tracking-wider border-b border-[#c4c8bb]/20">
                 <th className="py-2.5 px-3 pl-4 w-6"></th>
-                <th className="py-2.5 px-3 whitespace-nowrap">KODE KEMASAN</th>
-                <th className="py-2.5 px-3 whitespace-nowrap">NAMA KEMASAN</th>
-                <th className="py-2.5 px-3 whitespace-nowrap">STOK TERSEDIA</th>
-                <th className="py-2.5 px-3 whitespace-nowrap">HARGA / UNIT</th>
-                <th className="py-2.5 px-3 whitespace-nowrap">STATUS STOK</th>
-                <th className="py-2.5 px-3 pr-4 text-center whitespace-nowrap">AKSI</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Kode Kemasan</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Nama Kemasan</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Stok Tersedia</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Harga / Unit</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Status Stok</th>
+                <th className="py-2.5 px-3 pr-4 text-center whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="text-[#221A12] font-medium">

@@ -496,7 +496,7 @@ export const LahanPage: React.FC = () => {
           </div>
           <div className="min-w-0">
             <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
-              TOTAL LUAS LAHAN
+              Total Luas Lahan
             </p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {formatLuas(totalHektar)}
@@ -514,7 +514,7 @@ export const LahanPage: React.FC = () => {
           </div>
           <div className="min-w-0">
             <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
-              JUMLAH BLOK LAHAN
+              Jumlah Blok Lahan
             </p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {landList.length} Blok Lahan
@@ -532,7 +532,7 @@ export const LahanPage: React.FC = () => {
           </div>
           <div className="min-w-0">
             <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
-              RATA-RATA LUAS / BLOK
+              Rata-Rata Luas / Blok
             </p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {landList.length > 0 ? formatLuas(totalHektar / landList.length) : formatLuas(0)}

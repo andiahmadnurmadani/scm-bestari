@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Sprout, Package, Warehouse, Factory, ArrowRight, QrCode, Wheat, Droplets, CalendarDays } from 'lucide-react';
+import { MapPin, Sprout, Warehouse, Factory, ArrowRight, QrCode, Wheat, Droplets, Download } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { formatTanggalId } from '../../utils/dateUtils';
 import { shortKode } from '../../utils/kode';
@@ -16,7 +16,7 @@ import { ProductionBatch } from '../../types';
  * Semua data diambil dari lineage yang sudah disertakan API produksi
  * (lahan, planting, harvest, gudang, stockBatch) — tanpa endpoint baru.
  *
- * variant="full"    → timeline vertikal + QR (untuk modal Lacak)
+ * variant="full"    → info singkat + QR (untuk modal Lacak)
  * variant="compact" → rantai ringkas satu baris (untuk pratinjau di form)
  */
 
@@ -150,75 +150,64 @@ export const ProductTraceTimeline: React.FC<Props> = ({ batch, variant = 'full',
     );
   }
 
-  // ── Full: timeline vertikal + QR ──────────────────────────────────────────
+  // ── Full (modal Lacak): info singkat + QR saja ───────────────────────────
+  const info = [
+    { label: 'Lahan', value: batch.lahan?.namaLahan || '-' },
+    { label: 'Tanggal panen', value: fmtDate(batch.harvest?.tanggalPanen) },
+    { label: 'Tanggal produksi', value: fmtDate(batch.tanggalProduksi) },
+    { label: 'Hasil', value: `${Number(batch.jumlahHasil || 0).toLocaleString('id-ID')} ${batch.satuan || ''}`.trim() },
+  ];
+
+  const unduhQr = () => {
+    const canvas = document.querySelector('#qr-canvas-produk') as HTMLCanvasElement | null;
+    if (!canvas) return;
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `QR-${batch.kodeBatch}.png`;
+    a.click();
+  };
+
   return (
     <div className="space-y-4">
       {/* Ringkasan produk */}
-      <div className="rounded-2xl border border-[#c4c8bb]/30 bg-[#FFF8F4] p-4">
-        <p className="text-sm font-bold uppercase tracking-wider text-[#6B7280]">Produk</p>
-        <p className="text-xl font-extrabold text-[#172C05] mt-0.5">{batch.namaProduk}</p>
-        <p className="text-base text-[#6B7280] mt-0.5">
-          {shortKode(batch.kodeBatch)} • {Number(batch.jumlahHasil || 0).toLocaleString('id-ID')} {batch.satuan}
-        </p>
-      </div>
-
-      {/* Timeline */}
-      <div className="relative">
-        <div className="absolute left-5 top-4 bottom-4 w-0.5 bg-[#c4c8bb]/30" />
-        <div className="space-y-3">
-          {steps.map((s) => {
-            const Icon = s.icon;
-            return (
-              <div key={s.key} className="relative flex items-start gap-3.5">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 border-2 border-white shadow ${s.color}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div className="flex-1 p-3.5 bg-white rounded-2xl border border-[#c4c8bb]/20 min-w-0">
-                  <p className="text-sm font-extrabold text-[#2C4219] uppercase tracking-wide">{s.title}</p>
-                  <div className="mt-1.5 space-y-1">
-                    {s.rows.map((r) => (
-                      <div key={r.label} className="flex items-baseline gap-2 text-base">
-                        <span className="text-[#9CA3AF] shrink-0 w-32">{r.label}</span>
-                        <span className="font-semibold text-[#221A12] break-words min-w-0">{r.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      <div className="rounded-2xl border border-[#c4c8bb]/30 bg-[#FFF8F4] p-4 text-center">
+        <p className="text-xl font-extrabold text-[#172C05]">{batch.namaProduk}</p>
+        <p className="text-sm text-[#6B7280] mt-0.5">Kode batch {shortKode(batch.kodeBatch)}</p>
       </div>
 
       {/* QR untuk lacak publik */}
       {showQr && (
-        <div className="rounded-2xl border border-[#c4c8bb]/30 bg-white p-4 flex items-center gap-4">
-          {kodeStok ? (
-            <>
-              <div className="shrink-0 rounded-xl border border-[#c4c8bb]/30 p-1.5 bg-white">
-                <QRCodeCanvas value={traceUrl} size={96} level="M" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-base font-bold text-[#172C05] flex items-center gap-1.5">
-                  <QrCode className="w-4 h-4 text-[#2C4219]" /> Pindai untuk melacak
-                </p>
-                <p className="text-base text-[#6B7280] mt-0.5">
-                  Konsumen memindai QR ini untuk melihat asal-usul produk (lahan, tanggal tanam & panen).
-                </p>
-              </div>
-            </>
-          ) : (
-            <p className="text-base text-[#9CA3AF]">
-              QR lacak belum tersedia karena batch ini belum tertaut ke stok gudang (bahan baku).
+        kodeStok ? (
+          <div className="flex flex-col items-center gap-3">
+            <div className="rounded-2xl border border-[#c4c8bb]/30 p-3 bg-white">
+              <QRCodeCanvas id="qr-canvas-produk" value={traceUrl} size={200} level="M" includeMargin fgColor="#172C05" bgColor="#ffffff" />
+            </div>
+            <p className="text-base font-bold text-[#172C05] flex items-center gap-1.5">
+              <QrCode className="w-4 h-4 text-[#2C4219]" /> Pindai untuk melihat asal-usul produk
             </p>
-          )}
-        </div>
+            <button
+              type="button"
+              onClick={unduhQr}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#2C4219] text-white text-sm font-bold hover:bg-[#172C05] transition-colors cursor-pointer"
+            >
+              <Download className="w-4 h-4" /> Unduh QR
+            </button>
+          </div>
+        ) : (
+          <p className="text-base text-center text-[#9CA3AF] bg-[#F7F7F5] rounded-2xl p-4">
+            QR belum tersedia karena batch ini belum tertaut ke stok gudang.
+          </p>
+        )
       )}
 
-      {/* Catatan kecil */}
-      <div className="flex items-start gap-2 text-base text-[#6B7280]">
-        <CalendarDays className="w-4 h-4 mt-0.5 shrink-0" />
-        <span>Semua tanggal di atas tercatat otomatis dari setiap tahap pengelolaan.</span>
+      {/* Info singkat */}
+      <div className="grid grid-cols-2 gap-2.5">
+        {info.map((r) => (
+          <div key={r.label} className="rounded-xl bg-[#F7F7F5] px-3.5 py-2.5 min-w-0">
+            <p className="text-xs text-[#6B7280]">{r.label}</p>
+            <p className="text-sm font-bold text-[#172C05] break-words">{r.value}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

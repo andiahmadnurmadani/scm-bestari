@@ -4,6 +4,7 @@ import { harvestApi } from '../../api/endpoints/harvestApi';
 import { landApi } from '../../api/endpoints/landApi';
 import { plantingApi } from '../../api/endpoints/plantingApi';
 import { warehouseApi } from '../../api/endpoints/warehouseApi';
+import HarvestPrediction from '../../components/common/HarvestPrediction';
 import { HarvestRecord, LandPlot, Planting, Warehouse } from '../../types';
 import { useUnitSettings } from '../../context/UnitSettingsContext';
 import { formatTanggalId } from '../../utils/dateUtils';
@@ -353,7 +354,7 @@ export const LitePanenPage: React.FC = () => {
                   <p className="text-[11px] text-[#6B7280] flex items-center gap-1 truncate min-w-0 flex-1">
                     <MapPin className="w-3 h-3 shrink-0" />
                     {formatTanggalId(active.tanggalPanen)}
-                    {Number((active as any).panenKe) > 1 ? ` • Panen ${Number((active as any).panenKe)}/3` : ''}
+                    {` • Panen ${Number((active as any).panenKe) || 1}/3`}
                   </p>
                   <div className="flex items-center gap-1 shrink-0">
                     <button onClick={() => openDetail(active)} title="Lihat" className="p-2 rounded-lg text-[#2C4219] hover:bg-[#C3E28D]/30 cursor-pointer">
@@ -434,6 +435,7 @@ export const LitePanenPage: React.FC = () => {
                   </span>
                 </div>
               )}
+              <HarvestPrediction planting={selectedPlanting} tanggalPanen={formData.tanggalPanen} />
             </div>
 
             <div>
@@ -452,9 +454,9 @@ export const LitePanenPage: React.FC = () => {
                 disabled={!formData.plantingId}
                 className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm disabled:opacity-60"
               >
-                <option value={1}>Panen 1 (awal)</option>
-                <option value={2}>Panen 2 (ratoon)</option>
-                <option value={3}>Panen 3 (ratoon terakhir)</option>
+                <option value={1}>Panen 1/3 (awal)</option>
+                <option value={2}>Panen 2/3 (ratoon)</option>
+                <option value={3}>Panen 3/3 (terakhir)</option>
               </select>
               {formData.plantingId && usedPanenKe.includes(Number(formData.panenKe)) && (
                 <p className="text-[11px] font-semibold text-red-600 mt-1">Panen ke-{formData.panenKe} sudah dipanen. Pilih nomor panen lain.</p>
@@ -615,7 +617,7 @@ export const LitePanenPage: React.FC = () => {
                     ['Status', detailTarget.status],
                     ['Kode Panen', detailTarget.kodePanen],
                     ['Penanaman Asal', detailTarget.planting?.kodeTanam || '-'],
-                    ['Panen Ke', detailTarget.panenKe && Number(detailTarget.panenKe) > 1 ? `Panen ${detailTarget.panenKe}/3` : 'Panen 1 (awal)'],
+                    ['Panen Ke', `Panen ${Number(detailTarget.panenKe) || 1}/3`],
                     ['Terkena Hama', detailTarget.persenHama != null ? `${detailTarget.persenHama}%${detailTarget.jenisHama ? ` (${detailTarget.jenisHama})` : ''}` : 'Tidak ada'],
                   ].map(([k, v]) => (
                     <div key={k as string} className="p-3 bg-[#F7F7F5] rounded-xl">

@@ -339,7 +339,7 @@ export const IntegrationPage: React.FC = () => {
             icon={<Key className="w-4 h-4" />}
             badge={
               <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                AKTIF
+                Aktif
               </span>
             }
           >

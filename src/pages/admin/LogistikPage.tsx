@@ -275,7 +275,7 @@ export const LogistikPage: React.FC = () => {
       'Kode Transaksi': r.kodeTransaksi || '-',
       'Tanggal': r.tanggal || '-',
       'Kategori': r.kategori || '-',
-      'Keterangan / Vendor': r.keteranganVendor || '-',
+      'Deskripsi': r.keteranganVendor || '-',
       'Total Biaya (Rp)': (r.totalBiayaRp || 0).toLocaleString('id-ID'),
       'Status Pembayaran': r.statusPembayaran || '-',
       'Metode': r.metodePembayaran || '-',
@@ -351,7 +351,7 @@ export const LogistikPage: React.FC = () => {
         </style></head><body>
         <h1>Laporan Keuangan Logistik</h1>
         <p class="meta">Sorgum SCM ¢ Dicetak ${new Date().toLocaleDateString('id-ID')} ¢ Jumlah: ${data.length} transaksi</p>
-        <table><thead><tr><th>Kode</th><th>Tanggal</th><th>Kategori</th><th>Vendor</th><th>Biaya (Rp)</th><th>No. Nota</th><th>Status</th></tr></thead>
+        <table><thead><tr><th>Kode</th><th>Tanggal</th><th>Kategori</th><th>Deskripsi</th><th>Biaya (Rp)</th><th>No. Nota</th><th>Status</th></tr></thead>
         <tbody>${rowsHtml}</tbody></table>
         <p class="meta" style="margin-top:12px">Total Pengeluaran: <b>${formatRupiah(data.reduce((s, r) => s + (r.totalBiayaRp || 0), 0))}</b></p>
         <script>window.print();</script>
@@ -422,7 +422,7 @@ export const LogistikPage: React.FC = () => {
           </div>
           <div className="min-w-0">
             <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
-              TOTAL PENGELUARAN BULAN INI
+              Total Pengeluaran Bulan Ini
             </p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {formatRupiah(totalBulanIni)}
@@ -439,7 +439,7 @@ export const LogistikPage: React.FC = () => {
           </div>
           <div className="min-w-0">
             <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
-              BIAYA TRANSPORTASI & DISTRIBUSI
+              Biaya Transportasi & Distribusi
             </p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {formatRupiah(totalTransportasi)}
@@ -456,7 +456,7 @@ export const LogistikPage: React.FC = () => {
           </div>
           <div className="min-w-0">
             <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
-              BIAYA BAHAN & OPERASIONAL
+              Biaya Bahan & Operasional
             </p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {formatRupiah(totalBahanOp)}
@@ -512,13 +512,13 @@ export const LogistikPage: React.FC = () => {
           <table className="w-full text-left border-collapse text-xs min-w-[720px]">
             <thead>
               <tr className="bg-[#F7F7F5] text-[#6B7280] font-bold uppercase text-[11px] tracking-wider border-b border-[#c4c8bb]/20">
-                <th className="py-2 px-3 pl-4">KODE TRANSAKSI</th>
-                <th className="py-2 px-3">TANGGAL</th>
-                <th className="py-2 px-3">KATEGORI PENGELUARAN</th>
-                <th className="py-2 px-3">KETERANGAN / VENDOR</th>
-                <th className="py-2 px-3">TOTAL BIAYA (RP)</th>
-                <th className="py-2 px-3">STATUS PEMBAYARAN</th>
-                <th className="py-2 px-3 pr-4 text-center">DETAIL NOTA</th>
+                <th className="py-2 px-3 pl-4">Kode Transaksi</th>
+                <th className="py-2 px-3">Tanggal</th>
+                <th className="py-2 px-3">Kategori Pengeluaran</th>
+                <th className="py-2 px-3">Deskripsi</th>
+                <th className="py-2 px-3">Total Biaya (Rp)</th>
+                <th className="py-2 px-3">Status Pembayaran</th>
+                <th className="py-2 px-3 pr-4 text-center">Detail Nota</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 text-[#221A12] font-medium">
@@ -694,7 +694,7 @@ export const LogistikPage: React.FC = () => {
                   <p className="font-semibold text-[#221A12]">{activeReceipt.kodeTransaksi}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider">Vendor / Penerima</p>
+                  <p className="text-[10px] font-bold text-[#74796d] uppercase tracking-wider">Deskripsi</p>
                   <p className="font-semibold text-[#221A12]">{activeReceipt.keteranganVendor}</p>
                 </div>
                 <div>
@@ -752,7 +752,7 @@ export const LogistikPage: React.FC = () => {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={3} className="py-3 text-right font-black text-base text-[#2C4219]">TOTAL BAYAR</td>
+                    <td colSpan={3} className="py-3 text-right font-black text-base text-[#2C4219]">Total Bayar</td>
                     <td className="py-3 text-right font-black text-base text-[#2C4219]">
                       Rp {activeReceipt.totalBiayaRp.toLocaleString('id-ID')}
                     </td>
@@ -782,7 +782,7 @@ export const LogistikPage: React.FC = () => {
                 onClick={() => window.print()}
                 className="flex items-center gap-2 text-xs font-bold text-[#2C4219] hover:underline cursor-pointer"
               >
-                <Printer className="w-4 h-4" /> CETAK STRUK NOTA
+                <Printer className="w-4 h-4" /> Cetak Struk Nota
               </button>
 
               <Button variant="primary" onClick={() => setReceiptModalOpen(false)}>
@@ -889,13 +889,13 @@ export const LogistikPage: React.FC = () => {
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
-                  Vendor / Keterangan <span className="text-red-500">*</span>
+                  Deskripsi <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.keteranganVendor}
                   onChange={(e) => setFormData({ ...formData, keteranganVendor: e.target.value })}
-                  placeholder="Contoh: Pembelian pupuk NPK dari Toko Tani Makmur"
+                  placeholder="Contoh: Beli pupuk NPK 2 karung"
                   className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
                   required
                 />

@@ -234,7 +234,7 @@ export const openApiSpec = {
           kodeTransaksi: { type: 'string', example: 'INV-0001' },
           tanggal: { type: 'string', example: '14 Mei 2026' },
           kategori: { type: 'string', enum: ['Bahan Baku', 'Transportasi', 'Operasional', 'Kemasan', 'Perawatan Peralatan', 'Sertifikasi'] },
-          keteranganVendor: { type: 'string', example: 'PT Transport Jaya' },
+          keteranganVendor: { type: 'string', description: 'Deskripsi transaksi', example: 'Beli pupuk NPK 2 karung' },
           totalBiayaRp: { type: 'number', example: 250000 },
           statusPembayaran: { type: 'string', enum: ['LUNAS', 'PENDING', 'DIBATALKAN'] },
           metodePembayaran: { type: 'string', enum: ['Transfer Bank', 'Kas Tunai', 'E-Wallet', 'Giro'] },

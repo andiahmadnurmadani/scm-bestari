@@ -348,7 +348,7 @@ export const ProduksiPage: React.FC = () => {
             <Package className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL JENIS PRODUK OLAHAN</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Total Jenis Produk Olahan</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">{totalProdukOlahan} Jenis Produk</h3>
             <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Tepung, Snack & Gula Nira</p>
           </div>
@@ -359,7 +359,7 @@ export const ProduksiPage: React.FC = () => {
             <Factory className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL BATCH OLAHAN</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Total Batch Olahan</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">{totalProdukOlahan} Batch</h3>
             <p className="text-xs font-semibold text-[#6B7280] mt-0.5 sm:mt-1">Siap Konsumsi & Bahan Mentah</p>
           </div>
@@ -370,7 +370,7 @@ export const ProduksiPage: React.FC = () => {
             <CalendarDays className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL VOLUME OUTPUT</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Total Volume Output</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {totalVolumeHasil.toLocaleString('id-ID')} Unit / Kg
             </h3>
@@ -396,12 +396,12 @@ export const ProduksiPage: React.FC = () => {
           <table className="w-full text-left border-collapse text-xs min-w-[680px]">
             <thead>
               <tr className="bg-[#F7F7F5] text-[#6B7280] font-bold uppercase text-[11px] tracking-wider border-b border-[#c4c8bb]/20">
-                <th className="py-2.5 px-3 pl-4">KODE</th>
-                <th className="py-2.5 px-3">NAMA PRODUK OLAHAN</th>
-                <th className="py-2.5 px-3">JUMLAH HASIL</th>
-                <th className="py-2.5 px-3">BAHAN DIGUNAKAN</th>
-                <th className="py-2.5 px-3">PENANGGUNG JAWAB</th>
-                <th className="py-2.5 px-3 pr-4 text-center">AKSI</th>
+                <th className="py-2.5 px-3 pl-4">Kode</th>
+                <th className="py-2.5 px-3">Nama Produk Olahan</th>
+                <th className="py-2.5 px-3">Jumlah Hasil</th>
+                <th className="py-2.5 px-3">Bahan Digunakan</th>
+                <th className="py-2.5 px-3">Penanggung Jawab</th>
+                <th className="py-2.5 px-3 pr-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 text-[#221A12] font-medium">

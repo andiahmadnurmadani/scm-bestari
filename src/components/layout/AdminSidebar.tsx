@@ -293,7 +293,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               </div>
               <ol className="px-4 py-3 space-y-1.5 text-xs list-decimal pl-8">
                 <li>Klik <b>Catat Pengeluaran Baru</b> untuk menambahkan transaksi.</li>
-                <li>Isi kode transaksi, tanggal, kategori, vendor, total biaya, dan status pembayaran.</li>
+                <li>Isi kode transaksi, tanggal, kategori, deskripsi, total biaya, dan status pembayaran.</li>
                 <li>Filter kategori: Semua / Transportasi / Bahan Baku (tab di atas tabel).</li>
                 <li><b>Export Laporan</b>: pilih CSV, Excel, atau PDF (buka jendela cetak → simpan sebagai PDF).</li>
               </ol>

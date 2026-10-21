@@ -166,7 +166,7 @@ export const MasterVarietasPage: React.FC = () => {
             <Sprout className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL VARIETAS</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Total Varietas</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 truncate">{varieties.length}</h3>
             <p className="text-xs font-semibold text-[#6B7280] mt-0.5">Terdaftar di master data</p>
           </div>
@@ -176,7 +176,7 @@ export const MasterVarietasPage: React.FC = () => {
             <Calendar className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">RATA-RATA ESTIMASI PANEN</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Rata-Rata Estimasi Panen</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 truncate">
               {varieties.length ? Math.round(varieties.reduce((a, v) => a + (v.lamaPanen ?? 100), 0) / varieties.length) : 0} hari
             </h3>
@@ -206,11 +206,11 @@ export const MasterVarietasPage: React.FC = () => {
           <table className="w-full text-left text-xs min-w-[640px] border-collapse">
             <thead>
               <tr className="bg-[#F7F7F5] text-[#6B7280] font-bold uppercase text-[11px] tracking-wider border-y border-[#c4c8bb]/20">
-                <th className="py-2.5 px-3 text-center align-middle w-[72px] whitespace-nowrap">GAMBAR</th>
-                <th className="py-2.5 px-3 align-middle whitespace-nowrap">NAMA VARIETAS</th>
-                <th className="py-2.5 px-3 align-middle min-w-[260px]">DESKRIPSI</th>
-                <th className="py-2.5 px-3 text-center align-middle w-[130px] whitespace-nowrap">ESTIMASI PANEN</th>
-                <th className="py-2.5 px-3 text-center align-middle w-[168px] whitespace-nowrap">AKSI</th>
+                <th className="py-2.5 px-3 text-center align-middle w-[72px] whitespace-nowrap">Gambar</th>
+                <th className="py-2.5 px-3 align-middle whitespace-nowrap">Nama Varietas</th>
+                <th className="py-2.5 px-3 align-middle min-w-[260px]">Deskripsi</th>
+                <th className="py-2.5 px-3 text-center align-middle w-[130px] whitespace-nowrap">Estimasi Panen</th>
+                <th className="py-2.5 px-3 text-center align-middle w-[168px] whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 font-medium text-[#221A12]">

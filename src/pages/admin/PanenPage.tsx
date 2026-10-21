@@ -34,6 +34,7 @@ import { varietyApi, Variety } from '../../api/endpoints/varietyApi';
 import { landApi } from '../../api/endpoints/landApi';
 import { plantingApi } from '../../api/endpoints/plantingApi';
 import { warehouseApi } from '../../api/endpoints/warehouseApi';
+import HarvestPrediction from '../../components/common/HarvestPrediction';
 import { HarvestRecord, LandPlot, Planting, Warehouse } from '../../types';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
@@ -760,7 +761,7 @@ export const PanenPage: React.FC = () => {
             <Layers className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">TOTAL HASIL PANEN</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Total Hasil Panen</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {loading ? 'Memuat...' : `${formatTonase(statsTotalKg)}`}
             </h3>
@@ -776,7 +777,7 @@ export const PanenPage: React.FC = () => {
             <Calendar className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">PANEN BULAN INI</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Panen Bulan Ini</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {loading ? 'Memuat...' : formatTonase(currentMonthStats.kg)}
             </h3>
@@ -792,7 +793,7 @@ export const PanenPage: React.FC = () => {
             <CalendarDays className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">STATUS JADWAL PANEN</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Status Jadwal Panen</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {loading ? 'Memuat...' : nextHarvest ? formatCalDisplay(nextHarvest.tanggalPanen) : 'Belum Ada Jadwal'}
             </h3>
@@ -984,14 +985,14 @@ export const PanenPage: React.FC = () => {
             <table className="w-full text-left text-xs min-w-[720px] border-collapse">
               <thead>
                 <tr className="bg-[#F7F7F5] text-[#6B7280] font-bold uppercase text-[11px] tracking-wider border-y border-[#c4c8bb]/20">
-                  <th className="py-2.5 px-3 whitespace-nowrap align-middle">KODE PANEN</th>
-                  <th className="py-2.5 px-3 whitespace-nowrap align-middle">TANGGAL PANEN</th>
-                  <th className="py-2.5 px-3 whitespace-nowrap align-middle">LOKASI LAHAN</th>
-                  <th className="py-2.5 px-3 whitespace-nowrap align-middle">VARIETAS</th>
-                  <th className="py-2.5 px-3 whitespace-nowrap align-middle text-center">BERAT HASIL</th>
-                  <th className="py-2.5 px-3 whitespace-nowrap align-middle text-center">STATUS GUDANG</th>
-                  <th className="py-2.5 px-3 whitespace-nowrap align-middle text-center w-[92px]">DETAIL</th>
-                  <th className="py-2.5 px-3 whitespace-nowrap align-middle text-center w-[160px]">AKSI</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle">Kode Panen</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle">Tanggal Panen</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle">Lokasi Lahan</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle">Varietas</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle text-center">Berat Hasil</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle text-center">Status Gudang</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle text-center w-[92px]">Detail</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap align-middle text-center w-[160px]">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#c4c8bb]/15 font-medium text-[#221A12]">
@@ -1020,11 +1021,9 @@ export const PanenPage: React.FC = () => {
                         <div className="flex items-center gap-1.5">
                           <span className={`w-2.5 h-2.5 rounded-full ${gc.dot} shrink-0`} title="Penanda kelompok penanaman" />
                           {row.kodePanen}
-                          {(row as any).panenKe && Number((row as any).panenKe) > 1 && (
-                            <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] font-extrabold leading-none ${gc.solid}`}>
-                              Panen {Number((row as any).panenKe)}/3
-                            </span>
-                          )}
+                          <span className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-extrabold leading-none ${gc.solid}`}>
+                            Panen {Number((row as any).panenKe) || 1}/3
+                          </span>
                         </div>
                       </td>
                       <td className="py-2.5 px-3 align-middle text-[#44483e] whitespace-nowrap text-xs">
@@ -1370,6 +1369,7 @@ export const PanenPage: React.FC = () => {
                     </span>
                   </div>
                 )}
+                <HarvestPrediction planting={selectedPlanting} tanggalPanen={formData.tanggalPanen} />
               </div>
 
               <div>
@@ -1384,9 +1384,9 @@ export const PanenPage: React.FC = () => {
                     disabled={!formData.plantingId}
                     className="w-full p-2.5 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold disabled:opacity-60"
                   >
-                    <option value={1}>Panen 1 (awal)</option>
-                    <option value={2}>Panen 2 (ratoon)</option>
-                    <option value={3}>Panen 3 (ratoon terakhir)</option>
+                    <option value={1}>Panen 1/3 (awal)</option>
+                    <option value={2}>Panen 2/3 (ratoon)</option>
+                    <option value={3}>Panen 3/3 (terakhir)</option>
                   </select>
                   <p className={`text-[11px] mt-1.5 leading-relaxed ${formData.plantingId && usedPanenKe.includes(Number(formData.panenKe)) ? 'font-semibold text-red-600' : 'text-[#2C4219]'}`}>
                     {formData.plantingId && usedPanenKe.includes(Number(formData.panenKe))
@@ -1702,19 +1702,15 @@ export const PanenPage: React.FC = () => {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-[10px] font-bold text-[#C3E28D] uppercase tracking-wider">Kode Panen</p>
-                  {(selectedDetail as any).panenKe && Number((selectedDetail as any).panenKe) > 1 && (
-                    <span className="px-2 py-0.5 rounded-full bg-[#C3E28D] text-[#172C05] text-[10px] font-black">
-                      Panen {Number((selectedDetail as any).panenKe)}/3
-                    </span>
-                  )}
+                  <span className="px-2 py-0.5 rounded-full bg-[#C3E28D] text-[#172C05] text-[10px] font-black">
+                    Panen {Number((selectedDetail as any).panenKe) || 1}/3
+                  </span>
                 </div>
                 <p className="text-lg sm:text-2xl font-black text-white leading-tight truncate">{selectedDetail.kodePanen}</p>
                 <p className="text-[11px] sm:text-xs text-white/70 font-medium truncate mt-1">
                   <MapPin className="w-3 h-3 inline -mt-0.5 mr-1" />
                   {selectedDetail.namaLahan} • {selectedDetail.varietas}
-                  {selectedDetail.panenKe && Number(selectedDetail.panenKe) > 1 && (
-                    <span className="ml-2 font-bold text-[#C3E28D]">• Panen ke-{selectedDetail.panenKe}</span>
-                  )}
+                  <span className="ml-2 font-bold text-[#C3E28D]">• Panen {Number(selectedDetail.panenKe) || 1}/3</span>
                 </p>
               </div>
               <div className="text-right shrink-0 bg-white/10 rounded-xl px-4 py-2.5 border border-white/15">

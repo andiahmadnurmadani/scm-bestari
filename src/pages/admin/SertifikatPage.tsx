@@ -292,7 +292,7 @@ export const SertifikatPage: React.FC = () => {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">SERTIFIKAT AKTIF</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Sertifikat Aktif</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {certificates.filter((c) => c.status === 'AKTIF').length} Dokumen Legal
             </h3>
@@ -305,7 +305,7 @@ export const SertifikatPage: React.FC = () => {
             <FileCheck className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">DALAM PROSES AUDIT</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Dalam Proses Audit</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {certificates.filter((c) => c.status === 'PROSES').length} Dokumen Audit
             </h3>
@@ -318,7 +318,7 @@ export const SertifikatPage: React.FC = () => {
             <AlertCircle className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">KADALUARSA / RE-LAB</p>
+            <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Kadaluarsa / Re-Lab</p>
             <h3 className="text-base sm:text-lg font-bold text-[#221A12] mt-0.5 sm:mt-1 truncate">
               {certificates.filter((c) => c.status === 'KADALUARSA').length} Dokumen
             </h3>
@@ -342,13 +342,13 @@ export const SertifikatPage: React.FC = () => {
           <table className="w-full text-left border-collapse text-xs min-w-[760px]">
             <thead>
               <tr className="bg-[#F7F7F5] text-[#6B7280] font-bold uppercase text-[11px] tracking-wider border-b border-[#c4c8bb]/20">
-                <th className="py-2.5 px-3 pl-4">KODE</th>
-                <th className="py-2.5 px-3">NAMA SERTIFIKAT</th>
-                <th className="py-2.5 px-3">PENERBIT / LEMBAGA</th>
-                <th className="py-2.5 px-3">BERKAS / FILE</th>
-                <th className="py-2.5 px-3">BERLAKU HINGGA</th>
-                <th className="py-2.5 px-3">STATUS</th>
-                <th className="py-2.5 px-3 pr-4 text-center">AKSI</th>
+                <th className="py-2.5 px-3 pl-4">Kode</th>
+                <th className="py-2.5 px-3">Nama Sertifikat</th>
+                <th className="py-2.5 px-3">Penerbit / Lembaga</th>
+                <th className="py-2.5 px-3">Berkas / File</th>
+                <th className="py-2.5 px-3">Berlaku Hingga</th>
+                <th className="py-2.5 px-3">Status</th>
+                <th className="py-2.5 px-3 pr-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#c4c8bb]/15 text-[#221A12] font-medium">
@@ -868,9 +868,9 @@ export const SertifikatPage: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                   className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold cursor-pointer"
                 >
-                  <option value="AKTIF">AKTIF</option>
-                  <option value="PROSES">PROSES</option>
-                  <option value="KADALUARSA">KADALUARSA</option>
+                  <option value="AKTIF">Aktif</option>
+                  <option value="PROSES">Proses</option>
+                  <option value="KADALUARSA">Kadaluarsa</option>
                 </select>
               </div>
             </div>

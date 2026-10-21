@@ -32,7 +32,7 @@ function validateExpense(data) {
   const kategoriValues = ['Bahan Baku', 'Transportasi', 'Operasional', 'Kemasan', 'Perawatan Peralatan', 'Sertifikasi'];
   const statusValues = ['LUNAS', 'PENDING', 'DIBATALKAN'];
   const metodeValues = ['Transfer Bank', 'Kas Tunai', 'E-Wallet', 'Giro'];
-  if (!data.keteranganVendor || !String(data.keteranganVendor).trim()) return 'Keterangan vendor wajib diisi.';
+  if (!data.keteranganVendor || !String(data.keteranganVendor).trim()) return 'Deskripsi wajib diisi.';
   if (data.kategori && !kategoriValues.includes(data.kategori)) return 'Kategori tidak valid.';
   if (data.statusPembayaran && !statusValues.includes(data.statusPembayaran)) return 'Status pembayaran tidak valid.';
   if (data.metodePembayaran && !metodeValues.includes(data.metodePembayaran)) return 'Metode pembayaran tidak valid.';
