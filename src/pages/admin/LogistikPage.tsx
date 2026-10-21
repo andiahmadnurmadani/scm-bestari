@@ -309,7 +309,7 @@ export const LogistikPage: React.FC = () => {
       const esc = (v: string | number) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const thead = `<tr>${headers.map((h) => `<th style="background:#2C4219;color:#fff;">${esc(h)}</th>`).join('')}</tr>`;
       const tbody = data.map((r) => `<tr>${headers.map((h) => `<td>${esc(r[h])}</td>`).join('')}</tr>`).join('');
-      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Logistik</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table border="1">${thead}${tbody}</table></body></html>`;
+      const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Keuangan</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table border="1">${thead}${tbody}</table></body></html>`;
       const blob = new Blob(['\uFEFF' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -338,7 +338,7 @@ export const LogistikPage: React.FC = () => {
           <td>${esc(r.statusPembayaran)}</td>
         </tr>`).join('');
       win.document.write(`
-        <html><head><title>Laporan Logistik</title>
+        <html><head><title>Laporan Keuangan</title>
         <style>
           body{font-family:Arial,sans-serif;padding:24px;color:#2C4219}
           h1{font-size:18px;margin:0 0 4px}
@@ -349,7 +349,7 @@ export const LogistikPage: React.FC = () => {
           tr:nth-child(even){background:#f6f6f6}
           .tot{font-weight:bold}
         </style></head><body>
-        <h1>Laporan Keuangan Logistik</h1>
+        <h1>Laporan Keuangan</h1>
         <p class="meta">Sorgum SCM ¢ Dicetak ${new Date().toLocaleDateString('id-ID')} ¢ Jumlah: ${data.length} transaksi</p>
         <table><thead><tr><th>Kode</th><th>Tanggal</th><th>Kategori</th><th>Deskripsi</th><th>Biaya (Rp)</th><th>No. Nota</th><th>Status</th></tr></thead>
         <tbody>${rowsHtml}</tbody></table>
@@ -366,7 +366,7 @@ export const LogistikPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold text-[#2C4219] tracking-tight">
-            Catatan Keuangan Logistik
+            Catatan Keuangan
           </h1>
         </div>
 
@@ -654,7 +654,7 @@ export const LogistikPage: React.FC = () => {
       <Modal
         isOpen={receiptModalOpen}
         onClose={() => setReceiptModalOpen(false)}
-        title="Detail Nota & Kwitansi Logistik"
+        title="Detail Nota & Kwitansi"
         subtitle={activeReceipt ? `${activeReceipt.kodeTransaksi} - ${activeReceipt.nomorNotaReceipt}` : ''}
         maxWidth="lg"
       >

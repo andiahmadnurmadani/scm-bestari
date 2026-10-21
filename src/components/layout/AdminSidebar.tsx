@@ -9,7 +9,7 @@ import {
   Award,
   Package,
   Warehouse,
-  Truck,
+  Wallet,
   Database,
   HelpCircle,
   LogOut,
@@ -74,7 +74,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     { label: 'Kelola Olahan', path: '/dashboard/produksi', icon: Factory },
     { label: 'Kelola Sertifikat', path: '/dashboard/sertifikat', icon: Award },
     { label: 'Kelola Data Kemasan', path: '/dashboard/kemasan', icon: Package },
-    { label: 'Logistik', path: '/dashboard/logistik', icon: Truck },
+    { label: 'Keuangan', path: '/dashboard/logistik', icon: Wallet },
     { label: 'Varietas Sorgum', path: '/dashboard/master/varietas', icon: Database },
     { label: 'Produk Olahan', path: '/dashboard/master/produk', icon: Boxes },
   ];
@@ -285,11 +285,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               </ol>
             </div>
 
-            {/* Logistik */}
+            {/* Keuangan */}
             <div className="bg-white rounded-xl border border-[#c4c8bb]/20 overflow-hidden">
               <div className="px-4 py-2.5 bg-[#F7F7F5] border-b border-[#c4c8bb]/15 flex items-center gap-2">
-                <Truck className="w-4 h-4 text-[#2C4219]" />
-                <span className="text-xs font-bold text-[#2C4219]">Logistik & Keuangan</span>
+                <Wallet className="w-4 h-4 text-[#2C4219]" />
+                <span className="text-xs font-bold text-[#2C4219]">Keuangan</span>
               </div>
               <ol className="px-4 py-3 space-y-1.5 text-xs list-decimal pl-8">
                 <li>Klik <b>Catat Pengeluaran Baru</b> untuk menambahkan transaksi.</li>

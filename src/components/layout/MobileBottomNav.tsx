@@ -9,7 +9,7 @@ import {
   Wrench,
   Award,
   Package,
-  Truck,
+  Wallet,
   Database,
   LayoutGrid,
   X,
@@ -38,7 +38,7 @@ const secondaryNav = [
   { label: 'Peralatan', sub: 'Sarana & Alat', path: '/dashboard/peralatan', icon: Wrench, desc: 'Stok & kondisi alat' },
   { label: 'Sertifikat', sub: 'Legalitas', path: '/dashboard/sertifikat', icon: Award, desc: 'Halal, P-IRT, Lab' },
   { label: 'Kemasan', sub: 'Stok Kemasan', path: '/dashboard/kemasan', icon: Package, desc: 'Pouch, Box, Botol' },
-  { label: 'Logistik', sub: 'Keuangan', path: '/dashboard/logistik', icon: Truck, desc: 'Nota & pengeluaran' },
+  { label: 'Keuangan', sub: 'Pengeluaran', path: '/dashboard/logistik', icon: Wallet, desc: 'Nota & pengeluaran' },
   { label: 'Varietas', sub: 'Master Data', path: '/dashboard/master/varietas', icon: Database, desc: 'Benih sorgum' },
 ] as const;
 
@@ -431,7 +431,7 @@ export const MobileBottomNav: React.FC = () => {
               { t: 'Catat Panen', d: 'Buka Panen → Input Data Panen → isi lahan, varietas, tonase → Simpan.' },
               { t: 'Tambah Lahan', d: 'Buka Lahan → Tambah Lahan Baru → tandai lokasi di peta → Simpan.' },
               { t: 'Kelola Olahan', d: 'Buka Olahan → Tambah Batch → isi produk, kategori, QC → Simpan.' },
-              { t: 'Cek Logistik', d: 'Buka Logistik (di Lainnya) → Catat Pengeluaran → Export PDF/Excel.' },
+              { t: 'Cek Keuangan', d: 'Buka Keuangan (di Lainnya) → Catat Pengeluaran → Export PDF/Excel.' },
             ].map((x) => (
               <div key={x.t} className="p-3 bg-white rounded-xl border border-[#c4c8bb]/15">
                 <p className="font-bold text-[#172C05]">{x.t}</p>

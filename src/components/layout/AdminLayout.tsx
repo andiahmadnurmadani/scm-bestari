@@ -60,7 +60,7 @@ export const AdminLayout: React.FC = () => {
       sertifikat: 'Kelola Sertifikat',
       kemasan: 'Kelola Data Kemasan',
       gudang: 'Gudang',
-      logistik: 'Logistik',
+      logistik: 'Keuangan',
       profil: 'Profil Saya',
       integrasi: 'Pengaturan & Integrasi API',
       cms: 'Manajemen Konten Website',
