@@ -1,5 +1,11 @@
 import { getPool } from '../config/db.js';
-import { slugNama, tanggalKode, kodeUnik, buatCekAda } from '../utils/kodeUtil.js';
+import { slugNama, tanggalKode, kodeUnik, buatCekAda, toISODate } from '../utils/kodeUtil.js';
+
+/** Normalisasi tanggal yang dikirim (DD/MM/YYYY, '14 Mei 2026', dll) → YYYY-MM-DD. */
+function normalTanggal(data) {
+  if (data.tanggalTanam) data.tanggalTanam = toISODate(data.tanggalTanam) || data.tanggalTanam;
+  if (data.estimasiPanen) data.estimasiPanen = toISODate(data.estimasiPanen) || data.estimasiPanen;
+}
 
 function mapRowToPlanting(row) {
   const fmt = (v) => {
@@ -109,6 +115,7 @@ export async function getPlantingById(req, res) {
 export async function createPlanting(req, res) {
   try {
     const data = req.body || {};
+    normalTanggal(data);
     const validationError = validatePlanting(data);
     if (validationError) return res.status(400).json({ success: false, message: validationError });
 
@@ -155,22 +162,41 @@ export async function createPlanting(req, res) {
 export async function updatePlanting(req, res) {
   try {
     const { id } = req.params; const data = req.body || {};
+    normalTanggal(data);
     const pool = getPool();
-    const [existing] = await pool.execute('SELECT id FROM plantings WHERE id=? LIMIT 1', [id]);
+    const [existing] = await pool.execute("SELECT id, DATE_FORMAT(tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(estimasi_panen, '%Y-%m-%d') AS estimasi_panen FROM plantings WHERE id=? LIMIT 1", [id]);
     if (!existing.length) return res.status(404).json({ success: false, message: 'Data penanaman tidak ditemukan.' });
     if (data.lahanId) {
       const [lr] = await pool.execute('SELECT id FROM lands WHERE id=? LIMIT 1', [data.lahanId]);
       if (!lr.length) return res.status(400).json({ success: false, message: 'Lahan tidak ditemukan.' });
     }
-    const validationError = validatePlanting({ lahanId: data.lahanId || 1, tanggalTanam: data.tanggalTanam || '2000-01-01', varietas: data.varietas || 'x', petugas: data.petugas || 'x', jumlahLubang: data.jumlahLubang, statusTanam: data.statusTanam, estimasiPanen: data.estimasiPanen });
-    // allow partial update: hanya cek yang dikirim
-    if (data.petugas !== undefined && !String(data.petugas).trim()) return res.status(400).json({ success: false, message: 'Petugas penanaman wajib diisi.' });
+    // Partial update: validasi memakai nilai baru bila dikirim, selain itu nilai lama
+    const validationError = validatePlanting({
+      lahanId: data.lahanId || 1,
+      tanggalTanam: data.tanggalTanam || existing[0].tanggal_tanam || '2000-01-01',
+      varietas: data.varietas || 'x',
+      jumlahLubang: data.jumlahLubang,
+      statusTanam: data.statusTanam,
+      estimasiPanen: data.estimasiPanen !== undefined ? data.estimasiPanen : existing[0].estimasi_panen,
+    });
+    if (validationError) return res.status(400).json({ success: false, message: validationError });
+    // Tanggal tanam baru tidak boleh setelah panen yang sudah tercatat
+    if (data.tanggalTanam) {
+      const [hp] = await pool.execute("SELECT DATE_FORMAT(MIN(tanggal_panen), '%Y-%m-%d') AS t FROM harvests WHERE planting_id=?", [id]);
+      if (hp[0]?.t && data.tanggalTanam > hp[0].t) {
+        return res.status(400).json({ success: false, message: `Tanggal tanam tidak boleh setelah tanggal panen yang sudah tercatat (${hp[0].t}).` });
+      }
+    }
     if (data.statusTanam && !['Ditanam','Tumbuh','Siap Panen','Gagal','Dipanen'].includes(data.statusTanam)) return res.status(400).json({ success: false, message: 'Status tanam tidak valid.' });
 
     const fieldMap = { kodeTanam:'kode_tanam', lahanId:'lahan_id', tanggalTanam:'tanggal_tanam', estimasiPanen:'estimasi_panen', varietas:'varietas', jumlahLubang:'jumlah_lubang', luasTanam:'luas_tanam', petugas:'petugas', statusTanam:'status_tanam', catatan:'catatan', fotoUrl:'foto_url' };
     const sets=[]; const values=[];
     for (const [k,col] of Object.entries(fieldMap)) if (data[k] !== undefined) { sets.push(`${col}=?`); values.push(data[k]===''?null:data[k]); }
     if (sets.length) await pool.execute(`UPDATE plantings SET ${sets.join(', ')} WHERE id=?`, [...values, id]);
+    // Tanggal tanam berubah → umur tanam (periode_hari) di data panen dihitung ulang
+    if (data.tanggalTanam && data.tanggalTanam !== existing[0].tanggal_tanam) {
+      await pool.execute('UPDATE harvests SET periode_hari = DATEDIFF(tanggal_panen, ?) WHERE planting_id = ?', [data.tanggalTanam, id]);
+    }
     const [updatedRow] = await pool.execute(`SELECT p.id, p.kode_tanam, p.lahan_id, l.kode_lahan, l.nama_lahan, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas, p.jumlah_lubang, p.luas_tanam, p.petugas, p.status_tanam, p.catatan, p.foto_url, p.created_at,
       (SELECT COUNT(*) FROM harvests h WHERE h.planting_id = p.id) AS jumlah_panen,
       (SELECT MAX(h.panen_ke) FROM harvests h WHERE h.planting_id = p.id) AS panen_ke_terakhir

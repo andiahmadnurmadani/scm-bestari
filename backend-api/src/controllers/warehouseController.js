@@ -1,4 +1,5 @@
 import { getPool } from '../config/db.js';
+import { withTransaction, StokError } from '../utils/stokUtil.js';
 import { slugNama, tanggalKode, kodeUnik, buatCekAda, toISODate } from '../utils/kodeUtil.js';
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -458,7 +459,7 @@ export async function stockIn(req, res) {
     // Ambil data panen (validasi & tentukan gudang lahan otomatis)
     const [hr] = await pool.execute(
       `SELECT h.id, h.kode_panen, h.lahan_id, h.jumlah_hasil_kg,
-              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
+              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id AND sb.jenis = 'GABAH'), 0) AS sudah_masuk_kg
        FROM harvests h WHERE h.id = ? LIMIT 1`,
       [hid]
     );
@@ -473,10 +474,17 @@ export async function stockIn(req, res) {
     }
 
     // Gudang = gudang lahan dari panen (auto)
-    const [wg] = await pool.execute('SELECT id FROM warehouses WHERE lahan_id = ? LIMIT 1', [hr[0].lahan_id]);
+    const [wg] = await pool.execute('SELECT id FROM warehouses WHERE lahan_id = ? ORDER BY id ASC LIMIT 1', [hr[0].lahan_id]);
     if (wg.length === 0) return res.status(400).json({ success: false, message: 'Lahan panen belum punya gudang.' });
     const gudangId = wg[0].id;
 
+    const hasilTrx = await withTransaction(pool, async (conn) => {
+    // Cek ulang sisa panen di dalam transaksi (kunci baris panen → cegah input ganda bersamaan)
+    await conn.execute('SELECT id FROM harvests WHERE id = ? FOR UPDATE', [hid]);
+    const [cek] = await conn.execute('SELECT COALESCE(SUM(jumlah_masuk_kg), 0) AS n FROM warehouse_stock_batches WHERE harvest_id = ? AND jenis = ?', [hid, 'GABAH']);
+    if (qty - (Number(hr[0].jumlah_hasil_kg || 0) - Number(cek[0].n || 0)) > 0.001) {
+      throw new StokError(`Melebihi sisa panen ${hr[0].kode_panen} yang belum masuk gudang.`);
+    }
     // Buat batch stok GABAH — hasil panen masuk sebagai gabah.
     // Kode: GAB-<kode panen> (contoh GAB-GRT-10092026-01); bila panen yg sama masuk
     // lebih dari 1x (pecahan), tambah -02, -03 dst.
@@ -484,7 +492,7 @@ export async function stockIn(req, res) {
       (seq) => (seq === 1
         ? `GAB-${hr[0].kode_panen}`
         : `GAB-${hr[0].kode_panen}-${String(seq).padStart(2, '0')}`),
-      buatCekAda(pool, 'warehouse_stock_batches', 'kode_batch_stok')
+      buatCekAda(conn, 'warehouse_stock_batches', 'kode_batch_stok')
     );
 
     const d = new Date();
@@ -493,31 +501,37 @@ export async function stockIn(req, res) {
       ? toISODate(tanggalMasuk) + ` ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
       : `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 
-    await pool.execute(
+    const [insBatch] = await conn.execute(
       `INSERT INTO warehouse_stock_batches (gudang_id, harvest_id, kode_batch_stok, jumlah_masuk_kg, sisa_kg, tanggal_masuk, jenis)
        VALUES (?, ?, ?, ?, ?, ?, 'GABAH')`,
       [gudangId, hid, kodeBatchStok, qty, qty, tanggal]
     );
 
     // Update total stok gudang
-    await pool.execute(
+    await conn.execute(
       `UPDATE warehouses SET total_stok_kg = total_stok_kg + ? WHERE id = ?`,
       [qty, gudangId]
     );
 
     // Catat riwayat
-    await pool.execute(
-      `INSERT INTO warehouse_movements (gudang_id, tipe, jumlah_kg, keterangan, harvest_id)
-       VALUES (?, 'MASUK', ?, ?, ?)`,
-      [gudangId, qty, keterangan || `Hasil panen ${hr[0].kode_panen}`, hid]
+    await conn.execute(
+      `INSERT INTO warehouse_movements (gudang_id, tipe, jumlah_kg, keterangan, harvest_id, stock_batch_id)
+       VALUES (?, 'MASUK', ?, ?, ?, ?)`,
+      [gudangId, qty, keterangan || `Hasil panen ${hr[0].kode_panen}`, hid, insBatch.insertId]
     );
+
+    return kodeBatchStok;
+    });
 
     return res.status(201).json({
       success: true,
       message: 'Stok berhasil masuk ke gudang.',
-      data: { gudangId: String(gudangId), harvestId: String(hid), kodeBatchStok, jumlahKg: qty },
+      data: { gudangId: String(gudangId), harvestId: String(hid), kodeBatchStok: hasilTrx, jumlahKg: qty },
     });
   } catch (error) {
+    if (error instanceof StokError) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     console.error('[stockIn] Error:', error.message);
     return res.status(500).json({ success: false, message: 'Gagal mencatat stok masuk.' });
   }
@@ -563,13 +577,15 @@ export async function processSosoh(req, res) {
       return res.status(400).json({ success: false, message: `Gabah tidak cukup. Sisa batch ${batch[0].kode_batch_stok} hanya ${sisaGabah} kg.` });
     }
 
+    const hasilTrx = await withTransaction(pool, async (conn) => {
     // Kurangi batch gabah
-    await pool.execute(`UPDATE warehouse_stock_batches SET sisa_kg = sisa_kg - ? WHERE id = ?`, [kgPakai, bid]);
+    const [kurang] = await conn.execute(`UPDATE warehouse_stock_batches SET sisa_kg = sisa_kg - ? WHERE id = ? AND sisa_kg >= ?`, [kgPakai, bid, kgPakai]);
+    if (kurang.affectedRows === 0) throw new StokError(`Gabah tidak cukup. Sisa batch ${batch[0].kode_batch_stok} sudah berubah, muat ulang halaman.`);
 
     // Ambil kode panen asal dari harvest batch gabah (untuk kode SRG bermakna)
     let kodePanenAsal = null;
     if (batch[0].harvest_id) {
-      const [hrow] = await pool.execute('SELECT kode_panen FROM harvests WHERE id=? LIMIT 1', [batch[0].harvest_id]);
+      const [hrow] = await conn.execute('SELECT kode_panen FROM harvests WHERE id=? LIMIT 1', [batch[0].harvest_id]);
       kodePanenAsal = hrow[0]?.kode_panen || null;
     }
 
@@ -579,7 +595,7 @@ export async function processSosoh(req, res) {
       (seq) => (seq === 1
         ? `SRG-${kodePanenAsal || 'SOSOH'}`
         : `SRG-${kodePanenAsal || 'SOSOH'}-${String(seq).padStart(2, '0')}`),
-      buatCekAda(pool, 'warehouse_stock_batches', 'kode_batch_stok')
+      buatCekAda(conn, 'warehouse_stock_batches', 'kode_batch_stok')
     );
 
     const d = new Date();
@@ -587,7 +603,7 @@ export async function processSosoh(req, res) {
     const tanggalSekarang = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 
     // Buat batch sorgum — asal_batch_id menunjuk batch gabah
-    const [ins] = await pool.execute(
+    const [ins] = await conn.execute(
       `INSERT INTO warehouse_stock_batches (gudang_id, harvest_id, kode_batch_stok, jumlah_masuk_kg, sisa_kg, tanggal_masuk, jenis, asal_batch_id, tanggal_sosoh, operator_sosoh)
        VALUES (?, ?, ?, ?, ?, ?, 'SORGUM', ?, ?, ?)`,
       [gid, batch[0].harvest_id, kodeSorgum, kgHasil, kgHasil, tanggalSekarang, bid, tanggalSekarang, operator || null]
@@ -596,34 +612,38 @@ export async function processSosoh(req, res) {
 
     // Update total stok gudang: berkurang kgPakai, bertambah kgHasil
     const delta = kgHasil - kgPakai;
-    await pool.execute(`UPDATE warehouses SET total_stok_kg = total_stok_kg + ? WHERE id = ?`, [delta, gid]);
+    await conn.execute(`UPDATE warehouses SET total_stok_kg = total_stok_kg + ? WHERE id = ?`, [delta, gid]);
 
     // Catat jejak sosoh — kode SOS lanjut dari MAX(id), bukan COUNT(*) (yg bisa duplikat saat baris dihapus)
-    const [sMax] = await pool.execute('SELECT COALESCE(MAX(id), 0) AS mx FROM sosoh_processes');
+    const [sMax] = await conn.execute('SELECT COALESCE(MAX(id), 0) AS mx FROM sosoh_processes');
     const kodeSosoh = await kodeUnik(
       (seq) => `SOS-${String(seq).padStart(3, '0')}`,
-      buatCekAda(pool, 'sosoh_processes', 'kode_sosoh'),
+      buatCekAda(conn, 'sosoh_processes', 'kode_sosoh'),
       Number(sMax[0].mx) + 1
     );
     const rendemen = kgPakai > 0 ? Math.round((kgHasil / kgPakai) * 1000) / 10 : 0;
-    await pool.execute(
+    await conn.execute(
       `INSERT INTO sosoh_processes (kode_sosoh, gudang_id, batch_gabah_id, batch_sorgum_id, kg_gabah_dipakai, kg_sorgum_hasil, rendemen_persen, operator, keterangan)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [kodeSosoh, gid, bid, sorgumBatchId, kgPakai, kgHasil, rendemen, operator || null, keterangan || null]
     );
 
     // Riwayat internal (tidak ditampilkan detail di UI, hanya integritas)
-    await pool.execute(
+    await conn.execute(
       `INSERT INTO warehouse_movements (gudang_id, tipe, jumlah_kg, keterangan, stock_batch_id, harvest_id)
        VALUES (?, 'KELUAR', ?, ?, ?, ?)`,
       [gid, kgPakai, `Gabah ${batch[0].kode_batch_stok} disosoh menjadi ${kodeSorgum}`, bid, batch[0].harvest_id]
     );
-    await pool.execute(
+    await conn.execute(
       `INSERT INTO warehouse_movements (gudang_id, tipe, jumlah_kg, keterangan, stock_batch_id, harvest_id)
        VALUES (?, 'MASUK', ?, ?, ?, ?)`,
       [gid, kgHasil, `Hasil sosoh ${batch[0].kode_batch_stok} → ${kodeSorgum}`, sorgumBatchId, batch[0].harvest_id]
     );
 
+    return { kodeSorgum, sorgumBatchId, kodeSosoh, rendemen };
+    });
+
+    const { kodeSorgum, sorgumBatchId, kodeSosoh, rendemen } = hasilTrx;
     return res.status(201).json({
       success: true,
       message: `Proses sosoh berhasil: ${kgPakai} kg gabah → ${kgHasil} kg sorgum (rendemen ${rendemen}%).`,
@@ -639,6 +659,9 @@ export async function processSosoh(req, res) {
       },
     });
   } catch (error) {
+    if (error instanceof StokError) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     console.error('[processSosoh] Error:', error.message);
     return res.status(500).json({ success: false, message: 'Gagal memproses sosoh.' });
   }
@@ -682,25 +705,29 @@ export async function stockOut(req, res) {
       });
     }
 
+    const hasilTrx = await withTransaction(pool, async (conn) => {
     // Kurangi batch stok terpilih
-    await pool.execute(
-      `UPDATE warehouse_stock_batches SET sisa_kg = sisa_kg - ? WHERE id = ?`,
-      [qty, bid]
+    const [kurang] = await conn.execute(
+      `UPDATE warehouse_stock_batches SET sisa_kg = sisa_kg - ? WHERE id = ? AND sisa_kg >= ?`,
+      [qty, bid, qty]
     );
+    if (kurang.affectedRows === 0) throw new StokError('Sisa batch sudah berubah dan tidak cukup. Muat ulang halaman lalu coba lagi.');
 
     // Update total stok gudang
-    await pool.execute(
+    await conn.execute(
       `UPDATE warehouses SET total_stok_kg = total_stok_kg - ? WHERE id = ?`,
       [qty, gudangId]
     );
 
     const pid = productionId ? Number(productionId) : null;
     const asalBatch = batch[0].kode_panen ? ` (dari panen ${batch[0].kode_panen})` : '';
-    await pool.execute(
+    await conn.execute(
       `INSERT INTO warehouse_movements (gudang_id, tipe, jumlah_kg, keterangan, production_id, harvest_id, stock_batch_id)
        VALUES (?, 'KELUAR', ?, ?, ?, ?, ?)`,
       [gudangId, qty, (keterangan || 'Stok keluar') + asalBatch, pid, batch[0].harvest_id, bid]
     );
+
+    });
 
     return res.status(200).json({
       success: true,
@@ -708,6 +735,9 @@ export async function stockOut(req, res) {
       data: { gudangId: String(gudangId), stockBatchId: String(bid), jumlahKg: qty },
     });
   } catch (error) {
+    if (error instanceof StokError) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     console.error('[stockOut] Error:', error.message);
     return res.status(500).json({ success: false, message: 'Gagal mencatat stok keluar.' });
   }
@@ -754,7 +784,7 @@ export async function getHarvestOptions(req, res) {
     const [rows] = await pool.execute(
       `SELECT h.id, h.kode_panen, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen,
               h.jumlah_hasil_kg, h.lahan_id, l.nama_lahan AS l_nama_lahan,
-              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
+              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id AND sb.jenis = 'GABAH'), 0) AS sudah_masuk_kg
        FROM harvests h
        LEFT JOIN lands l ON h.lahan_id = l.id
        WHERE h.jumlah_hasil_kg > 0

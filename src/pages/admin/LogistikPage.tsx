@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { todayLocalISO } from '../../utils/tanggal';
 import {
   Download,
   Plus,
@@ -53,7 +54,7 @@ export const LogistikPage: React.FC = () => {
 
   const [formData, setFormData] = useState<Partial<FinancialExpense>>({
     kodeTransaksi: '',
-    tanggal: new Date().toISOString().slice(0, 10),
+    tanggal: todayLocalISO(),
     kategori: 'Bahan Baku',
     keteranganVendor: '',
     totalBiayaRp: 0,
@@ -155,7 +156,7 @@ export const LogistikPage: React.FC = () => {
     setEditingExpenseId(null);
     setFormData({
       kodeTransaksi: nextKode,
-      tanggal: new Date().toISOString().slice(0, 10),
+      tanggal: todayLocalISO(),
       kategori: 'Bahan Baku',
       keteranganVendor: '',
       totalBiayaRp: 0,
@@ -294,7 +295,7 @@ export const LogistikPage: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `laporan-logistik-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `laporan-logistik-${todayLocalISO()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } catch { setToast({ msg: 'Gagal mengekspor CSV.', type: 'error' }); }
@@ -314,7 +315,7 @@ export const LogistikPage: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `laporan-logistik-${new Date().toISOString().slice(0, 10)}.xls`;
+      a.download = `laporan-logistik-${todayLocalISO()}.xls`;
       a.click();
       URL.revokeObjectURL(url);
     } catch { setToast({ msg: 'Gagal mengekspor Excel.', type: 'error' }); }

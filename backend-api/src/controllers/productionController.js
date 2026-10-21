@@ -1,5 +1,6 @@
 import { getPool } from '../config/db.js';
-import { slugNama, tanggalKode, kodeUnik, buatCekAda, toISODate } from '../utils/kodeUtil.js';
+import { slugNama, tanggalKode, kodeUnik, buatCekAda, toISODate, todayISO } from '../utils/kodeUtil.js';
+import { withTransaction, kurangiStokBatch, kembalikanStokBatch, StokError } from '../utils/stokUtil.js';
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -214,6 +215,10 @@ export async function createBatch(req, res) {
       }
     }
 
+    // Simpan tanggal selalu dalam format YYYY-MM-DD (default: hari ini)
+    data.tanggalProduksi = toISODate(data.tanggalProduksi) || todayISO();
+    data.tanggalKadaluarsa = toISODate(data.tanggalKadaluarsa) || '';
+
     // Buat kode batch produksi otomatis: PRD-<slug nama lahan>-<tgl produksi DDMMYYYY>-<urutan>
     // (mis. PRD-LUS-15092026-01). Ambil nama lahan dari lahan asal bila tersedia.
     let kodeBatch = String(data.kodeBatch || '').trim();
@@ -244,7 +249,8 @@ export async function createBatch(req, res) {
       }
     }
 
-    const [result] = await pool.execute(
+    const result = await withTransaction(pool, async (conn) => {
+    const [result] = await conn.execute(
       `INSERT INTO production_batches
         (kode_batch, nama_produk, product_id, tanggal_produksi, tanggal_kadaluarsa,
          jumlah_hasil, satuan, bahan_digunakan, satuan_bahan, nomor_batch_bahan_baku, operator_produksi, status_qc, lokasi_gudang, lahan_id, planting_id, harvest_id, gudang_id, stock_batch_id)
@@ -271,25 +277,17 @@ export async function createBatch(req, res) {
       ]
     );
 
-    // Kurangi stok gudang dari batch yang dipilih (sudah divalidasi cukup di atas)
-    try {
-      if (gudangId && stockBatchId && qtyBahan > 0) {
-        await pool.execute(
-          `UPDATE warehouse_stock_batches SET sisa_kg = sisa_kg - ? WHERE id = ?`,
-          [qtyBahan, stockBatchId]
-        );
-        await pool.execute(
-          `UPDATE warehouses SET total_stok_kg = total_stok_kg - ? WHERE id = ?`,
-          [qtyBahan, gudangId]
-        );
-        await pool.execute(
-          `INSERT INTO warehouse_movements (gudang_id, tipe, jumlah_kg, keterangan, production_id, stock_batch_id, harvest_id)
-           VALUES (?, 'KELUAR', ?, ?, ?, ?, ?)`,
-          [gudangId, qtyBahan, `Dipakai batch ${kodeBatch}`, result.insertId, stockBatchId, harvestId]
-        );
-        console.log(`✓ Stok batch ${stockBatchId} keluar ${qtyBahan} kg untuk ${kodeBatch}.`);
-      }
-    } catch (e) { console.warn('⚠ Pengurangan stok batch dilewati:', e.message); }
+    // Kurangi stok gudang dari batch yang dipilih (atomik: gagal → batch olahan batal disimpan)
+    if (gudangId && stockBatchId && qtyBahan > 0) {
+      await kurangiStokBatch(conn, stockBatchId, qtyBahan);
+      await conn.execute(
+        `INSERT INTO warehouse_movements (gudang_id, tipe, jumlah_kg, keterangan, production_id, stock_batch_id, harvest_id)
+         VALUES (?, 'KELUAR', ?, ?, ?, ?, ?)`,
+        [gudangId, qtyBahan, `Dipakai batch ${kodeBatch}`, result.insertId, stockBatchId, harvestId]
+      );
+    }
+    return result;
+    });
 
     const [newRow] = await pool.execute(
       `SELECT b.id, b.kode_batch, b.nama_produk, b.product_id, b.tanggal_produksi, b.tanggal_kadaluarsa,
@@ -315,6 +313,9 @@ export async function createBatch(req, res) {
       data: mapRowToBatch(newRow[0]),
     });
   } catch (error) {
+    if (error instanceof StokError) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     console.error('[createBatch] Error:', error.message);
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ success: false, message: 'Kode batch sudah digunakan.' });
@@ -331,9 +332,32 @@ export async function updateBatch(req, res) {
     const data = req.body || {};
     const pool = getPool();
 
-    const [existing] = await pool.execute('SELECT id FROM production_batches WHERE id = ? LIMIT 1', [id]);
+    const [existing] = await pool.execute(
+      'SELECT id, kode_batch, nama_produk, stock_batch_id, bahan_digunakan, harvest_id FROM production_batches WHERE id = ? LIMIT 1',
+      [id]
+    );
     if (existing.length === 0) {
       return res.status(404).json({ success: false, message: 'Batch produksi tidak ditemukan.' });
+    }
+    const validationError = validateBatch({ ...data, namaProduk: data.namaProduk ?? existing[0].nama_produk });
+    if (validationError) return res.status(400).json({ success: false, message: validationError });
+
+    // Perubahan bahan/stok batch → stok gudang ikut disesuaikan
+    const lamaSb = existing[0].stock_batch_id ? Number(existing[0].stock_batch_id) : null;
+    const lamaQty = Number(existing[0].bahan_digunakan) || 0;
+    const baruSb = data.stockBatchId !== undefined ? (data.stockBatchId ? Number(data.stockBatchId) : null) : lamaSb;
+    const baruQty = data.bahanDigunakan !== undefined ? (Number(data.bahanDigunakan) || 0) : lamaQty;
+    const stokBerubah = lamaSb !== baruSb || Math.abs(lamaQty - baruQty) > 0.0001;
+    let baruBatch = null;
+    if (stokBerubah && baruSb && baruQty > 0) {
+      const [bt] = await pool.execute('SELECT id, gudang_id, jenis, kode_batch_stok, harvest_id FROM warehouse_stock_batches WHERE id = ? LIMIT 1', [baruSb]);
+      if (!bt.length) return res.status(400).json({ success: false, message: 'Stok batch tidak ditemukan.' });
+      if (bt[0].jenis !== 'SORGUM') {
+        return res.status(400).json({ success: false, message: `Batch ${bt[0].kode_batch_stok} masih GABAH. Proses sosoh dulu sebelum dipakai untuk olahan.` });
+      }
+      baruBatch = bt[0];
+      data.gudangId = bt[0].gudang_id;
+      if (data.harvestId === undefined && bt[0].harvest_id) data.harvestId = bt[0].harvest_id;
     }
 
     // jika harvestId diganti, sinkronkan trace
@@ -347,6 +371,9 @@ export async function updateBatch(req, res) {
         data.lahanId = null; data.plantingId = null;
       }
     }
+
+    if (data.tanggalProduksi !== undefined) data.tanggalProduksi = toISODate(data.tanggalProduksi) || todayISO();
+    if (data.tanggalKadaluarsa !== undefined) data.tanggalKadaluarsa = toISODate(data.tanggalKadaluarsa) || '';
 
     const fieldMap = {
       kodeBatch: 'kode_batch',
@@ -377,21 +404,40 @@ export async function updateBatch(req, res) {
         values.push(data[key]);
       }
     }
-    if (sets.length > 0) {
-      await pool.execute(`UPDATE production_batches SET ${sets.join(', ')} WHERE id = ?`, [...values, id]);
-    }
+    await withTransaction(pool, async (conn) => {
+      if (stokBerubah) {
+        // 1) kembalikan bahan lama ke batch asalnya & hapus catatan keluarnya
+        if (lamaSb && lamaQty > 0) await kembalikanStokBatch(conn, lamaSb, lamaQty);
+        await conn.execute("DELETE FROM warehouse_movements WHERE production_id = ? AND tipe = 'KELUAR'", [id]);
+        // 2) kurangi bahan baru (gagal bila stok tidak cukup → semua dibatalkan)
+        if (baruBatch && baruQty > 0) {
+          await kurangiStokBatch(conn, baruSb, baruQty);
+          await conn.execute(
+            `INSERT INTO warehouse_movements (gudang_id, tipe, jumlah_kg, keterangan, production_id, stock_batch_id, harvest_id)
+             VALUES (?, 'KELUAR', ?, ?, ?, ?, ?)`,
+            [baruBatch.gudang_id, baruQty, `Dipakai batch ${data.kodeBatch || existing[0].kode_batch}`, id, baruSb, baruBatch.harvest_id || null]
+          );
+        }
+      }
+      if (sets.length > 0) {
+        await conn.execute(`UPDATE production_batches SET ${sets.join(', ')} WHERE id = ?`, [...values, id]);
+      }
+    });
 
     const [updatedRow] = await pool.execute(
       `SELECT b.id, b.kode_batch, b.nama_produk, b.product_id, b.tanggal_produksi, b.tanggal_kadaluarsa,
               b.jumlah_hasil, b.satuan, b.bahan_digunakan, b.satuan_bahan, b.nomor_batch_bahan_baku, b.operator_produksi, b.status_qc, b.lokasi_gudang, b.lahan_id, b.planting_id, b.harvest_id, b.gudang_id, b.stock_batch_id, b.created_at,
               l.kode_lahan, l.nama_lahan, p.kode_tanam, p.tanggal_tanam, h.kode_panen, h.tanggal_panen, h.periode_hari,
-              w.kode_gudang AS w_kode_gudang, w.nama_gudang AS w_nama_gudang, sb.kode_batch_stok AS sb_kode_batch_stok
+              w.kode_gudang AS w_kode_gudang, w.nama_gudang AS w_nama_gudang,
+              sb.kode_batch_stok AS sb_kode_batch_stok, sb.jenis AS sb_jenis,
+              ab.kode_batch_stok AS sb_asal_kode_batch_stok
        FROM production_batches b
        LEFT JOIN lands l ON b.lahan_id=l.id
        LEFT JOIN plantings p ON b.planting_id=p.id
        LEFT JOIN harvests h ON b.harvest_id=h.id
        LEFT JOIN warehouses w ON b.gudang_id=w.id
        LEFT JOIN warehouse_stock_batches sb ON b.stock_batch_id=sb.id
+       LEFT JOIN warehouse_stock_batches ab ON sb.asal_batch_id=ab.id
        WHERE b.id = ? LIMIT 1`,
       [id]
     );
@@ -402,6 +448,9 @@ export async function updateBatch(req, res) {
       data: mapRowToBatch(updatedRow[0]),
     });
   } catch (error) {
+    if (error instanceof StokError) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     console.error('[updateBatch] Error:', error.message);
     return res.status(500).json({ success: false, message: 'Gagal memperbarui batch produksi.' });
   }
@@ -412,11 +461,19 @@ export async function updateBatch(req, res) {
 export async function deleteBatch(req, res) {
   try {
     const pool = getPool();
-    const [result] = await pool.execute('DELETE FROM production_batches WHERE id = ?', [req.params.id]);
-    if (result.affectedRows === 0) {
+    const [existing] = await pool.execute('SELECT id, stock_batch_id, bahan_digunakan FROM production_batches WHERE id = ? LIMIT 1', [req.params.id]);
+    if (existing.length === 0) {
       return res.status(404).json({ success: false, message: 'Batch produksi tidak ditemukan.' });
     }
-    return res.status(200).json({ success: true, message: 'Batch produksi berhasil dihapus.' });
+    // Hapus olahan → bahan yang dipakai dikembalikan ke stok gudang
+    await withTransaction(pool, async (conn) => {
+      if (existing[0].stock_batch_id && Number(existing[0].bahan_digunakan) > 0) {
+        await kembalikanStokBatch(conn, existing[0].stock_batch_id, Number(existing[0].bahan_digunakan));
+      }
+      await conn.execute("DELETE FROM warehouse_movements WHERE production_id = ? AND tipe = 'KELUAR'", [req.params.id]);
+      await conn.execute('DELETE FROM production_batches WHERE id = ?', [req.params.id]);
+    });
+    return res.status(200).json({ success: true, message: 'Batch produksi berhasil dihapus. Bahan dikembalikan ke stok gudang.' });
   } catch (error) {
     console.error('[deleteBatch] Error:', error.message);
     return res.status(500).json({ success: false, message: 'Gagal menghapus batch produksi.' });

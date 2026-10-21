@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { todayLocalISO } from '../../utils/tanggal';
 import { Plus, Sprout, Pencil, Trash2, Eye, MapPin, Warehouse as WarehouseIcon, Clock } from 'lucide-react';
 import { harvestApi } from '../../api/endpoints/harvestApi';
 import { landApi } from '../../api/endpoints/landApi';
@@ -35,7 +36,7 @@ export const LitePanenPage: React.FC = () => {
     plantingId: '',
     namaLahan: '',
     varietas: '',
-    tanggalPanen: new Date().toISOString().split('T')[0],
+    tanggalPanen: todayLocalISO(),
     tonase: '',
     petaniPenanggungJawab: '',
     catatan: '',
@@ -159,7 +160,7 @@ export const LitePanenPage: React.FC = () => {
 
   const resetForm = () => {
     setEditingId(null);
-    setFormData({ lahanId: '', plantingId: '', namaLahan: '', varietas: '', tanggalPanen: new Date().toISOString().split('T')[0], tonase: '', petaniPenanggungJawab: '', catatan: '', panenKe: 1, persenHama: '', jenisHama: '' });
+    setFormData({ lahanId: '', plantingId: '', namaLahan: '', varietas: '', tanggalPanen: todayLocalISO(), tonase: '', petaniPenanggungJawab: '', catatan: '', panenKe: 1, persenHama: '', jenisHama: '' });
     setUsedPanenKe([]);
     setGudangId('');
     setPlantingsForForm([]);
@@ -471,6 +472,8 @@ export const LitePanenPage: React.FC = () => {
                 type="date"
                 value={formData.tanggalPanen}
                 onChange={(e) => setFormData({ ...formData, tanggalPanen: e.target.value })}
+                min={selectedPlanting?.tanggalTanam?.slice(0, 10) || undefined}
+                max={todayLocalISO()}
                 className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
               />
             </div>

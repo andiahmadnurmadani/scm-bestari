@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { formatTanggalId } from '../../utils/dateUtils';
+import { todayLocalISO } from '../../utils/tanggal';
 import { Wrench, Plus, Eye, Edit3, Trash2, AlertTriangle, Upload, X, MapPin, AlertCircle, PackageX, Hammer, CheckCircle2, Filter, Wrench as WrenchIcon } from 'lucide-react';
 import { equipmentApi } from '../../api/endpoints/equipmentApi';
 import { Equipment } from '../../types';
@@ -78,10 +80,10 @@ export const PeralatanPage: React.FC = () => {
     kondisi: 'Sangat Baik',
     status: 'Tersedia',
     lokasiPenyimpanan: '',
-    tanggalPengadaan: new Date().toLocaleDateString('id-ID'),
+    tanggalPengadaan: todayLocalISO(),
     spesifikasi: '',
     fotoUrl: '',
-    terakhirServis: new Date().toLocaleDateString('id-ID'),
+    terakhirServis: todayLocalISO(),
   });
 
   // Muat SEMUA data sekali (batas 1000) lalu filter & cari di sisi klien,
@@ -180,10 +182,10 @@ export const PeralatanPage: React.FC = () => {
       kondisi: 'Baik',
       status: 'Tersedia',
       lokasiPenyimpanan: '',
-      tanggalPengadaan: new Date().toLocaleDateString('id-ID'),
+      tanggalPengadaan: todayLocalISO(),
       spesifikasi: '',
       fotoUrl: '',
-      terakhirServis: new Date().toLocaleDateString('id-ID'),
+      terakhirServis: todayLocalISO(),
     });
     setImagePreview('');
     setFormModalOpen(true);
@@ -513,8 +515,8 @@ export const PeralatanPage: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-[#c4c8bb]/20 text-xs text-[#74796d]">
-              <span>Tanggal Pengadaan: {activeItem.tanggalPengadaan}</span>
-              <span>Terakhir Servis: {activeItem.terakhirServis}</span>
+              <span>Tanggal Pengadaan: {formatTanggalId(activeItem.tanggalPengadaan)}</span>
+              <span>Terakhir Servis: {formatTanggalId(activeItem.terakhirServis)}</span>
             </div>
           </div>
         )}

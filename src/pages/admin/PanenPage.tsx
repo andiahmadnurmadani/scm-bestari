@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { todayLocalISO } from '../../utils/tanggal';
 import {
   Sprout,
   Plus,
@@ -100,7 +101,7 @@ export const PanenPage: React.FC = () => {
     lahanId: '',
     plantingId: '',
     varietas: '',
-    tanggalPanen: new Date().toISOString().split('T')[0],
+    tanggalPanen: todayLocalISO(),
     tonase: '',
     petaniPenanggungJawab: '',
     catatan: '',
@@ -292,7 +293,7 @@ export const PanenPage: React.FC = () => {
       lahanId: '',
       plantingId: '',
       varietas: '',
-      tanggalPanen: new Date().toISOString().split('T')[0],
+      tanggalPanen: todayLocalISO(),
       tonase: '',
       petaniPenanggungJawab: '',
       catatan: '',
@@ -334,7 +335,7 @@ export const PanenPage: React.FC = () => {
       lahanId: (row as any).lahanId || '',
       plantingId: (row as any).plantingId || '',
       varietas: row.varietas,
-      tanggalPanen: row.tanggalPanen ? row.tanggalPanen.split('T')[0] : new Date().toISOString().split('T')[0],
+      tanggalPanen: row.tanggalPanen ? row.tanggalPanen.split('T')[0] : todayLocalISO(),
       tonase: String(kgKeUnit(row.jumlahHasilKg)),
       petaniPenanggungJawab: row.petaniPenanggungJawab,
       catatan: row.catatan || '',
@@ -369,7 +370,8 @@ export const PanenPage: React.FC = () => {
     // Prefill pecahan batch stok dari detail panen (stockBatches dari backend)
     try {
       const det = await harvestApi.getById(row.id);
-      const batches = det.data?.stockBatches || [];
+      // Hanya batch GABAH asli panen ini (batch SORGUM hasil sosoh bukan stok panen)
+      const batches = (det.data?.stockBatches || []).filter((b: any) => (b.jenis || 'GABAH') === 'GABAH');
       if (batches.length > 0) {
         setStokBatch(batches.map((b: any) => ({ jumlahKg: String(b.jumlahMasukKg), keterangan: '' })));
         // Default gudang = gudang batch pertama
@@ -545,7 +547,7 @@ export const PanenPage: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `data-panen-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `data-panen-${todayLocalISO()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -579,7 +581,7 @@ export const PanenPage: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `data-panen-${new Date().toISOString().slice(0, 10)}.xls`;
+      a.download = `data-panen-${todayLocalISO()}.xls`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -1404,7 +1406,8 @@ export const PanenPage: React.FC = () => {
                   type="date"
                   value={formData.tanggalPanen}
                   onChange={(e) => setFormData({ ...formData, tanggalPanen: e.target.value })}
-                  max={new Date().toISOString().split('T')[0]}
+                  max={todayLocalISO()}
+                  min={selectedPlanting?.tanggalTanam?.slice(0, 10) || undefined}
                   className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#2C4219]/20"
                   required
                 />

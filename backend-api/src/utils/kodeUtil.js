@@ -51,6 +51,17 @@ export function toISODate(v) {
     const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
     if (!isNaN(d.getTime())) return `${iso[1]}-${String(Number(iso[2])).padStart(2, '0')}-${String(Number(iso[3])).padStart(2, '0')}`;
   }
+  // Format Indonesia angka "DD/MM/YYYY" (hasil toLocaleDateString('id-ID')).
+  // Wajib dicek sebelum new Date(): engine JS membacanya sebagai MM/DD
+  // sehingga "05/10/2026" salah jadi 10 Mei dan "19/10/2026" tidak valid.
+  const dmy = String(v).trim().match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
+  if (dmy) {
+    const dd = Number(dmy[1]); const mm = Number(dmy[2]);
+    if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
+      return `${dmy[3]}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+    }
+    return null;
+  }
   // Date objek (dari kolom DATE/DATETIME MySQL)
   const d = v instanceof Date ? v : new Date(v);
   if (isNaN(d.getTime())) {
@@ -73,6 +84,11 @@ export function toISODate(v) {
   return `${y}-${m}-${day}`;
 }
 
+/** Tanggal hari ini (zona waktu server/WIB) -> "YYYY-MM-DD". */
+export function todayISO() {
+  return toISODate(new Date());
+}
+
 /**
  * Konversi tanggal (YYYY-MM-DD / Date / "14 Mei 2026") -> "DDMMYYYY".
  * Jika tidak bisa parse, return kosong ''.
@@ -81,13 +97,13 @@ export function tanggalKode(tgl) {
   if (!tgl) return '';
   let d = null;
   if (tgl instanceof Date) d = tgl;
-  else if (/^\d{4}-\d{2}-\d{2}/.test(String(tgl))) {
-    const [y, m, day] = String(tgl).slice(0, 10).split('-').map(Number);
-    d = new Date(y, (m || 1) - 1, day || 1);
-  } else {
-    // coba Date.parse biasa
-    const parsed = new Date(String(tgl));
-    if (!isNaN(parsed.getTime())) d = parsed;
+  else {
+    // Normalisasi dulu (mendukung YYYY-MM-DD, DD/MM/YYYY, "14 Mei 2026")
+    const iso = toISODate(tgl);
+    if (iso) {
+      const [y, m, day] = iso.split('-').map(Number);
+      d = new Date(y, m - 1, day);
+    }
   }
   if (!d || isNaN(d.getTime())) return '';
   const dd = String(d.getDate()).padStart(2, '0');

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { todayLocalISO } from '../../utils/tanggal';
 import { Link } from 'react-router-dom';
 import { Plus, Factory, Trash2, Boxes, QrCode, Check, ArrowRight } from 'lucide-react';
 import { productionApi } from '../../api/endpoints/productionApi';
@@ -56,7 +57,7 @@ export const LiteProduksiPage: React.FC = () => {
   const [newProductSatuan, setNewProductSatuan] = useState('Pouch');
 
   const [formData, setFormData] = useState({
-    tanggalProduksi: new Date().toISOString().split('T')[0],
+    tanggalProduksi: todayLocalISO(),
     tanggalKadaluarsa: '',
     jumlahHasil: '',
     bahanDigunakan: '',
@@ -95,7 +96,7 @@ export const LiteProduksiPage: React.FC = () => {
     setAddingNewProduct(false);
     setNewProductName('');
     setNewProductSatuan('Pouch');
-    setFormData({ tanggalProduksi: new Date().toISOString().split('T')[0], tanggalKadaluarsa: '', jumlahHasil: '', bahanDigunakan: '', satuan: 'Pouch', operatorProduksi: '', catatan: '', lokasiGudang: '' });
+    setFormData({ tanggalProduksi: todayLocalISO(), tanggalKadaluarsa: '', jumlahHasil: '', bahanDigunakan: '', satuan: 'Pouch', operatorProduksi: '', catatan: '', lokasiGudang: '' });
   };
 
   const handleOpenAdd = () => {

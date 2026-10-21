@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { todayLocalISO } from '../../utils/tanggal';
 import {
   Package, PackageX, AlertTriangle, Filter, Plus, Edit3, Trash2,
   ChevronDown, ChevronUp, ImagePlus, Clock, Beaker, List, X, Upload,
@@ -218,7 +219,7 @@ export const KemasanPage: React.FC = () => {
     e.preventDefault();
     const kode = formData.kodeKemasan ?? '';
     const newRiwayat: RiwayatItem = {
-      tanggal: new Date().toISOString().slice(0, 10),
+      tanggal: todayLocalISO(),
       aksi: editId ? 'Diperbarui' : 'Dibuat',
       keterangan: editId ? `Update data kemasan ${kode}` : `Item baru ${kode} didaftarkan`,
       oleh: 'Ibu KWT',

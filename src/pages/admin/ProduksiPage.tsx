@@ -12,7 +12,8 @@ import { useUnitSettings } from '../../context/UnitSettingsContext';
 import { warehouseApi } from '../../api/endpoints/warehouseApi';
 import { Toast } from '../../components/common/Toast';
 import { Combobox } from '../../components/common/Combobox';
-import { formatTanggalId, formatDateTimeId } from '../../utils/dateUtils';
+import { formatTanggalId, formatDateTimeId, parseTanggal } from '../../utils/dateUtils';
+import { todayLocalISO, toLocalISODate } from '../../utils/tanggal';
 
 export const ProduksiPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();
@@ -60,7 +61,7 @@ export const ProduksiPage: React.FC = () => {
   >({
     kodeBatch: '',
     namaProduk: '',
-    tanggalProduksi: new Date().toLocaleDateString('id-ID'),
+    tanggalProduksi: todayLocalISO(),
     tanggalKadaluarsa: '',
     jumlahHasil: '',
     satuan: 'Pouch',
@@ -150,7 +151,7 @@ export const ProduksiPage: React.FC = () => {
     setFormData({
       kodeBatch: '', // dibuat otomatis backend: PRD-<nama lahan>-<tgl produksi>-<urutan>
       namaProduk: '',
-      tanggalProduksi: new Date().toLocaleDateString('id-ID'),
+      tanggalProduksi: todayLocalISO(),
       tanggalKadaluarsa: '',
       jumlahHasil: '',
       satuan: 'Pouch',
@@ -174,6 +175,7 @@ export const ProduksiPage: React.FC = () => {
     setNewProductSatuan('Pouch');
     setFormData({
       ...item,
+      tanggalProduksi: (() => { const d = parseTanggal(item.tanggalProduksi); return d ? toLocalISODate(d) : todayLocalISO(); })(),
       jumlahHasil: String(item.jumlahHasil ?? ''),
       bahanDigunakan: item.bahanDigunakan != null ? String(item.bahanDigunakan) : '',
       satuanBahan: item.satuanBahan || 'Kg',
@@ -741,7 +743,20 @@ export const ProduksiPage: React.FC = () => {
                   <p className="text-[11px] text-amber-700 mt-1.5">Belum ada stok Sorgum Sosoh. Masukkan hasil panen ke gudang & proses sosoh dulu.</p>
                 )}
               </div>
-              <div className="sm:col-span-2">
+              <div>
+                <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
+                  Tanggal Produksi <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.tanggalProduksi || ''}
+                  max={todayLocalISO()}
+                  onChange={(e) => setFormData({ ...formData, tanggalProduksi: e.target.value })}
+                  className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
+                  required
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Penanggung Jawab Produksi</label>
                 <input
                   type="text"

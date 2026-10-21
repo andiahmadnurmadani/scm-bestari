@@ -589,6 +589,23 @@ export async function initDatabase() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
   console.log('✓ Tabel "production_batches" siap.');
+  // Instalasi baru: migrasi kolom di atas berjalan SEBELUM tabel ini dibuat
+  // (dilewati), jadi pastikan lagi kolom relasi tersedia setelah CREATE TABLE.
+  for (const [col, def] of [
+    ['product_id', 'BIGINT UNSIGNED NULL'],
+    ['lahan_id', 'BIGINT UNSIGNED NULL'],
+    ['planting_id', 'BIGINT UNSIGNED NULL'],
+    ['harvest_id', 'BIGINT UNSIGNED NULL'],
+    ['stock_batch_id', 'BIGINT UNSIGNED NULL'],
+  ]) {
+    try {
+      const [pr] = await pool.query(`SELECT COUNT(*) AS total FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='production_batches' AND COLUMN_NAME=?`, [col]);
+      if (Number(pr[0].total) === 0) {
+        await pool.query(`ALTER TABLE production_batches ADD COLUMN \`${col}\` ${def}`);
+        console.log(`✓ Kolom "production_batches.${col}" ditambahkan.`);
+      }
+    } catch (e) { console.warn(`⚠ Migrasi production_batches.${col} dilewati:`, e.message); }
+  }
 
   // Seed batch produksi awal (DINONAKTIFKAN — user minta data kosong)
   const [pCount] = await pool.query('SELECT COUNT(*) AS total FROM production_batches');

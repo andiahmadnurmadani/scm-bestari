@@ -1,5 +1,6 @@
 import { getPool } from '../config/db.js';
-import { slugNama, tanggalKode, kodeUnik, buatCekAda, toISODate } from '../utils/kodeUtil.js';
+import { slugNama, tanggalKode, kodeUnik, buatCekAda, toISODate, todayISO } from '../utils/kodeUtil.js';
+import { withTransaction, StokError } from '../utils/stokUtil.js';
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -63,13 +64,13 @@ function calcPeriode(tanam, panen) {
 
 /** Format tanggal aman → 'YYYY-MM-DD'. Tangani string ('2026-09-01') DAN Date object (dari MySQL). */
 function fmtTanggalStok(t) {
-  if (!t) return new Date().toISOString().slice(0, 10);
+  if (!t) return todayISO();
   if (typeof t === 'string' && t.trim()) {
     const s = t.trim().slice(0, 10);
     if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s;
   }
   const d = new Date(t);
-  if (isNaN(d.getTime())) return new Date().toISOString().slice(0, 10);
+  if (isNaN(d.getTime())) return todayISO();
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -79,80 +80,132 @@ function fmtTanggalStok(t) {
 // Format DATETIME lokal 'YYYY-MM-DD HH:mm:ss' (jam masuk = waktu sekarang jika kosong)
 function fmtDateTimeStok(t) {
   const d = t ? new Date(t) : new Date();
-  if (isNaN(d.getTime())) return new Date().toISOString().slice(0, 10);
+  if (isNaN(d.getTime())) return todayISO();
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
 /**
- * Sinkronkan stok gudang lahan untuk sebuah panen (Opsi B: 1 panen → banyak batch).
- * - Hapus batch stok lama milik panen ini & kembalikan sisa ke stok gudang.
- * - Buat batch baru sesuai array `stokBatch` [{ jumlahKg, keterangan }].
- * - Jika `stokBatch` kosong/tidak dikirim → otomatis 1 batch penuh.
+ * Sinkronkan stok gudang untuk sebuah panen (Opsi B: 1 panen → banyak batch GABAH).
+ *
+ * Aturan agar data stok tidak rusak:
+ * - `stokBatch` tidak dikirim (undefined) → stok TIDAK diubah sama sekali
+ *   (mis. edit catatan/foto saja).
+ * - Bila stok panen ini sudah terpakai (sudah disosoh / dipakai produksi /
+ *   dikeluarkan), batch lama tidak boleh dihapus. Jika jumlah yang dikirim sama
+ *   dengan yang tercatat → dibiarkan; jika berbeda → StokError 409.
+ * - Bila belum terpakai → batch lama dihapus (total gudang dikurangi sesuai
+ *   gudang asal masing-masing) lalu dibuat ulang sesuai `stokBatch`.
+ * Harus dipanggil dengan koneksi transaksi (`conn`).
  */
-async function replaceHarvestStockBatches(pool, { harvestId, lahanId, kodePanen, tanggalPanen, stokBatch, qtyPanenKg, gudangId }) {
-  if (!lahanId && !gudangId) return;
-  // Default: gudang sesuai lahan. Bila user pilih gudang lain → pakai pilihan itu.
-  let gudangTujuan = gudangId ? Number(gudangId) : null;
-  if (!gudangTujuan && lahanId) {
-    const [wg] = await pool.execute('SELECT id FROM warehouses WHERE lahan_id = ? LIMIT 1', [lahanId]);
-    if (!wg.length) return;
-    gudangTujuan = wg[0].id;
+async function replaceHarvestStockBatches(conn, { harvestId, lahanId, kodePanen, stokBatch, qtyPanenKg, gudangId }) {
+  if (stokBatch === undefined) return;
+  const rows = Array.isArray(stokBatch) ? stokBatch.filter((r) => Number(r.jumlahKg) > 0) : [];
+  const totalBaru = rows.reduce((a, r) => a + Number(r.jumlahKg), 0);
+  if (qtyPanenKg > 0 && totalBaru - qtyPanenKg > 0.001) {
+    throw new StokError(`Total stok masuk gudang (${totalBaru} kg) melebihi hasil panen (${qtyPanenKg} kg).`);
   }
-  if (!gudangTujuan) return;
-  const gudangIdAkhir = gudangTujuan;
 
-  // 1. Hapus batch lama milik panen ini & kembalikan sisa stok
-  const [oldBatches] = await pool.execute(
-    'SELECT id, sisa_kg FROM warehouse_stock_batches WHERE harvest_id = ?',
+  const [oldBatches] = await conn.execute(
+    'SELECT id, gudang_id, jenis, jumlah_masuk_kg, sisa_kg FROM warehouse_stock_batches WHERE harvest_id = ? FOR UPDATE',
     [harvestId]
   );
-  let totalDikembalikan = 0;
+  const [keluar] = await conn.execute(
+    "SELECT COUNT(*) AS n FROM warehouse_movements WHERE harvest_id = ? AND tipe = 'KELUAR'",
+    [harvestId]
+  );
+  const sudahTerpakai =
+    Number(keluar[0].n) > 0 ||
+    oldBatches.some((b) => b.jenis !== 'GABAH' || Math.abs(Number(b.sisa_kg) - Number(b.jumlah_masuk_kg)) > 0.001);
+
+  if (sudahTerpakai) {
+    const totalLama = oldBatches
+      .filter((b) => b.jenis === 'GABAH')
+      .reduce((a, b) => a + Number(b.jumlah_masuk_kg), 0);
+    if (Math.abs(totalLama - totalBaru) < 0.001) return; // tidak ada perubahan stok
+    throw new StokError(
+      'Stok panen ini sudah disosoh atau dipakai untuk olahan, jadi jumlah stok gudangnya tidak bisa diubah dari sini. Data lain (catatan, foto, dll) tetap bisa diubah tanpa mengubah stok.',
+      409
+    );
+  }
+
+  // Gudang tujuan: pilihan user → gudang batch lama → gudang milik lahan
+  let gudangTujuan = gudangId ? Number(gudangId) : null;
+  if (!gudangTujuan && oldBatches.length) gudangTujuan = Number(oldBatches[0].gudang_id);
+  if (!gudangTujuan && lahanId) {
+    const [wg] = await conn.execute('SELECT id FROM warehouses WHERE lahan_id = ? ORDER BY id ASC LIMIT 1', [lahanId]);
+    if (wg.length) gudangTujuan = wg[0].id;
+  }
+
+  // 1. Hapus batch lama (belum terpakai) & kurangi total di gudang asalnya
   for (const b of oldBatches) {
-    totalDikembalikan += Number(b.sisa_kg || 0);
-    await pool.execute('DELETE FROM warehouse_stock_batches WHERE id = ?', [b.id]);
+    await conn.execute('UPDATE warehouses SET total_stok_kg = GREATEST(0, total_stok_kg - ?) WHERE id = ?', [Number(b.sisa_kg || 0), b.gudang_id]);
+    await conn.execute('DELETE FROM warehouse_stock_batches WHERE id = ?', [b.id]);
   }
-  if (totalDikembalikan > 0) {
-    await pool.execute('UPDATE warehouses SET total_stok_kg = total_stok_kg - ? WHERE id = ?', [totalDikembalikan, gudangId]);
-  }
-  await pool.execute('DELETE FROM warehouse_movements WHERE harvest_id = ?', [harvestId]);
+  await conn.execute("DELETE FROM warehouse_movements WHERE harvest_id = ? AND tipe = 'MASUK'", [harvestId]);
 
-  // 2. Buat batch baru HANYA jika stokBatch berisi (kosong/undefined → tidak masuk gudang, bisa diisi nanti via Gudang → Stok Masuk)
-  const rows = Array.isArray(stokBatch)
-    ? stokBatch.filter((r) => Number(r.jumlahKg) > 0)
-    : [];
-  if (rows.length === 0) {
-    console.log(`✓ ${kodePanen}: tidak ada batch stok (belum masuk gudang).`);
-    return;
+  // 2. Buat batch baru (kosong → belum masuk gudang, bisa diisi nanti via Gudang → Stok Masuk)
+  if (rows.length === 0) return;
+  if (!gudangTujuan) {
+    throw new StokError('Gudang tujuan belum ada. Buat gudang untuk lahan ini atau pilih gudang terlebih dahulu.');
   }
-
   for (const r of rows) {
     const qty = Number(r.jumlahKg);
-    if (!qty || qty <= 0) continue;
     // Kode batch gabah bermakna: GAB-<kode panen> (pecahan → -02, -03, dst), konsisten dgn Stok Masuk
     const kodeBatchStok = await kodeUnik(
-      (seq) => (seq === 1
-        ? `GAB-${kodePanen}`
-        : `GAB-${kodePanen}-${String(seq).padStart(2, '0')}`),
-      buatCekAda(pool, 'warehouse_stock_batches', 'kode_batch_stok')
+      (seq) => (seq === 1 ? `GAB-${kodePanen}` : `GAB-${kodePanen}-${String(seq).padStart(2, '0')}`),
+      buatCekAda(conn, 'warehouse_stock_batches', 'kode_batch_stok')
     );
     const tgl = fmtDateTimeStok(null); // jam masuk = waktu input sekarang
-    await pool.execute(
+    const [ins] = await conn.execute(
       `INSERT INTO warehouse_stock_batches (gudang_id, harvest_id, kode_batch_stok, jumlah_masuk_kg, sisa_kg, tanggal_masuk, jenis)
        VALUES (?, ?, ?, ?, ?, ?, 'GABAH')`,
-      [gudangIdAkhir, harvestId, kodeBatchStok, qty, qty, tgl]
+      [gudangTujuan, harvestId, kodeBatchStok, qty, qty, tgl]
     );
-    await pool.execute(
-      'UPDATE warehouses SET total_stok_kg = total_stok_kg + ? WHERE id = ?',
-      [qty, gudangIdAkhir]
-    );
-    await pool.execute(
-      `INSERT INTO warehouse_movements (gudang_id, tipe, jumlah_kg, keterangan, harvest_id)
-       VALUES (?, 'MASUK', ?, ?, ?)`,
-      [gudangIdAkhir, qty, `${r.keterangan ? r.keterangan + ' — ' : ''}${kodePanen}`, harvestId]
+    await conn.execute('UPDATE warehouses SET total_stok_kg = total_stok_kg + ? WHERE id = ?', [qty, gudangTujuan]);
+    await conn.execute(
+      `INSERT INTO warehouse_movements (gudang_id, tipe, jumlah_kg, keterangan, harvest_id, stock_batch_id)
+       VALUES (?, 'MASUK', ?, ?, ?, ?)`,
+      [gudangTujuan, qty, `${r.keterangan ? r.keterangan + ' — ' : ''}${kodePanen}`, harvestId, ins.insertId]
     );
   }
-  console.log(`✓ Stok gudang ${gudangIdAkhir} disinkronkan untuk ${kodePanen} (${rows.length} batch).`);
+}
+
+/**
+ * Status penanaman mengikuti data panen: 'Dipanen' bila panen ke-3 (terakhir)
+ * sudah tercatat; bila panen ke-3 dihapus/diubah → kembali 'Siap Panen'.
+ */
+async function sinkronStatusTanam(conn, plantingId) {
+  if (!plantingId) return;
+  await conn.execute(
+    `UPDATE plantings SET status_tanam = CASE
+        WHEN EXISTS (SELECT 1 FROM harvests WHERE planting_id = ? AND panen_ke = 3) THEN 'Dipanen'
+        WHEN status_tanam = 'Dipanen' THEN 'Siap Panen'
+        ELSE status_tanam END
+     WHERE id = ?`,
+    [plantingId, plantingId]
+  );
+}
+
+/**
+ * Validasi urutan tanggal: panen tidak boleh sebelum tanggal tanam, dan
+ * panen ke-n tidak boleh lebih awal dari panen ke-(n-1) / lebih lambat dari ke-(n+1).
+ */
+async function validasiTanggalPanen(conn, { plantingId, tanggalPanen, panenKe, excludeId }) {
+  if (!plantingId || !tanggalPanen) return null;
+  const [pr] = await conn.execute("SELECT DATE_FORMAT(tanggal_tanam, '%Y-%m-%d') AS t FROM plantings WHERE id = ? LIMIT 1", [plantingId]);
+  if (pr.length && pr[0].t && tanggalPanen < pr[0].t) {
+    return `Tanggal panen tidak boleh sebelum tanggal tanam (${pr[0].t}).`;
+  }
+  const [lain] = await conn.execute(
+    "SELECT panen_ke, DATE_FORMAT(tanggal_panen, '%Y-%m-%d') AS t FROM harvests WHERE planting_id = ? AND id <> ?",
+    [plantingId, excludeId || 0]
+  );
+  for (const h of lain) {
+    if (Number(h.panen_ke) < panenKe && h.t > tanggalPanen) return `Tanggal panen ke-${panenKe} tidak boleh lebih awal dari panen ke-${h.panen_ke} (${h.t}).`;
+    if (Number(h.panen_ke) > panenKe && h.t < tanggalPanen) return `Tanggal panen ke-${panenKe} tidak boleh lebih lambat dari panen ke-${h.panen_ke} (${h.t}).`;
+  }
+  return null;
 }
 
 // ── Controller: Daftar Panen (dengan pagination) ──────────────────────────────
@@ -230,7 +283,7 @@ export async function getHarvests(req, res) {
               h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.persen_hama, h.jenis_hama, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
               p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
-              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
+              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id AND sb.jenis = 'GABAH'), 0) AS sudah_masuk_kg
        FROM harvests h
        LEFT JOIN lands l ON h.lahan_id = l.id
        LEFT JOIN plantings p ON h.planting_id = p.id
@@ -267,7 +320,7 @@ export async function getHarvestById(req, res) {
               h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.persen_hama, h.jenis_hama, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
               p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
-              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
+              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id AND sb.jenis = 'GABAH'), 0) AS sudah_masuk_kg
        FROM harvests h
        LEFT JOIN lands l ON h.lahan_id = l.id
        LEFT JOIN plantings p ON h.planting_id = p.id
@@ -314,6 +367,7 @@ export async function getHarvestById(req, res) {
 export async function createHarvest(req, res) {
   try {
     const data = req.body || {};
+    if (data.tanggalPanen) data.tanggalPanen = toISODate(data.tanggalPanen) || data.tanggalPanen;
     const validationError = validateHarvest(data);
     if (validationError) {
       return res.status(400).json({ success: false, message: validationError });
@@ -380,6 +434,9 @@ export async function createHarvest(req, res) {
         // otomatis gunakan nomor berikutnya, batas maksimal 3
         panenKe = 1;
         while (used.includes(panenKe) && panenKe < 3) panenKe += 1;
+        if (used.includes(panenKe)) {
+          return res.status(409).json({ success: false, message: 'Penanaman ini sudah 3 kali dipanen (maksimal 3 kali).' });
+        }
       } else {
         panenKe = Number(data.panenKe);
         if (used.includes(panenKe)) {
@@ -390,8 +447,11 @@ export async function createHarvest(req, res) {
     if (panenKe < 1 || panenKe > 3) {
       return res.status(400).json({ success: false, message: 'Maksimal 3 kali panen untuk satu kali tanam.' });
     }
+    const errTanggal = await validasiTanggalPanen(pool, { plantingId, tanggalPanen: data.tanggalPanen, panenKe });
+    if (errTanggal) return res.status(400).json({ success: false, message: errTanggal });
 
-    const [result] = await pool.execute(
+    const result = await withTransaction(pool, async (conn) => {
+    const [result] = await conn.execute(
       `INSERT INTO harvests
         (kode_panen, nama_lahan, varietas, tanggal_panen, jumlah_hasil_kg,
          kualitas_grade, petani_penanggung_jawab, status, catatan, foto_url, lahan_id, planting_id, periode_hari, panen_ke,
@@ -417,23 +477,20 @@ export async function createHarvest(req, res) {
       ]
     );
 
-    // update planting: tandai Dipanen hanya jika sudah panen ke-3 (ratoon selesai)
-    if (plantingId) {
-      try { await pool.execute(`UPDATE plantings SET status_tanam='Dipanen' WHERE id=? AND (SELECT COUNT(*) FROM harvests WHERE planting_id=? AND panen_ke<=3) >= 3`, [plantingId, plantingId]); } catch {}
-    }
+    // Status penanaman ikut data panen (Dipanen setelah panen ke-3)
+    await sinkronStatusTanam(conn, plantingId);
 
     // Masukkan stok ke gudang lahan terkait (Opsi B: 1 panen → banyak batch)
-    try {
-      await replaceHarvestStockBatches(pool, {
-        harvestId: result.insertId,
-        lahanId,
-        kodePanen,
-        tanggalPanen: data.tanggalPanen,
-        stokBatch: data.stokBatch,
-        qtyPanenKg: Number(data.jumlahHasilKg),
-        gudangId: data.gudangId || undefined,
-      });
-    } catch (e) { console.warn('⚠ Stok masuk gudang dilewati:', e.message); }
+    await replaceHarvestStockBatches(conn, {
+      harvestId: result.insertId,
+      lahanId,
+      kodePanen,
+      stokBatch: data.stokBatch,
+      qtyPanenKg: Number(data.jumlahHasilKg),
+      gudangId: data.gudangId || null,
+    });
+    return result;
+    });
 
     // Ambil data lengkap SETELAH stok masuk agar sudah_masuk_kg akurat
     const [newRow] = await pool.execute(
@@ -441,7 +498,7 @@ export async function createHarvest(req, res) {
               h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.persen_hama, h.jenis_hama, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
               p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
-              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
+              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id AND sb.jenis = 'GABAH'), 0) AS sudah_masuk_kg
        FROM harvests h LEFT JOIN lands l ON h.lahan_id=l.id LEFT JOIN plantings p ON h.planting_id=p.id WHERE h.id = ? LIMIT 1`,
       [result.insertId]
     );
@@ -452,6 +509,9 @@ export async function createHarvest(req, res) {
       data: mapRowToHarvest(newRow[0]),
     });
   } catch (error) {
+    if (error instanceof StokError) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     console.error('[createHarvest] Error:', error.message);
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ success: false, message: 'Kode panen sudah digunakan.' });
@@ -470,10 +530,11 @@ export async function updateHarvest(req, res) {
     const pool = getPool();
 
     // Pastikan data ada
-    const [existing] = await pool.execute('SELECT id, lahan_id, planting_id FROM harvests WHERE id = ? LIMIT 1', [id]);
+    const [existing] = await pool.execute("SELECT id, lahan_id, planting_id, panen_ke, DATE_FORMAT(tanggal_panen, '%Y-%m-%d') AS tanggal_panen FROM harvests WHERE id = ? LIMIT 1", [id]);
     if (existing.length === 0) {
       return res.status(404).json({ success: false, message: 'Data panen tidak ditemukan.' });
     }
+    if (data.tanggalPanen) data.tanggalPanen = toISODate(data.tanggalPanen) || data.tanggalPanen;
 
     // jika update planting/lahan, hitung ulang periode
     let lahanId = data.lahanId !== undefined ? (data.lahanId ? Number(data.lahanId) : null) : undefined;
@@ -517,49 +578,62 @@ export async function updateHarvest(req, res) {
     }
     if (periodeHari !== undefined) { sets.push(`periode_hari = ?`); values.push(periodeHari); }
 
-    // Validasi panen_ke (ratoon sorgum: 1..3, unik per planting)
-    if (data.panenKe !== undefined && data.panenKe !== null) {
-      const pk = Number(data.panenKe);
-      if (!Number.isInteger(pk) || pk < 1 || pk > 3) {
-        return res.status(400).json({ success: false, message: 'Panen ke hanya boleh 1, 2, atau 3.' });
+    // Validasi panen_ke (1..3, unik per penanaman) — juga saat penanaman diganti
+    const effPlantingId = plantingId !== undefined ? plantingId : existing[0].planting_id;
+    const effPanenKe = data.panenKe !== undefined && data.panenKe !== null ? Number(data.panenKe) : Number(existing[0].panen_ke) || 1;
+    if (!Number.isInteger(effPanenKe) || effPanenKe < 1 || effPanenKe > 3) {
+      return res.status(400).json({ success: false, message: 'Panen ke hanya boleh 1, 2, atau 3.' });
+    }
+    if (effPlantingId) {
+      const [pr] = await pool.execute('SELECT lahan_id FROM plantings WHERE id=? LIMIT 1', [effPlantingId]);
+      if (!pr.length) return res.status(400).json({ success: false, message: 'Data penanaman tidak ditemukan.' });
+      const effLahan = lahanId !== undefined ? lahanId : existing[0].lahan_id;
+      if (effLahan && Number(pr[0].lahan_id) !== Number(effLahan)) {
+        return res.status(400).json({ success: false, message: 'Penanaman tidak sesuai dengan lahan yang dipilih.' });
       }
-      const effPlantingId = plantingId !== undefined ? plantingId : existing[0].planting_id;
-      if (effPlantingId) {
-        const [dup] = await pool.query(
-          `SELECT id FROM harvests WHERE planting_id = ? AND panen_ke = ? AND id <> ? LIMIT 1`,
-          [effPlantingId, pk, id]
-        );
-        if (dup.length) {
-          return res.status(409).json({ success: false, message: `Panen ke-${pk} sudah dipanen pada penanaman ini. Pilih nomor panen lain (maksimal 3).` });
-        }
+      const [dup] = await pool.query(
+        `SELECT id FROM harvests WHERE planting_id = ? AND panen_ke = ? AND id <> ? LIMIT 1`,
+        [effPlantingId, effPanenKe, id]
+      );
+      if (dup.length) {
+        return res.status(409).json({ success: false, message: `Panen ke-${effPanenKe} sudah dipanen pada penanaman ini. Pilih nomor panen lain (maksimal 3).` });
       }
+      const errTanggal = await validasiTanggalPanen(pool, {
+        plantingId: effPlantingId,
+        tanggalPanen: data.tanggalPanen || existing[0].tanggal_panen,
+        panenKe: effPanenKe,
+        excludeId: id,
+      });
+      if (errTanggal) return res.status(400).json({ success: false, message: errTanggal });
     }
 
-    if (sets.length > 0) {
-      await pool.execute(`UPDATE harvests SET ${sets.join(', ')} WHERE id = ?`, [...values, id]);
-    }
-
-    // Sinkronkan stok gudang (Opsi B) — pakai lahanId efektif
-    try {
+    // Simpan perubahan panen + sinkron stok + status tanam dalam satu transaksi
+    await withTransaction(pool, async (conn) => {
+      if (sets.length > 0) {
+        await conn.execute(`UPDATE harvests SET ${sets.join(', ')} WHERE id = ?`, [...values, id]);
+      }
       const effLahanId = lahanId !== undefined ? lahanId : existing[0].lahan_id;
-      const [cur] = await pool.execute('SELECT kode_panen, tanggal_panen, jumlah_hasil_kg FROM harvests WHERE id = ?', [id]);
-      await replaceHarvestStockBatches(pool, {
+      const [cur] = await conn.execute('SELECT kode_panen, jumlah_hasil_kg FROM harvests WHERE id = ?', [id]);
+      await replaceHarvestStockBatches(conn, {
         harvestId: id,
         lahanId: effLahanId,
         kodePanen: cur[0]?.kode_panen || '',
-        tanggalPanen: cur[0]?.tanggal_panen,
         stokBatch: data.stokBatch,
         qtyPanenKg: Number(cur[0]?.jumlah_hasil_kg || 0),
-        gudangId: data.gudangId || undefined,
+        gudangId: data.gudangId || null,
       });
-    } catch (e) { console.warn('⚠ Sinkron stok gudang saat update dilewati:', e.message); }
+      await sinkronStatusTanam(conn, effPlantingId);
+      if (existing[0].planting_id && String(existing[0].planting_id) !== String(effPlantingId)) {
+        await sinkronStatusTanam(conn, existing[0].planting_id);
+      }
+    });
 
     const [updatedRow] = await pool.execute(
       `SELECT h.id, h.kode_panen, h.nama_lahan, h.varietas, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.jumlah_hasil_kg,
               h.kualitas_grade, h.petani_penanggung_jawab, h.status, h.catatan, h.foto_url, h.lahan_id, h.planting_id, h.periode_hari, h.panen_ke, h.persen_hama, h.jenis_hama, h.created_at,
               l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.luas_hektar,
               p.kode_tanam, DATE_FORMAT(p.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam, DATE_FORMAT(p.estimasi_panen, '%Y-%m-%d') AS estimasi_panen, p.varietas AS p_varietas, p.jumlah_lubang, p.petugas,
-              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id), 0) AS sudah_masuk_kg
+              COALESCE((SELECT SUM(sb.jumlah_masuk_kg) FROM warehouse_stock_batches sb WHERE sb.harvest_id = h.id AND sb.jenis = 'GABAH'), 0) AS sudah_masuk_kg
        FROM harvests h LEFT JOIN lands l ON h.lahan_id=l.id LEFT JOIN plantings p ON h.planting_id=p.id WHERE h.id = ? LIMIT 1`,
       [id]
     );
@@ -570,6 +644,9 @@ export async function updateHarvest(req, res) {
       data: mapRowToHarvest(updatedRow[0]),
     });
   } catch (error) {
+    if (error instanceof StokError) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     console.error('[updateHarvest] Error:', error.message);
     return res.status(500).json({ success: false, message: 'Gagal memperbarui data panen.' });
   }
@@ -580,27 +657,36 @@ export async function updateHarvest(req, res) {
 export async function deleteHarvest(req, res) {
   try {
     const pool = getPool();
-    const [existing] = await pool.execute('SELECT id, lahan_id FROM harvests WHERE id = ? LIMIT 1', [req.params.id]);
+    const [existing] = await pool.execute('SELECT id, lahan_id, planting_id FROM harvests WHERE id = ? LIMIT 1', [req.params.id]);
     if (existing.length === 0) {
       return res.status(404).json({ success: false, message: 'Data panen tidak ditemukan.' });
     }
 
-    // Hapus batch stok panen ini & kurangi stok gudang
-    try {
-      await replaceHarvestStockBatches(pool, {
-        harvestId: req.params.id,
-        lahanId: existing[0].lahan_id,
-        kodePanen: 'HAPUS',
-        tanggalPanen: null,
-        stokBatch: [], // kosong → hapus semua batch
-        qtyPanenKg: 0,
-      });
-    } catch (e) { console.warn('⚠ Hapus stok gudang dilewati:', e.message); }
-
-    const [result] = await pool.execute('DELETE FROM harvests WHERE id = ?', [req.params.id]);
+    await withTransaction(pool, async (conn) => {
+      // Hapus batch stok panen ini (hanya bila belum terpakai) & kurangi stok gudang
+      try {
+        await replaceHarvestStockBatches(conn, {
+          harvestId: req.params.id,
+          lahanId: existing[0].lahan_id,
+          kodePanen: 'HAPUS',
+          stokBatch: [], // kosong → hapus semua batch
+          qtyPanenKg: 0,
+        });
+      } catch (e) {
+        if (e instanceof StokError) {
+          throw new StokError('Panen ini tidak bisa dihapus karena stoknya sudah disosoh atau dipakai untuk olahan. Hapus data olahan/sosoh terkait terlebih dahulu.', 409);
+        }
+        throw e;
+      }
+      await conn.execute('DELETE FROM harvests WHERE id = ?', [req.params.id]);
+      await sinkronStatusTanam(conn, existing[0].planting_id);
+    });
 
     return res.status(200).json({ success: true, message: 'Data panen berhasil dihapus.' });
   } catch (error) {
+    if (error instanceof StokError) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     console.error('[deleteHarvest] Error:', error.message);
     return res.status(500).json({ success: false, message: 'Gagal menghapus data panen.' });
   }
