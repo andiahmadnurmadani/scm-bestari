@@ -4,6 +4,7 @@ import { CmsProvider } from './context/CmsContext';
 import { UnitSettingsProvider } from './context/UnitSettingsContext';
 import { AppModeProvider } from './context/AppModeContext';
 import { ApiOfflineBanner } from './components/common/ApiOfflineBanner';
+import { DemoBanner } from './components/common/DemoBanner';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 
 // Public Pages
@@ -103,6 +104,7 @@ export default function App() {
 
               {/* Popup saat backend tidak terhubung */}
               <ApiOfflineBanner />
+              <DemoBanner />
             </BrowserRouter>
           </AppModeProvider>
         </UnitSettingsProvider>
