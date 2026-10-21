@@ -836,6 +836,8 @@ export async function getWarehouseHistory(req, res) {
     const offset = (page - 1) * limit;
 
     // ── Kondisi filter dinamis (dipakai di query data & count) ──
+    // created_at di sini = TANGGAL KEJADIAN (tanggal masuk stok / tanggal produksi),
+    // bukan waktu data diinput — agar filter bulan & urutan sesuai kenyataan.
     const kondisi = [];
     const params = [];
     if (bulan && /^\d{4}-\d{2}$/.test(bulan)) {
@@ -862,7 +864,10 @@ export async function getWarehouseHistory(req, res) {
                 m.tipe,
                 m.jumlah_kg,
                 m.keterangan,
-                DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
+                DATE_FORMAT(CASE
+                  WHEN m.tipe = 'MASUK' AND sb.tanggal_masuk IS NOT NULL THEN sb.tanggal_masuk
+                  WHEN pb.tanggal_produksi REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN TIMESTAMP(pb.tanggal_produksi, TIME(m.created_at))
+                  ELSE m.created_at END, '%Y-%m-%d %H:%i:%s') AS created_at,
                 sb.kode_batch_stok AS kode_batch,
                 NULL AS kode_sosoh,
                 NULL AS kode_batch_gabah,
@@ -873,6 +878,7 @@ export async function getWarehouseHistory(req, res) {
                 NULL AS operator
          FROM warehouse_movements m
          LEFT JOIN warehouse_stock_batches sb ON m.stock_batch_id = sb.id
+         LEFT JOIN production_batches pb ON m.production_id = pb.id
          WHERE m.gudang_id = ?
            AND LOWER(COALESCE(m.keterangan, '')) NOT LIKE '%sosoh%'
          UNION ALL
@@ -904,12 +910,16 @@ export async function getWarehouseHistory(req, res) {
     const [countRows] = await pool.query(
       `SELECT COUNT(*) AS total FROM (
          SELECT CONCAT('M-', m.id) AS id, m.tipe,
-                DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
+                DATE_FORMAT(CASE
+                  WHEN m.tipe = 'MASUK' AND sb.tanggal_masuk IS NOT NULL THEN sb.tanggal_masuk
+                  WHEN pb.tanggal_produksi REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN TIMESTAMP(pb.tanggal_produksi, TIME(m.created_at))
+                  ELSE m.created_at END, '%Y-%m-%d %H:%i:%s') AS created_at,
                 sb.kode_batch_stok AS kode_batch, m.keterangan,
                 NULL AS operator, NULL AS kode_sosoh,
                 NULL AS kode_batch_gabah, NULL AS kode_batch_sorgum
          FROM warehouse_movements m
          LEFT JOIN warehouse_stock_batches sb ON m.stock_batch_id = sb.id
+         LEFT JOIN production_batches pb ON m.production_id = pb.id
          WHERE m.gudang_id = ?
            AND LOWER(COALESCE(m.keterangan, '')) NOT LIKE '%sosoh%'
          UNION ALL
