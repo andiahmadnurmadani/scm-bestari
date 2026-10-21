@@ -365,6 +365,12 @@ export async function deleteWarehouse(req, res) {
 
 export async function getStockBatchesByWarehouse(req, res) {
   try {
+    // Default (untuk form olahan): hanya SORGUM yang masih ada sisa.
+    // ?jenis=GABAH|SORGUM|SEMUA & ?termasukHabis=true → ambil semua batch via API.
+    const jenis = String(req.query.jenis || 'SORGUM').toUpperCase();
+    const termasukHabis = ['1', 'true'].includes(String(req.query.termasukHabis || '').toLowerCase());
+    const filterJenis = jenis === 'SEMUA' ? '' : ` AND s.jenis = ${jenis === 'GABAH' ? "'GABAH'" : "'SORGUM'"}`;
+    const filterSisa = termasukHabis ? '' : ' AND s.sisa_kg > 0';
     const [rows] = await getPool().execute(
       `SELECT s.id, s.gudang_id, s.harvest_id, s.kode_batch_stok, s.jumlah_masuk_kg, s.sisa_kg,
               DATE_FORMAT(s.tanggal_masuk, '%Y-%m-%d %H:%i:%s') AS tanggal_masuk,
@@ -373,7 +379,7 @@ export async function getStockBatchesByWarehouse(req, res) {
        FROM warehouse_stock_batches s
        LEFT JOIN harvests h ON s.harvest_id = h.id
        LEFT JOIN warehouse_stock_batches ab ON s.asal_batch_id = ab.id
-       WHERE s.gudang_id = ? AND s.sisa_kg > 0 AND s.jenis = 'SORGUM'
+       WHERE s.gudang_id = ?${filterSisa}${filterJenis}
        ORDER BY s.tanggal_masuk ASC, s.id ASC`,
       [req.params.id]
     );
@@ -384,7 +390,7 @@ export async function getStockBatchesByWarehouse(req, res) {
         gudangId: String(r.gudang_id),
         harvestId: r.harvest_id != null ? String(r.harvest_id) : null,
         kodeBatchStok: r.kode_batch_stok,
-        jenis: r.jenis || 'SORGUM',
+        jenis: r.jenis || 'GABAH',
         asalBatch: r.asal_batch_id ? { id: String(r.asal_batch_id), kodeBatchStok: r.asal_kode_batch_stok } : null,
         kodePanen: r.kode_panen || null,
         jumlahMasukKg: Number(r.jumlah_masuk_kg || 0),
@@ -428,7 +434,7 @@ export async function getAllStockSorgum(req, res) {
         namaLahan: r.l_nama_lahan || null,
         harvestId: r.harvest_id != null ? String(r.harvest_id) : null,
         kodeBatchStok: r.kode_batch_stok,
-        jenis: r.jenis || 'SORGUM',
+        jenis: r.jenis || 'GABAH',
         asalBatch: r.asal_batch_id ? { id: String(r.asal_batch_id), kodeBatchStok: r.asal_kode_batch_stok } : null,
         kodePanen: r.kode_panen || null,
         varietas: r.h_varietas || null,

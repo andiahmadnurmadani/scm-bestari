@@ -1,3 +1,4 @@
+import { authenticateTokenOrApiKey } from '../middleware/apiKeyMiddleware.js';
 import { Router } from 'express';
 import {
   getCmsContent,
@@ -18,7 +19,7 @@ router.put('/', authenticateToken, saveCmsContent);
 router.delete('/', authenticateToken, resetCmsContent);
 
 // Setting arbitrer (mis. app_units) — hanya admin
-router.get('/settings/:key', authenticateToken, getSettingByKey);
+router.get('/settings/:key', authenticateTokenOrApiKey, getSettingByKey); // baca: JWT atau API key
 router.put('/settings/:key', authenticateToken, saveSettingByKey);
 
 export default router;

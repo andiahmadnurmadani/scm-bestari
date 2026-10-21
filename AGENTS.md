@@ -221,7 +221,7 @@ router.delete('/:id', deleteHarvest);
 7. **Halaman tersembunyi**: `/dashboard/cms` & `/dashboard/integrasi` TIDAK ada di sidebar
    (hanya via URL). `/dashboard/integrasi` sekarang redirect ke `/dashboard/cms`.
    Sidebar hanya 9 menu: Dashboard, Panen, Lahan, Peralatan, Produksi, Sertifikat, Kemasan,
-   Logistik, Varietas.
+   Keuangan (route tetap `/dashboard/logistik`), Varietas.
 8. **Jangan tambah data dummy/mock** yang menyesatkan (contoh: kartu "Aplikasi Terhubung"
    Tokopedia/WA pernah ada & dihapus). Kalau fitur belum ada: tampilkan pesan jujur atau kosongkan.
 9. **CmsContext** menyimpan data di state + localStorage + backend — pastikan sinkron saat
@@ -229,7 +229,9 @@ router.delete('/:id', deleteHarvest);
 10. `Modal` unmount children saat tutup → jangan andalkan state internal modal bertahan.
 11. **Jangan hapus `resetConfirm`/state penting** saat refactor (pernah terjadi — selalu
     verifikasi diff).
-12. File backend adalah **ESM** (`import ... from './x.js'`) — ekstensi `.js` wajib di import.
+12. **Dokumentasi API wajib sinkron**: setiap menambah/mengubah endpoint, query, body, atau field respons,
+    perbarui `backend-api/src/openapi.js` (tampil di `/api/docs`) dan `docs/API.md`.
+13. File backend adalah **ESM** (`import ... from './x.js'`) — ekstensi `.js` wajib di import.
 
 ---
 

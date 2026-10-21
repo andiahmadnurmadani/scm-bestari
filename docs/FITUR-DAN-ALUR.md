@@ -58,7 +58,7 @@ Sidebar 11 menu:
 | 6 | **Kelola Olahan** | `/dashboard/produksi` | Produksi olahan (tepung, dll.) dari batch stok sorgum, status QC |
 | 7 | **Kelola Sertifikat** | `/dashboard/sertifikat` | CRUD dokumen sertifikat (organik, halal, dll.) |
 | 8 | **Kelola Data Kemasan** | `/dashboard/kemasan` | CRUD bahan kemasan + stok menipis/habis |
-| 9 | **Logistik** | `/dashboard/logistik` | Pencatatan transaksi keuangan logistik + ekspor |
+| 9 | **Keuangan** | `/dashboard/logistik` | Catatan pengeluaran (nota, deskripsi, rincian) + ekspor |
 | 10 | **Varietas Sorgum** | `/dashboard/master/varietas` | Master data varietas (nama, lama panen, dll.) |
 | 11 | **Produk Olahan** | `/dashboard/master/produk` | Master produk olahan |
 
@@ -95,7 +95,7 @@ flowchart LR
     E --> F[Produksi Olahan]
     F --> G[Produk + Kemasan]
     G --> H[Lacak Batch oleh Konsumen]
-    C --> I[Logistik / Keuangan]
+    C --> I[Keuangan]
     B --> J[Varietas menentukan estimasi panen]
 ```
 
@@ -148,7 +148,11 @@ flowchart TD
 ```
 
 - Panen hanya bisa dari **lahan yang sedang ditanami** (status aktif).
-- Mendukung **beberapa kali panen** (ke-1/2/3) dari satu penanaman.
+- Satu penanaman maksimal **3 kali panen**, ditampilkan sebagai **Panen 1/3, 2/3, 3/3** (pertama / kedua / terakhir).
+- Form menampilkan **Prediksi Panen**: sisa hari menuju perkiraan panen (tanggal tanam + umur panen varietas) dan umur tanaman.
+- Tanggal panen tidak boleh sebelum tanggal tanam dan harus urut (panen ke-2 tidak lebih awal dari ke-1).
+- Setelah panen ke-3, status penanaman otomatis **Dipanen** (kembali bila panen ke-3 dihapus).
+- Stok panen yang sudah disosoh / dipakai olahan **tidak bisa diubah atau dihapus** dari form panen; data lain (catatan, foto) tetap bisa diubah.
 
 ### 4.4 Alur Detail — Gudang & Stok
 
@@ -230,9 +234,10 @@ Tabel utama backend: `users`, `cms_settings`, `lands`, `plantings`, `harvests`, 
 
 ### Peralatan (Sarana)
 - Catat alat, kondisi (baik/rusak), status pemakaian (tersedia/dipakai/dirawat).
+- Kategori: Pascapanen, Pengolahan Produk, Pengemasan.
 
-### Logistik & Keuangan
-- Catat transaksi (pemasukan/pengeluaran) logistik.
+### Keuangan (dulu "Logistik")
+- Catat transaksi pengeluaran: tanggal, kategori, **Deskripsi**, rincian barang/jasa, nota.
 - Dashboard menghitung **pengeluaran bulan berjalan**.
 - Bisa ekspor data (CSV/Excel/PDF).
 
@@ -243,8 +248,14 @@ Tabel utama backend: `users`, `cms_settings`, `lands`, `plantings`, `harvests`, 
 ### CMS Landing Page
 - Ubah konten landing (hero, tentang, produk, galeri, kontak) lewat `/dashboard/cms` — tersimpan di backend + cache lokal.
 
+### Olahan & Lacak
+- Batch olahan wajib punya **Tanggal Produksi**; bahan diambil dari stok **Sorgum Sosoh** dan mengurangi stok gudang.
+- Ubah jumlah bahan → stok disesuaikan; hapus olahan → bahan kembali ke stok.
+- Tombol **Lacak** menampilkan info singkat + **QR** (bisa diunduh). Konsumen memindai QR untuk melihat asal-usul produk.
+
 ### Profil
 - Ubah data profil, **foto avatar** (base64), ganti password.
+- Tab **Pengaturan** menampilkan API key untuk akses data dari aplikasi lain (lihat [API.md](API.md)).
 
 ---
 
@@ -276,7 +287,9 @@ npm run dev
 - Backend: http://localhost:8000/api/health
 - Login demo: `admin@sorgum.com` / `password`
 - Backend otomatis membuat database & tabel saat pertama start.
-- Produksi: `https://scm.livinglabs.id`
+- Situs utama (data asli & laporan): `https://scm.livinglabs.id`
+- Situs demo (data contoh, label "Mode Demo"): `https://scm1.livinglabs.id` — database terpisah (`sorgum_scm_demo`)
+- Dokumentasi API: `/api/docs` di masing-masing situs
 
 ---
 
