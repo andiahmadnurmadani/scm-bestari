@@ -49,7 +49,7 @@ function validateHarvest(data) {
   if (data.plantingId && isNaN(Number(data.plantingId))) return 'Data penanaman tidak valid.';
   if (data.panenKe != null) {
     const pk = Number(data.panenKe);
-    if (!Number.isInteger(pk) || pk < 1 || pk > 3) return 'Panen ke hanya boleh 1, 2, atau 3 (ratoon sorgum).';
+    if (!Number.isInteger(pk) || pk < 1 || pk > 3) return 'Panen ke hanya boleh 1, 2, atau 3.';
   }
   return null;
 }
@@ -388,7 +388,7 @@ export async function createHarvest(req, res) {
       }
     }
     if (panenKe < 1 || panenKe > 3) {
-      return res.status(400).json({ success: false, message: 'Maksimal 3 kali panen untuk satu kali tanam (ratoon sorgum).' });
+      return res.status(400).json({ success: false, message: 'Maksimal 3 kali panen untuk satu kali tanam.' });
     }
 
     const [result] = await pool.execute(
@@ -521,7 +521,7 @@ export async function updateHarvest(req, res) {
     if (data.panenKe !== undefined && data.panenKe !== null) {
       const pk = Number(data.panenKe);
       if (!Number.isInteger(pk) || pk < 1 || pk > 3) {
-        return res.status(400).json({ success: false, message: 'Panen ke hanya boleh 1, 2, atau 3 (ratoon sorgum).' });
+        return res.status(400).json({ success: false, message: 'Panen ke hanya boleh 1, 2, atau 3.' });
       }
       const effPlantingId = plantingId !== undefined ? plantingId : existing[0].planting_id;
       if (effPlantingId) {

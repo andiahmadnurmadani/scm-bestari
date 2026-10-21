@@ -1384,8 +1384,8 @@ export const PanenPage: React.FC = () => {
                     disabled={!formData.plantingId}
                     className="w-full p-2.5 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold disabled:opacity-60"
                   >
-                    <option value={1}>Panen 1/3 (awal)</option>
-                    <option value={2}>Panen 2/3 (ratoon)</option>
+                    <option value={1}>Panen 1/3 (pertama)</option>
+                    <option value={2}>Panen 2/3 (kedua)</option>
                     <option value={3}>Panen 3/3 (terakhir)</option>
                   </select>
                   <p className={`text-[11px] mt-1.5 leading-relaxed ${formData.plantingId && usedPanenKe.includes(Number(formData.panenKe)) ? 'font-semibold text-red-600' : 'text-[#2C4219]'}`}>

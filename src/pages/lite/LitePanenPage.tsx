@@ -454,8 +454,8 @@ export const LitePanenPage: React.FC = () => {
                 disabled={!formData.plantingId}
                 className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm disabled:opacity-60"
               >
-                <option value={1}>Panen 1/3 (awal)</option>
-                <option value={2}>Panen 2/3 (ratoon)</option>
+                <option value={1}>Panen 1/3 (pertama)</option>
+                <option value={2}>Panen 2/3 (kedua)</option>
                 <option value={3}>Panen 3/3 (terakhir)</option>
               </select>
               {formData.plantingId && usedPanenKe.includes(Number(formData.panenKe)) && (
