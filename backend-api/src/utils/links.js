@@ -10,7 +10,11 @@
 export function baseUrl(req) {
   const env = String(process.env.PUBLIC_APP_URL || '').trim().replace(/\/+$/, '');
   if (env) return env;
-  const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
+  // Lewat Cloudflare Tunnel, Nginx menerima HTTP (X-Forwarded-Proto jadi "http");
+  // skema asli pengunjung ada di header CF-Visitor: {"scheme":"https"}.
+  let proto = '';
+  try { proto = JSON.parse(String(req.headers['cf-visitor'] || '{}')).scheme || ''; } catch { proto = ''; }
+  if (!proto) proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
   const host = req.headers['x-forwarded-host'] || req.get('host');
   return `${proto}://${host}`;
 }

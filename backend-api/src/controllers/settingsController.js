@@ -433,8 +433,9 @@ export async function seedDemoData(_req, res) {
       { produk: 'Beras Sorgum', satuan: 'Pouch', perKg: 2, tanggalOffset: -60 },
       { produk: 'Tepung Sorgum', satuan: 'Pouch', perKg: 2.5, tanggalOffset: -45 },
       { produk: 'Keripik Sorgum', satuan: 'Pouch', perKg: 3, tanggalOffset: -30 },
-      { produk: 'Beras Sorgum', satuan: 'Pouch', perKg: 2, tanggalOffset: -15 },
-      { produk: 'Gula Cair Nira Sorgum', satuan: 'Botol', perKg: 1.5, tanggalOffset: -7 },
+      // Gula cair sebelum Beras ke-2 agar 4 batch pertama mencakup semua produk
+      { produk: 'Gula Cair Nira Sorgum', satuan: 'Botol', perKg: 1.5, tanggalOffset: -15 },
+      { produk: 'Beras Sorgum', satuan: 'Pouch', perKg: 2, tanggalOffset: -7 },
     ];
     for (let i = 0; i < Math.min(produksiDefs.length, sorgumBatches.length); i += 1) {
       const P = produksiDefs[i];
