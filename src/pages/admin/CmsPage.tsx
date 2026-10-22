@@ -604,6 +604,18 @@ export const CmsPage: React.FC = () => {
             </div>
           </SectionCard>
 
+          <SectionCard title="Halaman QR untuk Pembeli" subtitle="Pesan hangat yang tampil saat pembeli memindai QR kemasan / produk" icon={<QrCode className="w-4 h-4" />}>
+            <div className="space-y-4">
+              <Field label="Pesan dari Petani">
+                <textarea rows={4} value={cms.qrPesanPetani} onChange={(e) => update({ qrPesanPetani: e.target.value })} className={textareaCls} placeholder="Contoh: Sorgum ini kami tanam dan olah sendiri dengan penuh kasih…" />
+              </Field>
+              <Field label="Nama Pengirim Pesan">
+                <input value={cms.qrPesanPengirim} onChange={(e) => update({ qrPesanPengirim: e.target.value })} className={inputCls} placeholder="Contoh: Ibu-ibu KWT Sukamaju" />
+              </Field>
+              <p className="text-xs text-[#6B7280]">Bila data lahan mencatat nama kelompok tani, nama kelompok itu yang ditampilkan sebagai pengirim.</p>
+            </div>
+          </SectionCard>
+
           <SectionCard title="Alur Rantai Pasok" subtitle="Diagram langkah di bawah kartu fitur" icon={<GitBranch className="w-4 h-4" />}>
             <Field label="Judul Alur">
               <input value={cms.workflowTitle} onChange={(e) => update({ workflowTitle: e.target.value })} className={inputCls} />

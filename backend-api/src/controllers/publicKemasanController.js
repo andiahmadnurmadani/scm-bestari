@@ -41,12 +41,15 @@ export async function getPublicKemasan(req, res) {
     let batches = [];
     if (r.product_id) {
       const [b] = await pool.execute(
-        `SELECT b.kode_batch, b.tanggal_produksi, b.tanggal_kadaluarsa, b.jumlah_hasil, b.satuan,
-                l.nama_lahan, DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.varietas,
+        `SELECT b.kode_batch, b.tanggal_produksi, b.tanggal_kadaluarsa, b.jumlah_hasil, b.satuan, b.operator_produksi,
+                l.nama_lahan, l.lokasi_desa, l.kecamatan, l.pemilik_kelompok_tani,
+                DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen, h.varietas, h.petani_penanggung_jawab, h.periode_hari,
+                DATE_FORMAT(pl.tanggal_tanam, '%Y-%m-%d') AS tanggal_tanam,
                 sb.kode_batch_stok
          FROM production_batches b
          LEFT JOIN lands l ON l.id = b.lahan_id
          LEFT JOIN harvests h ON h.id = b.harvest_id
+         LEFT JOIN plantings pl ON pl.id = h.planting_id
          LEFT JOIN warehouse_stock_batches sb ON sb.id = b.stock_batch_id
          WHERE b.product_id = ?
          ORDER BY b.tanggal_produksi DESC, b.id DESC
@@ -60,8 +63,15 @@ export async function getPublicKemasan(req, res) {
         jumlahHasil: Number(x.jumlah_hasil || 0),
         satuan: x.satuan,
         namaLahan: x.nama_lahan || null,
+        lokasiDesa: x.lokasi_desa || null,
+        kecamatan: x.kecamatan || null,
+        kelompokTani: x.pemilik_kelompok_tani || null,
         varietas: x.varietas || null,
+        tanggalTanam: x.tanggal_tanam || null,
         tanggalPanen: x.tanggal_panen || null,
+        umurTanamHari: x.periode_hari != null ? Number(x.periode_hari) : null,
+        petani: x.petani_penanggung_jawab || null,
+        pengolah: x.operator_produksi || null,
         kodeBatchStok: x.kode_batch_stok || null,
         ...traceLinks(req, x.kode_batch_stok),
       }));

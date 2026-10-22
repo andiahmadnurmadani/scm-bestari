@@ -110,6 +110,9 @@ export interface CmsData {
   traceTitlePre: string;
   traceTitleHighlight: string;
   traceDesc: string;
+  // Halaman QR (dibuka pembeli) — pesan hangat dari petani
+  qrPesanPetani: string;
+  qrPesanPengirim: string;
 
   // Alur rantai pasok
   workflowTitle: string;
@@ -221,6 +224,8 @@ export const defaultCms: CmsData = {
   traceTitlePre: 'Lacak asal-usulnya —',
   traceTitleHighlight: 'kenali perjalanan produk Anda',
   traceDesc: 'Pindai QR pada kemasan untuk melihat jejak lengkap: lahan asal, tanggal tanam, tanggal panen, hingga batch olahan. Transparan untuk konsumen, membanggakan untuk petani.',
+  qrPesanPetani: 'Sorgum ini kami tanam, rawat, dan panen sendiri di ladang desa kami. Setiap butirnya kami olah dengan tangan kami dan penuh kasih, supaya keluarga Anda menikmati pangan yang sehat. Terima kasih sudah memilih hasil kerja petani perempuan di desa kami.',
+  qrPesanPengirim: 'Ibu-ibu Kelompok Wanita Tani',
   products: [
     {
       name: 'Tepung Sorgum Bioguma',

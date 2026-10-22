@@ -29,7 +29,7 @@ export async function getPublicBatchTrace(req, res) {
               DATE_FORMAT(s.tanggal_masuk, '%Y-%m-%d %H:%i:%s') AS tanggal_masuk,
               s.jenis, s.asal_batch_id, DATE_FORMAT(s.tanggal_sosoh, '%Y-%m-%d %H:%i:%s') AS tanggal_sosoh,
               w.kode_gudang, w.nama_gudang,
-              l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa,
+              l.kode_lahan, l.nama_lahan AS l_nama_lahan, l.lokasi_desa, l.kecamatan AS l_kecamatan, l.pemilik_kelompok_tani,
               h.kode_panen, h.nama_lahan AS h_nama_lahan, h.varietas AS h_varietas,
               DATE_FORMAT(h.tanggal_panen, '%Y-%m-%d') AS tanggal_panen,
               h.jumlah_hasil_kg, h.petani_penanggung_jawab, h.status AS h_status, h.periode_hari,
@@ -65,10 +65,14 @@ export async function getPublicBatchTrace(req, res) {
 
     // 3. Batch olahan yang memakai batch stok ini
     const [productions] = await pool.execute(
-      `SELECT b.id, b.kode_batch, b.nama_produk, b.kategori, b.tanggal_produksi,
+      `SELECT b.id, b.kode_batch, b.nama_produk, b.kategori, b.tanggal_produksi, b.tanggal_kadaluarsa,
               b.jumlah_hasil, b.satuan, b.bahan_digunakan, b.operator_produksi,
-              DATE_FORMAT(b.created_at, '%Y-%m-%d %H:%i:%s') AS created_at
+              DATE_FORMAT(b.created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
+              pr.foto_url AS p_foto, pr.deskripsi AS p_deskripsi,
+              (SELECT k.extra_data FROM packaging_materials k WHERE k.product_id = b.product_id ORDER BY k.id LIMIT 1) AS k_extra,
+              (SELECT k.kapasitas FROM packaging_materials k WHERE k.product_id = b.product_id ORDER BY k.id LIMIT 1) AS k_kapasitas
        FROM production_batches b
+       LEFT JOIN products pr ON pr.id = b.product_id
        WHERE b.stock_batch_id = ?
        ORDER BY b.created_at ASC, b.id ASC`,
       [b.id]
@@ -92,7 +96,7 @@ export async function getPublicBatchTrace(req, res) {
           tanggalMasuk: toDateStr(b.tanggal_masuk),
         },
         gudang: b.gudang_id ? { kodeGudang: b.kode_gudang, namaGudang: b.nama_gudang } : null,
-        lahan: b.kode_lahan ? { kodeLahan: b.kode_lahan, namaLahan: b.l_nama_lahan, lokasiDesa: b.lokasi_desa } : null,
+        lahan: b.kode_lahan ? { kodeLahan: b.kode_lahan, namaLahan: b.l_nama_lahan, lokasiDesa: b.lokasi_desa, kecamatan: b.l_kecamatan || null, kelompokTani: b.pemilik_kelompok_tani || null } : null,
         tanam: b.kode_tanam ? {
           kodeTanam: b.kode_tanam,
           tanggalTanam: toDateStr(b.tanggal_tanam),
@@ -129,6 +133,19 @@ export async function getPublicBatchTrace(req, res) {
           satuan: p.satuan,
           bahanDigunakan: p.bahan_digunakan != null ? Number(p.bahan_digunakan) : null,
           operatorProduksi: p.operator_produksi,
+          tanggalKadaluarsa: toDateStr(p.tanggal_kadaluarsa),
+          fotoUrl: p.p_foto || null,
+          deskripsi: p.p_deskripsi || '',
+          ...(() => {
+            let k = null;
+            try { k = p.k_extra ? JSON.parse(p.k_extra) : null; } catch { k = null; }
+            return {
+              kapasitas: p.k_kapasitas || '',
+              komposisi: k?.komposisi || '',
+              nilaiGizi: k?.nilaiGizi || {},
+              fotos: Array.isArray(k?.imagesDataUrl) ? k.imagesDataUrl : [],
+            };
+          })(),
           createdAt: p.created_at,
         })),
         logistik: [],

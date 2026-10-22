@@ -332,7 +332,7 @@ export const openApiSpec = {
       },
       BatchTrace: {
         type: 'object',
-        description: 'Jejak lengkap satu batch stok: lahan → tanam → panen → gudang/sosoh → olahan',
+        description: 'Jejak lengkap satu batch stok: lahan → tanam → panen → gudang/sosoh → olahan. Versi publik (/public/trace) menyertakan lahan.kelompokTani & kecamatan, serta produksi[].fotoUrl, deskripsi, kapasitas, komposisi, nilaiGizi, fotos (dari kemasan produk).',
         properties: {
           batch: { type: 'object' }, gudang: { type: 'object' }, lahan: { type: 'object', nullable: true },
           tanam: { type: 'object', nullable: true }, panen: { type: 'object', nullable: true },
@@ -501,7 +501,7 @@ export const openApiSpec = {
           produk: { type: 'object', nullable: true, properties: { name: { type: 'string' }, deskripsi: { type: 'string' }, fotoUrl: nullableStr, satuanHasil: { type: 'string' } } },
           batches: {
             type: 'array', description: '10 batch olahan terbaru dari produk ini',
-            items: { type: 'object', properties: { kodeBatch: { type: 'string' }, tanggalProduksi: nullableStr, tanggalKadaluarsa: nullableStr, jumlahHasil: { type: 'number' }, satuan: { type: 'string' }, namaLahan: nullableStr, varietas: nullableStr, tanggalPanen: nullableStr, kodeBatchStok: nullableStr, traceUrl: nullableStr, qrUrl: nullableStr } },
+            items: { type: 'object', properties: { kodeBatch: { type: 'string' }, tanggalProduksi: nullableStr, tanggalKadaluarsa: nullableStr, jumlahHasil: { type: 'number' }, satuan: { type: 'string' }, namaLahan: nullableStr, lokasiDesa: nullableStr, kecamatan: nullableStr, kelompokTani: nullableStr, varietas: nullableStr, tanggalTanam: nullableStr, tanggalPanen: nullableStr, umurTanamHari: { type: 'integer', nullable: true }, petani: { ...nullableStr, description: 'Petani penanggung jawab panen' }, pengolah: { ...nullableStr, description: 'Penanggung jawab produksi' }, kodeBatchStok: nullableStr, traceUrl: nullableStr, qrUrl: nullableStr } },
           },
         },
       },
