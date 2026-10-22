@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Sprout, Wheat, HandHeart, PackageCheck, Quote, MapPin, Heart, Leaf, Search } from 'lucide-react';
 import { useCms } from '../../context/CmsContext';
 import { formatTanggalId } from '../../utils/dateUtils';
+import { isDemoMode } from '../common/DemoBanner';
 
 /**
  * Tampilan halaman yang dibuka pembeli dari QR (kemasan / batch).
@@ -114,7 +115,7 @@ export const QrStory: React.FC<{ data: QrStoryData }> = ({ data }) => {
       <div className="relative">
         <img src={fotos[fotoAktif] || fotos[0]} alt={data.namaProduk} className="w-full aspect-[4/5] object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#172C05]/90 via-[#172C05]/20 to-transparent" />
-        <div className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-sm font-semibold text-[#2C4219]">
+        <div className={`absolute ${isDemoMode ? 'top-9' : 'top-4'} left-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-sm font-semibold text-[#2C4219]`}>
           <Leaf className="w-4 h-4" /> Hasil tangan petani desa
         </div>
         <div className="absolute bottom-0 inset-x-0 p-5 text-white">
