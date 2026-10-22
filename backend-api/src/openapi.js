@@ -385,14 +385,14 @@ export const openApiSpec = {
         type: 'object',
         properties: {
           id: { type: 'string' }, name: { type: 'string', example: 'Tepung Sorgum' },
-          satuanHasil: { type: 'string', enum: ['Pouch', 'Kg', 'Botol', 'Box', 'Toples', 'Kemasan'] },
+          satuanHasil: { type: 'string', enum: ['Pcs', 'Pouch', 'Kg', 'Botol', 'Box', 'Toples', 'Kemasan'] },
           deskripsi: { type: 'string' }, fotoUrl: nullableStr, isActive: { type: 'boolean' }, createdAt: { type: 'string' },
         },
       },
       ProductInput: {
         type: 'object', required: ['name'],
         properties: {
-          name: { type: 'string' }, satuanHasil: { type: 'string', enum: ['Pouch', 'Kg', 'Botol', 'Box', 'Toples', 'Kemasan'] },
+          name: { type: 'string' }, satuanHasil: { type: 'string', enum: ['Pcs', 'Pouch', 'Kg', 'Botol', 'Box', 'Toples', 'Kemasan'] },
           deskripsi: { type: 'string' }, fotoUrl: { type: 'string' }, isActive: { type: 'boolean' },
         },
       },

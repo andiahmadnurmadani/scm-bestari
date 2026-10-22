@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { SATUAN_HASIL_OPTIONS } from '../../utils/satuan';
 import { KemasanPicker } from '../../components/common/KemasanPicker';
 import { todayLocalISO } from '../../utils/tanggal';
 import { Link } from 'react-router-dom';
@@ -117,7 +118,10 @@ export const LiteProduksiPage: React.FC = () => {
       setAddingNewProduct(true);
       setSelectedProductId(null);
       setNewProductName('');
-      setNewProductSatuan('Pouch');
+      setNewProductSatuan('Pcs');
+      setKemasanForm({ packagingId: '', jumlahKemasan: '' });
+      // Satuan hasil mengikuti satuan produk baru
+      setFormData((prev) => ({ ...prev, satuan: 'Pcs' }));
       return;
     }
     const prod = productOptions.find((x) => String(x.id) === productId) || null;
@@ -389,10 +393,13 @@ export const LiteProduksiPage: React.FC = () => {
                       <label className="block text-sm font-bold text-[#2C4219] mb-1">Satuan Hasil *</label>
                       <select
                         value={newProductSatuan}
-                        onChange={(e) => setNewProductSatuan(e.target.value)}
+                        onChange={(e) => {
+                          setNewProductSatuan(e.target.value);
+                          setFormData((prev) => ({ ...prev, satuan: e.target.value }));
+                        }}
                         className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-base"
                       >
-                        {['Pouch', 'Kg', 'Botol', 'Box', 'Toples', 'Kemasan'].map((s) => (
+                        {SATUAN_HASIL_OPTIONS.map((s) => (
                           <option key={s} value={s}>{s}</option>
                         ))}
                       </select>
@@ -498,16 +505,18 @@ export const LiteProduksiPage: React.FC = () => {
                   inputMode="decimal"
                   value={formData.jumlahHasil}
                   onChange={(e) => setFormData({ ...formData, jumlahHasil: e.target.value })}
-                  placeholder="Contoh: 250"
+                  placeholder={`Contoh: 250${formData.satuan ? ` ${formData.satuan}` : ''}`}
                   className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-base"
                 />
-                {selectedProductId && <p className="text-[13px] text-[#6B7280] mt-1">Satuan: <b className="text-[#2C4219]">{formData.satuan}</b></p>}
+                {(selectedProductId || addingNewProduct) && <p className="text-[13px] text-[#6B7280] mt-1">Satuan: <b className="text-[#2C4219]">{formData.satuan}</b></p>}
               </div>
               <KemasanPicker
                 productId={selectedProductId}
                 packagingId={kemasanForm.packagingId}
                 jumlahKemasan={kemasanForm.jumlahKemasan}
                 jumlahHasil={String(formData.jumlahHasil || '')}
+                satuanHasil={formData.satuan || ''}
+                produkBaru={addingNewProduct}
                 terpakaiSebelumnya={kemasanAwal}
                 autoPilih={!editingId}
                 onChange={setKemasanForm}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { SATUAN_HASIL_OPTIONS } from '../../utils/satuan';
 import {
   Plus,
   Trash2,
@@ -18,7 +19,7 @@ import { useAdminSearch } from '../../components/layout/AdminLayout';
 import { compressImage } from '../../utils/imageCompress';
 
 // Opsi satuan hasil — SAMA dengan opsi dropdown Satuan Hasil di form Olahan
-export const SATUAN_HASIL_OPTIONS = ['Pouch', 'Kg', 'Botol', 'Box', 'Toples', 'Kemasan'];
+export { SATUAN_HASIL_OPTIONS };
 
 export const MasterProdukPage: React.FC = () => {
   const { searchTerm } = useAdminSearch();

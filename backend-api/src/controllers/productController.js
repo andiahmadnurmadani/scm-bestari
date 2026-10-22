@@ -15,7 +15,7 @@ function mapRowToProduct(row) {
 }
 
 /** Validasi satuan hasil yang diizinkan (sama dengan opsi dropdown form olahan). */
-const SATUAN_IZIN = ['Pouch', 'Kg', 'Botol', 'Box', 'Toples', 'Kemasan'];
+const SATUAN_IZIN = ['Pcs', 'Pouch', 'Kg', 'Botol', 'Box', 'Toples', 'Kemasan'];
 
 // ── Controller: Daftar Produk (master data) ───────────────────────────────────
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { SATUAN_HASIL_OPTIONS } from '../../utils/satuan';
 import { Plus, Boxes, Trash2, Pencil, Eye, Upload, X } from 'lucide-react';
 import { productApi, Product } from '../../api/endpoints/productApi';
 import { Modal } from '../../components/common/Modal';
@@ -6,7 +7,6 @@ import { Toast } from '../../components/common/Toast';
 import { Button } from '../../components/common/Button';
 
 // Opsi satuan hasil — SAMA dengan opsi dropdown Satuan Hasil di form Olahan (Pro)
-const SATUAN_HASIL_OPTIONS = ['Pouch', 'Kg', 'Botol', 'Box', 'Toples', 'Kemasan'];
 
 export const LiteProdukPage: React.FC = () => {
   const [dataList, setDataList] = useState<Product[]>([]);

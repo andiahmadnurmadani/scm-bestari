@@ -8,6 +8,10 @@ interface Props {
   packagingId: string;
   jumlahKemasan: string;
   jumlahHasil: string;
+  /** satuan hasil olahan (mis. Pcs/Pouch) — ditampilkan di petunjuk jumlah */
+  satuanHasil?: string;
+  /** sedang menambah produk olahan baru (belum punya kemasan) */
+  produkBaru?: boolean;
   /** stok kemasan yang sudah terpakai oleh batch ini (saat edit) — dihitung kembali */
   terpakaiSebelumnya?: { packagingId: string | null; jumlah: number };
   /** pilih otomatis bila produk hanya punya 1 kemasan (hanya untuk olahan baru) */
@@ -19,7 +23,7 @@ interface Props {
  * Pilih kemasan yang dipakai batch olahan. Hanya menampilkan kemasan milik produk
  * terpilih; stok kemasan otomatis berkurang sebanyak "Jumlah kemasan" saat disimpan.
  */
-export const KemasanPicker: React.FC<Props> = ({ productId, packagingId, jumlahKemasan, jumlahHasil, terpakaiSebelumnya, autoPilih = true, onChange }) => {
+export const KemasanPicker: React.FC<Props> = ({ productId, packagingId, jumlahKemasan, jumlahHasil, satuanHasil = '', produkBaru = false, terpakaiSebelumnya, autoPilih = true, onChange }) => {
   const [list, setList] = useState<PackagingMaterial[]>([]);
 
   useEffect(() => {
@@ -43,7 +47,9 @@ export const KemasanPicker: React.FC<Props> = ({ productId, packagingId, jumlahK
   return (
     <div className="p-4 bg-[#fff8f4] border border-[#efe0d2] rounded-2xl space-y-3">
       <p className="text-sm font-extrabold text-[#2C4219] flex items-center gap-1.5"><Package className="w-4 h-4" /> Kemasan yang Dipakai</p>
-      {!productId ? (
+      {produkBaru ? (
+        <p className="text-xs text-[#6B7280]">Produk baru belum punya kemasan. Setelah disimpan, tambahkan kemasannya di menu Kelola Data Kemasan (pilih produk ini), lalu hubungkan lewat Edit olahan.</p>
+      ) : !productId ? (
         <p className="text-xs text-[#6B7280]">Pilih produk dulu.</p>
       ) : list.length === 0 ? (
         <p className="text-xs text-amber-700">Belum ada kemasan untuk produk ini. Tambahkan di menu Kelola Data Kemasan (pilih produknya), atau lanjutkan tanpa kemasan.</p>
@@ -69,7 +75,7 @@ export const KemasanPicker: React.FC<Props> = ({ productId, packagingId, jumlahK
               min="0"
               value={jumlahKemasan}
               onChange={(e) => onChange({ packagingId, jumlahKemasan: e.target.value })}
-              placeholder={jumlahHasil ? `Sama dengan hasil: ${jumlahHasil}` : 'Contoh: 150'}
+              placeholder={jumlahHasil ? `Sama dengan hasil: ${jumlahHasil}${satuanHasil ? ` ${satuanHasil}` : ''}` : 'Contoh: 150'}
               disabled={!packagingId}
               className="w-full p-3 bg-white border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold disabled:opacity-60"
             />

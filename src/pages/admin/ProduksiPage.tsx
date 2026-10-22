@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { SATUAN_HASIL_OPTIONS } from '../../utils/satuan';
 import { Factory, Plus, Edit3, Trash2, ChevronLeft, ChevronRight, User, MapPin, Sprout, Eye, Warehouse as WarehouseIcon, Package, CalendarDays, Hash, QrCode } from 'lucide-react';
 import { productionApi } from '../../api/endpoints/productionApi';
 import { productApi, Product } from '../../api/endpoints/productApi';
@@ -228,8 +229,10 @@ export const ProduksiPage: React.FC = () => {
       setAddingNewProduct(true);
       setSelectedProductId(null);
       setNewProductName('');
-      setNewProductSatuan('Pouch');
-      setFormData((prev) => ({ ...prev, productId: null as any, namaProduk: '' }));
+      setNewProductSatuan('Pcs');
+      setKemasanForm({ packagingId: '', jumlahKemasan: '' });
+      // Satuan hasil mengikuti satuan produk baru
+      setFormData((prev) => ({ ...prev, productId: null as any, namaProduk: '', satuan: 'Pcs' }));
       return;
     }
     const prod = productOptions.find((x) => String(x.id) === productId) || null;
@@ -610,10 +613,13 @@ export const ProduksiPage: React.FC = () => {
                       <label className="block text-xs font-bold text-[#2C4219] mb-1">Satuan Hasil *</label>
                       <select
                         value={newProductSatuan}
-                        onChange={(e) => setNewProductSatuan(e.target.value)}
+                        onChange={(e) => {
+                          setNewProductSatuan(e.target.value);
+                          setFormData((prev) => ({ ...prev, satuan: e.target.value }));
+                        }}
                         className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
                       >
-                        {['Pouch', 'Kg', 'Botol', 'Box', 'Toples', 'Kemasan'].map((s) => (
+                        {SATUAN_HASIL_OPTIONS.map((s) => (
                           <option key={s} value={s}>{s}</option>
                         ))}
                       </select>
@@ -646,14 +652,14 @@ export const ProduksiPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div>
                 <label className="block text-sm font-bold text-[#2C4219] mb-1.5">
-                  Jumlah Hasil <span className="text-red-500">*</span>
+                  Jumlah Hasil{formData.satuan ? ` (${formData.satuan})` : ''} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
                   min="0"
                   value={formData.jumlahHasil}
                   onChange={(e) => setFormData({ ...formData, jumlahHasil: e.target.value })}
-                  placeholder="Contoh: 1000"
+                  placeholder={`Contoh: 1000${formData.satuan ? ` ${formData.satuan}` : ''}`}
                   className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm font-semibold"
                   required
                 />
@@ -675,6 +681,8 @@ export const ProduksiPage: React.FC = () => {
               packagingId={kemasanForm.packagingId}
               jumlahKemasan={kemasanForm.jumlahKemasan}
               jumlahHasil={String(formData.jumlahHasil || '')}
+              satuanHasil={formData.satuan || ''}
+              produkBaru={addingNewProduct}
               terpakaiSebelumnya={kemasanAwal}
               autoPilih={!editId}
               onChange={setKemasanForm}
