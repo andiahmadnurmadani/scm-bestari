@@ -168,6 +168,12 @@ export interface PackagingMaterial {
   id: string;
   kodeKemasan: string;
   namaKemasan: string;
+  /** Produk olahan yang dikemas (QR kemasan → halaman produk) */
+  productId?: string | null;
+  product?: { id: string; name: string; satuanHasil?: string; fotoUrl?: string | null } | null;
+  /** Halaman publik kemasan & gambar QR (dari API) */
+  publicUrl?: string | null;
+  qrUrl?: string | null;
   kategori: 'Standing Pouch' | 'Box Custom' | 'Karung Bulk' | 'Botol Kaca' | 'Aksesoris';
   kapasitas: string;
   stokTersedia: number;

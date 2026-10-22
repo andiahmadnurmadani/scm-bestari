@@ -1845,11 +1845,11 @@ export const PanenPage: React.FC = () => {
                             <div className="grid grid-cols-2 gap-2 text-center">
                               <div className="p-2.5 bg-white/10 rounded-lg border border-white/10">
                                 <p className="text-[10px] font-bold text-white/70 uppercase">Jumlah Lubang</p>
-                                <p className="text-sm font-black text-white mt-1">{lubang.toLocaleString('id-ID')}</p>
+                                <p className="text-sm font-black text-white mt-1">{lubang > 0 ? lubang.toLocaleString('id-ID') : '-'}</p>
                               </div>
                               <div className="p-2.5 bg-[#C3E28D] rounded-lg">
                                 <p className="text-[10px] font-bold text-[#172C05] uppercase">Jumlah Biji (×3)</p>
-                                <p className="text-sm font-black text-[#172C05] mt-1">{totalBiji.toLocaleString('id-ID')}</p>
+                                <p className="text-sm font-black text-[#172C05] mt-1">{totalBiji > 0 ? totalBiji.toLocaleString('id-ID') : '-'}</p>
                               </div>
                             </div>
                             <p className="text-[11px] text-white/70 leading-relaxed text-center">Jumlah biji = jumlah lubang × 3 (1 lubang berisi 3 biji sorgum).</p>

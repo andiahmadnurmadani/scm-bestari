@@ -3,8 +3,10 @@ import { todayLocalISO } from '../../utils/tanggal';
 import {
   Package, PackageX, AlertTriangle, Filter, Plus, Edit3, Trash2,
   ChevronDown, ChevronUp, ImagePlus, Clock, Beaker, List, X, Upload,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, QrCode, Download, ExternalLink,
 } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
+import { productApi, Product } from '../../api/endpoints/productApi';
 import { packagingApi } from '../../api/endpoints/packagingApi';
 import { PackagingMaterial } from '../../types';
 import { Button } from '../../components/common/Button';
@@ -140,6 +142,22 @@ export const KemasanPage: React.FC = () => {
 
   // Toast notifikasi
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  // Master produk olahan (kemasan dihubungkan ke produk → QR kemasan membuka halaman produk)
+  const [productOptions, setProductOptions] = useState<Product[]>([]);
+  useEffect(() => {
+    productApi.getAll({ isActive: true }).then((r) => setProductOptions(r.data || [])).catch(() => setProductOptions([]));
+  }, []);
+
+  /** Alamat halaman publik kemasan (isi QR). */
+  const kemasanUrl = (kode: string) => `${window.location.origin}/kemasan/${encodeURIComponent(kode)}`;
+  const unduhQr = (kode: string) => {
+    const canvas = document.getElementById(`qr-kemasan-${kode}`) as HTMLCanvasElement | null;
+    if (!canvas) return;
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `QR-${kode}.png`;
+    a.click();
+  };
 
   const [formData, setFormData] = useState<
     Partial<PackagingMaterial> & {
@@ -194,7 +212,7 @@ export const KemasanPage: React.FC = () => {
     setModalTab('dasar');
     setFormData({
       kodeKemasan: nextCode('KMG-', packagingList, 3),
-      namaKemasan: '', kategori: 'Standing Pouch', kapasitas: '',
+      namaKemasan: '', productId: '', kategori: 'Standing Pouch', kapasitas: '',
       stokTersedia: '', satuan: 'Pcs', stokMinimal: '',
       pemasok: '', hargaPerUnitRp: '',
     });
@@ -210,6 +228,7 @@ export const KemasanPage: React.FC = () => {
       stokTersedia: String(item.stokTersedia ?? ''),
       stokMinimal: String(item.stokMinimal ?? ''),
       hargaPerUnitRp: String(item.hargaPerUnitRp ?? ''),
+      productId: item.productId || '',
     });
     setFormExtra(getExtra(item));
     setIsModalOpen(true);
@@ -224,8 +243,10 @@ export const KemasanPage: React.FC = () => {
       keterangan: editId ? `Update data kemasan ${kode}` : `Item baru ${kode} didaftarkan`,
       oleh: 'Ibu KWT',
     };
+    const { product: _product, publicUrl: _publicUrl, qrUrl: _qrUrl, ...formBase } = formData;
     const payload: Partial<PackagingMaterial> = {
-      ...formData,
+      ...formBase,
+      productId: formData.productId || null,
       stokTersedia: Number(formData.stokTersedia) || 0,
       stokMinimal: Number(formData.stokMinimal) || 0,
       hargaPerUnitRp: Number(formData.hargaPerUnitRp) || 0,
@@ -240,9 +261,7 @@ export const KemasanPage: React.FC = () => {
         imagesDataUrl: formExtra.imagesDataUrl && formExtra.imagesDataUrl.length > 0 ? formExtra.imagesDataUrl : undefined,
       },
     };
-    if (editId) {
-      await packagingApi.update(editId, payload);
-    } else {
+    if (!editId) {
       // Foto WAJIB saat menambah data kemasan baru
       const hasImage =
         (formExtra.imagesDataUrl && formExtra.imagesDataUrl.length > 0) ||
@@ -251,10 +270,16 @@ export const KemasanPage: React.FC = () => {
         setToast({ msg: 'Foto produk wajib diisi. Silakan unggah minimal 1 foto kemasan.', type: 'error' });
         return;
       }
-      await packagingApi.create(payload);
     }
-    setIsModalOpen(false);
-    fetchPackaging();
+    try {
+      if (editId) await packagingApi.update(editId, payload);
+      else await packagingApi.create(payload);
+      setToast({ msg: editId ? 'Data kemasan diperbarui.' : 'Data kemasan ditambahkan.', type: 'success' });
+      setIsModalOpen(false);
+      fetchPackaging();
+    } catch (err: any) {
+      setToast({ msg: err?.response?.data?.message || 'Gagal menyimpan data kemasan.', type: 'error' });
+    }
   };
 
   const confirmDelete = async () => {
@@ -411,6 +436,7 @@ export const KemasanPage: React.FC = () => {
                 <th className="py-2.5 px-3 pl-4 w-6"></th>
                 <th className="py-2.5 px-3 whitespace-nowrap">Kode Kemasan</th>
                 <th className="py-2.5 px-3 whitespace-nowrap">Nama Kemasan</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Produk</th>
                 <th className="py-2.5 px-3 whitespace-nowrap">Stok Tersedia</th>
                 <th className="py-2.5 px-3 whitespace-nowrap">Harga / Unit</th>
                 <th className="py-2.5 px-3 whitespace-nowrap">Status Stok</th>
@@ -420,14 +446,14 @@ export const KemasanPage: React.FC = () => {
             <tbody className="text-[#221A12] font-medium">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-[#6B7280]">
+                  <td colSpan={8} className="py-8 text-center text-[#6B7280]">
                     <span className="inline-block w-4 h-4 border-2 border-[#2C4219] border-t-transparent rounded-full animate-spin align-middle mr-2" />
                     Memuat data kemasan...
                   </td>
                 </tr>
               ) : packagingList.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-[#6B7280]">
+                  <td colSpan={8} className="py-8 text-center text-[#6B7280]">
                     Tidak ada data kemasan yang ditemukan.
                   </td>
                 </tr>
@@ -452,6 +478,7 @@ export const KemasanPage: React.FC = () => {
                       </td>
                       <td className="py-2.5 px-3 font-bold text-[#2C4219] whitespace-nowrap">{item.kodeKemasan}</td>
                       <td className="py-2.5 px-3 font-semibold">{item.namaKemasan}</td>
+                      <td className="py-2.5 px-3 text-[#44483e]">{item.product?.name || <span className="text-[#9CA3AF]">Belum dipilih</span>}</td>
                       <td className="py-2.5 px-3 font-bold whitespace-nowrap">{item.stokTersedia.toLocaleString('id-ID')} {item.satuan}</td>
                       <td className="py-2.5 px-3 font-semibold text-[#2C4219] whitespace-nowrap">Rp {item.hargaPerUnitRp.toLocaleString('id-ID')}</td>
                       <td className="py-2.5 px-3 whitespace-nowrap">
@@ -476,7 +503,7 @@ export const KemasanPage: React.FC = () => {
                     {/* ── Expanded Detail Panel ── */}
                     {isOpen && (
                       <tr>
-                        <td colSpan={7} className="bg-[#FAFAFA] border-b border-[#c4c8bb]/20 p-0">
+                        <td colSpan={8} className="bg-[#FAFAFA] border-b border-[#c4c8bb]/20 p-0">
                           <div className="p-4 sm:p-5 space-y-4">
                             {/* Photo + tabs header */}
                             <div className="flex flex-col sm:flex-row gap-4">
@@ -504,9 +531,33 @@ export const KemasanPage: React.FC = () => {
 
                               {/* Info + sub-tabs */}
                               <div className="flex-1 space-y-3">
-                                <div>
-                                  <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Pemasok</p>
-                                  <p className="text-xs font-semibold text-[#221A12]">{item.pemasok}</p>
+                                <div className="flex flex-wrap items-start justify-between gap-4">
+                                  <div className="space-y-2">
+                                    <div>
+                                      <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Produk</p>
+                                      <p className="text-xs font-semibold text-[#221A12]">{item.product?.name || 'Belum dihubungkan ke produk'}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Pemasok</p>
+                                      <p className="text-xs font-semibold text-[#221A12]">{item.pemasok}</p>
+                                    </div>
+                                  </div>
+                                  {/* QR kemasan → halaman produk */}
+                                  <div className="flex items-center gap-3 bg-white rounded-2xl border border-[#c4c8bb]/30 p-3">
+                                    <QRCodeCanvas id={`qr-kemasan-${item.kodeKemasan}`} value={kemasanUrl(item.kodeKemasan)} size={96} level="M" includeMargin fgColor="#172C05" bgColor="#ffffff" />
+                                    <div className="space-y-1.5">
+                                      <p className="text-xs font-bold text-[#172C05] flex items-center gap-1.5"><QrCode className="w-3.5 h-3.5" /> QR Kemasan</p>
+                                      <p className="text-[11px] text-[#6B7280] max-w-[13rem]">Tempel di kemasan. Pembeli memindai untuk melihat produk & asal-usulnya.</p>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        <button type="button" onClick={() => unduhQr(item.kodeKemasan)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#2C4219] text-white text-[11px] font-bold cursor-pointer hover:bg-[#172C05]">
+                                          <Download className="w-3.5 h-3.5" /> Unduh QR
+                                        </button>
+                                        <a href={kemasanUrl(item.kodeKemasan)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#c4c8bb]/50 text-[#2C4219] text-[11px] font-bold hover:bg-[#F7F7F5]">
+                                          <ExternalLink className="w-3.5 h-3.5" /> Buka halaman
+                                        </a>
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                                 <div className="flex gap-1 border-b border-[#c4c8bb]/20 pb-0">
                                   {([
@@ -791,6 +842,21 @@ export const KemasanPage: React.FC = () => {
                     <option>Aksesoris</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className={labelCls}>Produk Olahan</label>
+                <select
+                  value={formData.productId || ''}
+                  onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+                  className={inputCls}
+                >
+                  <option value="">-- Pilih produk yang dikemas --</option>
+                  {productOptions.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-[#6B7280] mt-1">QR kemasan akan menampilkan produk ini beserta asal-usul batchnya.</p>
               </div>
 
               <div>

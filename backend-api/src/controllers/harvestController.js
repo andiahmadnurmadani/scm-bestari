@@ -1,4 +1,5 @@
 import { getPool } from '../config/db.js';
+import { traceLinks } from '../utils/links.js';
 import { slugNama, tanggalKode, kodeUnik, buatCekAda, toISODate, todayISO } from '../utils/kodeUtil.js';
 import { withTransaction, StokError } from '../utils/stokUtil.js';
 
@@ -349,6 +350,7 @@ export async function getHarvestById(req, res) {
       gudang: s.gudang_id ? { id: String(s.gudang_id), kodeGudang: s.kode_gudang, namaGudang: s.nama_gudang } : null,
       harvestId: s.harvest_id != null ? String(s.harvest_id) : null,
       kodeBatchStok: s.kode_batch_stok,
+      ...traceLinks(req, s.kode_batch_stok),
       jenis: s.jenis || 'GABAH',
       jumlahMasukKg: Number(s.jumlah_masuk_kg || 0),
       sisaKg: Number(s.sisa_kg || 0),

@@ -1,4 +1,8 @@
 import { getPool } from '../config/db.js';
+import { traceLinks } from '../utils/links.js';
+
+/** Link lacak + QR dari batch stok bahan (bila olahan tertaut stok gudang). */
+const withTrace = (req, b) => ({ ...b, ...traceLinks(req, b.stockBatch?.kodeBatchStok) });
 import { slugNama, tanggalKode, kodeUnik, buatCekAda, toISODate, todayISO } from '../utils/kodeUtil.js';
 import { withTransaction, kurangiStokBatch, kembalikanStokBatch, StokError } from '../utils/stokUtil.js';
 
@@ -106,7 +110,7 @@ export async function getBatches(req, res) {
 
     return res.status(200).json({
       success: true,
-      data: rows.map(mapRowToBatch),
+      data: rows.map((r) => withTrace(req, mapRowToBatch(r))),
       pagination: { page, limit, total, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
     });
   } catch (error) {
@@ -139,7 +143,7 @@ export async function getBatchById(req, res) {
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Batch produksi tidak ditemukan.' });
     }
-    return res.status(200).json({ success: true, data: mapRowToBatch(rows[0]) });
+    return res.status(200).json({ success: true, data: withTrace(req, mapRowToBatch(rows[0])) });
   } catch (error) {
     console.error('[getBatchById] Error:', error.message);
     return res.status(500).json({ success: false, message: 'Gagal mengambil detail produksi.' });
@@ -310,7 +314,7 @@ export async function createBatch(req, res) {
     return res.status(201).json({
       success: true,
       message: 'Batch produksi berhasil ditambahkan.',
-      data: mapRowToBatch(newRow[0]),
+      data: withTrace(req, mapRowToBatch(newRow[0])),
     });
   } catch (error) {
     if (error instanceof StokError) {
@@ -445,7 +449,7 @@ export async function updateBatch(req, res) {
     return res.status(200).json({
       success: true,
       message: 'Batch produksi berhasil diperbarui.',
-      data: mapRowToBatch(updatedRow[0]),
+      data: withTrace(req, mapRowToBatch(updatedRow[0])),
     });
   } catch (error) {
     if (error instanceof StokError) {

@@ -186,11 +186,12 @@ export const LahanPage: React.FC = () => {
     setAddingNewVariety(false);
     // jumlahLubang di DB sudah ×3 → tampilkan nilai asli (÷3)
     const asli = (p.jumlahLubang ?? 0) / 3;
+    const lubangAsli = asli > 0 ? String(Number.isInteger(asli) ? asli : asli.toFixed(1)) : '';
     setPlantingForm({
       tanggalTanam: p.tanggalTanam,
       estimasiPanen: p.estimasiPanen || '',
       varietas: p.varietas,
-      jumlahLubang: String(Number.isInteger(asli) ? asli : asli.toFixed(1)),
+      jumlahLubang: lubangAsli,
       petugas: p.petugas || '',
       statusTanam: p.statusTanam,
       catatan: p.catatan || '',
@@ -893,9 +894,9 @@ export const LahanPage: React.FC = () => {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">Jumlah Lubang *</label>
-              <input type="number" min="0" value={plantingForm.jumlahLubang} onChange={(e) => setPlantingForm({ ...plantingForm, jumlahLubang: e.target.value })} placeholder="Contoh: 1200" className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm" required />
-              <p className="text-[11px] text-[#6B7280] mt-1">Jumlah lubang (di kali 3) — isi sesuai lubang yang dibuat, sistem mengalikan otomatis.</p>
+              <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">Jumlah Lubang <span className="font-normal normal-case text-[#6B7280]">(opsional)</span></label>
+              <input type="number" min="0" value={plantingForm.jumlahLubang} onChange={(e) => setPlantingForm({ ...plantingForm, jumlahLubang: e.target.value })} placeholder="Contoh: 1200 (boleh dikosongkan)" className="w-full p-3 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm" />
+              <p className="text-[11px] text-[#6B7280] mt-1">Boleh dikosongkan. Bila diisi, sistem mengalikan 3 otomatis (1 lubang = 3 benih).</p>
             </div>
             <div>
               <label className="block text-xs font-bold text-[#2C4219] uppercase mb-1">Petugas Penanaman <span className="text-red-500">*</span></label>
@@ -1003,7 +1004,7 @@ export const LahanPage: React.FC = () => {
                         )}
                         <p className="text-[11px] text-[#6B7280] flex items-center gap-1.5">
                           <Layers className="w-3.5 h-3.5 text-[#2C4219] shrink-0" />
-                          {Math.round((Number(p.jumlahLubang) || 0) / 3).toLocaleString('id-ID')} lubang tanam
+                          {Number(p.jumlahLubang) > 0 ? `${Math.round(Number(p.jumlahLubang) / 3).toLocaleString('id-ID')} lubang tanam` : 'Jumlah lubang belum diisi'}
                         </p>
                         <p className="text-[11px] text-[#6B7280] flex items-center gap-1.5">
                           <User className="w-3.5 h-3.5 text-[#2C4219] shrink-0" />

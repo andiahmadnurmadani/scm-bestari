@@ -85,9 +85,36 @@ Lahan → Penanaman → Panen (maks 3x) → Gudang: GABAH → Sosoh → SORGUM �
    diubah atau dihapus lewat panen (respons **409**). Mengubah data lain panen (catatan, foto)
    tanpa mengirim `stokBatch` tidak mengubah stok.
 
+6. **Kemasan ↔ produk**: setiap kemasan dihubungkan ke produk olahan (`productId`). QR kemasan
+   membuka halaman produk berisi komposisi, gizi, dan batch-batch produk itu yang bisa dilacak.
+
 ---
 
-## 5. Daftar Endpoint
+## 5. QR Code
+
+| Kebutuhan | Cara |
+|---|---|
+| Link & QR batch stok | Field `traceUrl` + `qrUrl` di `GET /warehouse/:id/stock-batches`, `GET /warehouse/stock-sorgum/all`, `GET /warehouse/:id` (`stockBatches`), `GET /harvest/:id` (`stockBatches`) |
+| Link & QR produk olahan | Field `traceUrl` + `qrUrl` di `GET /production` & `GET /production/:id` (dari batch stok bahannya; `null` bila belum tertaut stok) |
+| Link & QR kemasan | Field `publicUrl` + `qrUrl` di `GET /packaging` & `GET /packaging/:id` |
+| Gambar QR batch | `GET /public/qr/trace/:kodeBatchStok` — publik, PNG (default) atau `?format=svg`, `?size=128–1024` |
+| Gambar QR kemasan | `GET /public/qr/kemasan/:kodeKemasan` — publik, PNG/SVG |
+| Data halaman kemasan | `GET /public/kemasan/:kodeKemasan` — publik (tanpa harga/pemasok/stok) |
+
+```bash
+# Ambil QR kemasan KMG-001 sebagai PNG 800px
+curl -o qr-kmg-001.png "https://scm.livinglabs.id/api/public/qr/kemasan/KMG-001?size=800"
+
+# Ambil QR semua olahan lewat API key
+curl -H "x-api-key: sk-..." "https://scm.livinglabs.id/api/production?limit=100" | jq '.data[] | {kodeBatch, qrUrl}'
+```
+
+Isi QR mengarah ke halaman publik di domain yang sama (`/trace/<kode>` atau `/kemasan/<kode>`), jadi QR dari
+situs demo mengarah ke situs demo. Bisa dipaksa lewat env `PUBLIC_APP_URL` di backend.
+
+---
+
+## 6. Daftar Endpoint
 
 Keterangan Auth: **R** = JWT atau API key · **W** = wajib JWT · **—** = publik.
 
@@ -125,7 +152,7 @@ Keterangan Auth: **R** = JWT atau API key · **W** = wajib JWT · **—** = publ
 |---|---|---|---|
 | GET | `/plantings` | R | List (`page`, `limit`, `search`, `lahanId`, `status`) — termasuk `jumlahPanen`, `panenKeTerakhir` |
 | GET | `/plantings/:id` | R | Detail |
-| POST | `/plantings` | W | Tambah (`lahanId`, `tanggalTanam`, `varietas`, `estimasiPanen`, …) |
+| POST | `/plantings` | W | Tambah (`lahanId`, `tanggalTanam`, `varietas` wajib; `jumlahLubang`, `estimasiPanen`, `petugas` opsional) |
 | PUT | `/plantings/:id` | W | Update — ganti tanggal tanam menghitung ulang umur panen |
 | DELETE | `/plantings/:id` | W | Hapus (ditolak 409 bila sudah ada panen) |
 
@@ -179,13 +206,14 @@ Keterangan Auth: **R** = JWT atau API key · **W** = wajib JWT · **—** = publ
 |---|---|---|---|
 | GET | `/equipment` | R | List (`page`, `limit`, `search`, `status`, `kondisi`, `perhatian=1`) |
 | GET | `/certificates` | R | List (`page`, `limit`, `search`) |
-| GET | `/packaging` | R | List (`page`, `limit`, `search`, `kategori`) |
+| GET | `/packaging` | R | List (`page`, `limit`, `search`, `kategori`, `productId`) — termasuk `product`, `publicUrl`, `qrUrl` |
 | GET | `/logistics` | R | Catatan pengeluaran / menu **Keuangan** (`page`, `limit`, `search`, `kategori`) |
 | GET | `/<resource>/:id` | R | Detail untuk keempat resource di atas |
 | POST / PUT / DELETE | `/<resource>`, `/<resource>/:id` | W | Tambah / ubah / hapus |
 
 Kategori peralatan: `Pascapanen`, `Pengolahan Produk`, `Pengemasan`.
 Field `keteranganVendor` pada pengeluaran = **Deskripsi** transaksi.
+Kemasan: kirim `productId` untuk menghubungkan ke produk olahan; minimal 1 foto (`extraData.imagesDataUrl`) saat tambah.
 `/logistics/expenses` adalah alias lama dari `/logistics`.
 
 ### Notifikasi — `/notifications`
@@ -210,11 +238,14 @@ Field `keteranganVendor` pada pengeluaran = **Deskripsi** transaksi.
 ### Publik
 | Method | Path | Auth | Keterangan |
 |---|---|---|---|
-| GET | `/public/trace/:kodeBatchStok` | — | Lacak asal-usul produk (dipakai QR) |
+| GET | `/public/trace/:kodeBatchStok` | — | Lacak asal-usul batch (dipakai QR batch) |
+| GET | `/public/kemasan/:kodeKemasan` | — | Info produk dari kemasan (dipakai QR kemasan) |
+| GET | `/public/qr/trace/:kodeBatchStok` | — | Gambar QR batch (`?format=png\|svg&size=`) |
+| GET | `/public/qr/kemasan/:kodeKemasan` | — | Gambar QR kemasan (`?format=png\|svg&size=`) |
 
 ---
 
-## 6. Contoh (JavaScript)
+## 7. Contoh (JavaScript)
 
 ```js
 const BASE = 'https://scm.livinglabs.id/api';
@@ -238,7 +269,7 @@ await fetch(`${BASE}/harvest`, {
 
 ---
 
-## 7. Pagination
+## 8. Pagination
 
 `?page=1&limit=10` (maks `limit` **100**):
 
@@ -248,7 +279,7 @@ await fetch(`${BASE}/harvest`, {
 
 ---
 
-## 8. Kode Status
+## 9. Kode Status
 
 | Kode | Arti |
 |---|---|

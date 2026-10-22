@@ -99,6 +99,10 @@ export const openApiSpec = {
       '- Stok gudang: panen masuk sebagai **GABAH**, disosoh menjadi **SORGUM**, SORGUM dipakai untuk olahan. Stok tidak bisa minus.\n' +
       '- Stok panen yang sudah disosoh/dipakai olahan tidak bisa diubah/dihapus lewat panen (respons 409).\n' +
       '- Mengubah/menghapus olahan otomatis menyesuaikan/mengembalikan stok bahan.\n\n' +
+      '## QR Code\n' +
+      '- Batch stok & olahan punya `traceUrl` (halaman lacak) dan `qrUrl` (gambar QR) di respons API.\n' +
+      '- Kemasan punya `publicUrl` (halaman produk) dan `qrUrl`. Kemasan dihubungkan ke produk lewat `productId`.\n' +
+      '- Gambar QR publik: `GET /public/qr/trace/{kodeBatchStok}` dan `GET /public/qr/kemasan/{kodeKemasan}` (`?format=png|svg&size=512`).\n\n' +
       '## Server\n' +
       '- Utama (data asli): `https://scm.livinglabs.id/api`\n' +
       '- Demo (data contoh): `https://scm1.livinglabs.id/api`\n' +
@@ -300,7 +304,10 @@ export const openApiSpec = {
           kodeBatchStok: { type: 'string', example: 'SRG-BAS-19102026-01' }, jumlahMasukKg: { type: 'number' }, sisaKg: { type: 'number' },
           tanggalMasuk: { type: 'string' }, tanggalSosoh: nullableStr, operatorSosoh: nullableStr,
           asalBatch: { type: 'object', nullable: true, properties: { id: { type: 'string' }, kodeBatchStok: { type: 'string' } } },
-          harvest: { type: 'object', nullable: true }, kodePanen: nullableStr, createdAt: { type: 'string' },
+          harvest: { type: 'object', nullable: true }, kodePanen: nullableStr,
+          traceUrl: { type: 'string', nullable: true, description: 'Halaman lacak publik (isi QR)', example: 'https://scm.livinglabs.id/trace/SRG-BAS-19102026-01' },
+          qrUrl: { type: 'string', nullable: true, description: 'Gambar QR (PNG; tambah ?format=svg)', example: 'https://scm.livinglabs.id/api/public/qr/trace/SRG-BAS-19102026-01' },
+          createdAt: { type: 'string' },
         },
       },
       WarehouseMovement: {
@@ -348,6 +355,8 @@ export const openApiSpec = {
           lahan: { type: 'object', nullable: true }, planting: { type: 'object', nullable: true }, harvest: { type: 'object', nullable: true },
           gudang: { type: 'object', nullable: true },
           stockBatch: { type: 'object', nullable: true, properties: { id: { type: 'string' }, kodeBatchStok: { type: 'string' }, jenis: { type: 'string' }, asalBatch: { type: 'object', nullable: true } } },
+          traceUrl: { type: 'string', nullable: true, description: 'Halaman lacak publik (isi QR)', example: 'https://scm.livinglabs.id/trace/SRG-BAS-19102026-01' },
+          qrUrl: { type: 'string', nullable: true, description: 'Gambar QR (PNG; tambah ?format=svg)', example: 'https://scm.livinglabs.id/api/public/qr/trace/SRG-BAS-19102026-01' },
           createdAt: { type: 'string' },
         },
       },
@@ -435,19 +444,27 @@ export const openApiSpec = {
       Packaging: {
         type: 'object',
         properties: {
-          id: { type: 'string' }, kodeKemasan: { type: 'string' }, namaKemasan: { type: 'string' },
+          id: { type: 'string' }, kodeKemasan: { type: 'string', example: 'KMG-001' }, namaKemasan: { type: 'string' },
+          productId: { ...nullableStr, description: 'Produk olahan yang dikemas' },
+          product: { type: 'object', nullable: true, properties: { id: { type: 'string' }, name: { type: 'string' }, satuanHasil: { type: 'string' }, fotoUrl: nullableStr } },
           kategori: { type: 'string', enum: ['Standing Pouch', 'Box Custom', 'Karung Bulk', 'Botol Kaca', 'Aksesoris'] },
           kapasitas: { type: 'string' }, stokTersedia: { type: 'integer' }, satuan: { type: 'string' }, stokMinimal: { type: 'integer' },
-          pemasok: { type: 'string' }, hargaPerUnitRp: { type: 'number' }, statusStok: { type: 'string' }, extraData: { type: 'object', nullable: true },
+          pemasok: { type: 'string' }, hargaPerUnitRp: { type: 'number' }, statusStok: { type: 'string' },
+          extraData: { type: 'object', nullable: true, description: 'komposisi, nilaiGizi, akg, riwayat, imagesDataUrl (1–4 foto)' },
+          publicUrl: { type: 'string', description: 'Halaman publik kemasan (isi QR)', example: 'https://scm.livinglabs.id/kemasan/KMG-001' },
+          qrUrl: { type: 'string', description: 'Gambar QR kemasan (PNG; tambah ?format=svg)', example: 'https://scm.livinglabs.id/api/public/qr/kemasan/KMG-001' },
           createdAt: { type: 'string' },
         },
       },
       PackagingInput: {
         type: 'object', required: ['namaKemasan'],
         properties: {
-          kodeKemasan: { type: 'string' }, namaKemasan: { type: 'string' }, kategori: { type: 'string', enum: ['Standing Pouch', 'Box Custom', 'Karung Bulk', 'Botol Kaca', 'Aksesoris'] },
+          kodeKemasan: { type: 'string', description: 'Otomatis KMG-xxx jika kosong' }, namaKemasan: { type: 'string' },
+          productId: { type: 'string', nullable: true, description: 'ID produk olahan (GET /products)' },
+          kategori: { type: 'string', enum: ['Standing Pouch', 'Box Custom', 'Karung Bulk', 'Botol Kaca', 'Aksesoris'] },
           kapasitas: { type: 'string' }, stokTersedia: { type: 'integer' }, satuan: { type: 'string' }, stokMinimal: { type: 'integer' },
-          pemasok: { type: 'string' }, hargaPerUnitRp: { type: 'number' }, extraData: { type: 'object', description: 'Mis. foto & riwayat stok' },
+          pemasok: { type: 'string' }, hargaPerUnitRp: { type: 'number' },
+          extraData: { type: 'object', description: 'komposisi, nilaiGizi, akg, imagesDataUrl (wajib ≥1 foto saat tambah)' },
         },
       },
       FinancialExpense: {
@@ -474,6 +491,18 @@ export const openApiSpec = {
           nomorNotaReceipt: { type: 'string' },
           detailItem: { type: 'array', items: { type: 'object', properties: { nama: { type: 'string' }, qty: { type: 'number' }, hargaSatuan: { type: 'number' } } } },
           catatanNota: { type: 'string' }, notaUrl: { type: 'string', description: 'Data URL base64' },
+        },
+      },
+      PublicKemasan: {
+        type: 'object',
+        description: 'Data halaman publik dari QR kemasan (tanpa harga, pemasok, stok)',
+        properties: {
+          kemasan: { type: 'object', properties: { kodeKemasan: { type: 'string' }, namaKemasan: { type: 'string' }, kategori: { type: 'string' }, kapasitas: { type: 'string' }, fotos: { type: 'array', items: { type: 'string' } }, komposisi: { type: 'string' }, nilaiGizi: { type: 'object' }, akg: { type: 'array', items: { type: 'object' } }, publicUrl: { type: 'string' }, qrUrl: { type: 'string' } } },
+          produk: { type: 'object', nullable: true, properties: { name: { type: 'string' }, deskripsi: { type: 'string' }, fotoUrl: nullableStr, satuanHasil: { type: 'string' } } },
+          batches: {
+            type: 'array', description: '10 batch olahan terbaru dari produk ini',
+            items: { type: 'object', properties: { kodeBatch: { type: 'string' }, tanggalProduksi: nullableStr, tanggalKadaluarsa: nullableStr, jumlahHasil: { type: 'number' }, satuan: { type: 'string' }, namaLahan: nullableStr, varietas: nullableStr, tanggalPanen: nullableStr, kodeBatchStok: nullableStr, traceUrl: nullableStr, qrUrl: nullableStr } },
+          },
         },
       },
       Notification: {
@@ -644,7 +673,7 @@ export const openApiSpec = {
     ...crud({ base: '/certificates', tag: 'Sertifikat', label: 'sertifikat', item: ref('Certificate'), input: ref('CertificateInput') }),
     ...crud({
       base: '/packaging', tag: 'Kemasan', label: 'kemasan', item: ref('Packaging'), input: ref('PackagingInput'),
-      listParams: [...pageParams, q('kategori', { type: 'string', enum: ['Standing Pouch', 'Box Custom', 'Karung Bulk', 'Botol Kaca', 'Aksesoris'] })],
+      listParams: [...pageParams, q('kategori', { type: 'string', enum: ['Standing Pouch', 'Box Custom', 'Karung Bulk', 'Botol Kaca', 'Aksesoris'] }), q('productId', { type: 'string' }, 'Kemasan milik produk tertentu')],
     }),
     ...crud({
       base: '/logistics', tag: 'Keuangan', label: 'transaksi pengeluaran', item: ref('FinancialExpense'), input: ref('FinancialExpenseInput'),
@@ -690,6 +719,39 @@ export const openApiSpec = {
     },
 
     // ── Publik ────────────────────────────────────────────────────────────
+    '/public/kemasan/{kodeKemasan}': {
+      get: {
+        tags: ['Publik'], summary: 'Info produk dari QR kemasan (komposisi, gizi, batch yang bisa dilacak)',
+        parameters: [idParam('kodeKemasan', 'Kode kemasan, mis. KMG-001')],
+        responses: { 200: ok(ref('PublicKemasan')), 404: E404 },
+      },
+    },
+    '/public/qr/trace/{kodeBatchStok}': {
+      get: {
+        tags: ['Publik'], summary: 'Gambar QR lacak batch stok (menuju /trace/{kode})',
+        parameters: [idParam('kodeBatchStok', 'Kode batch stok'), ...[
+          q('format', { type: 'string', enum: ['png', 'svg'], default: 'png' }),
+          q('size', { type: 'integer', minimum: 128, maximum: 1024, default: 512 }, 'Lebar gambar PNG (px)'),
+        ]],
+        responses: {
+          200: { description: 'Gambar QR', content: { 'image/png': { schema: { type: 'string', format: 'binary' } }, 'image/svg+xml': { schema: { type: 'string' } } } },
+          404: E404,
+        },
+      },
+    },
+    '/public/qr/kemasan/{kodeKemasan}': {
+      get: {
+        tags: ['Publik'], summary: 'Gambar QR kemasan (menuju /kemasan/{kode})',
+        parameters: [idParam('kodeKemasan', 'Kode kemasan'), ...[
+          q('format', { type: 'string', enum: ['png', 'svg'], default: 'png' }),
+          q('size', { type: 'integer', minimum: 128, maximum: 1024, default: 512 }, 'Lebar gambar PNG (px)'),
+        ]],
+        responses: {
+          200: { description: 'Gambar QR', content: { 'image/png': { schema: { type: 'string', format: 'binary' } }, 'image/svg+xml': { schema: { type: 'string' } } } },
+          404: E404,
+        },
+      },
+    },
     '/public/trace/{kodeBatchStok}': {
       get: {
         tags: ['Publik'], summary: 'Lacak asal-usul produk dari kode batch stok (dipakai QR)',

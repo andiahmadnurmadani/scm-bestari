@@ -1,4 +1,5 @@
 import { getPool } from '../config/db.js';
+import { traceLinks } from '../utils/links.js';
 import { withTransaction, StokError } from '../utils/stokUtil.js';
 import { slugNama, tanggalKode, kodeUnik, buatCekAda, toISODate } from '../utils/kodeUtil.js';
 
@@ -200,7 +201,7 @@ export async function getWarehouseById(req, res) {
       success: true,
       data: {
         ...warehouse,
-        stockBatches: stocks.map(mapRowToStock),
+        stockBatches: stocks.map((r) => { const b = mapRowToStock(r); return { ...b, ...traceLinks(req, b.kodeBatchStok) }; }),
         movements: movements.map(mapRowToMovement),
         sosohList: sosohs.map((r) => ({
           id: String(r.id),
@@ -390,6 +391,7 @@ export async function getStockBatchesByWarehouse(req, res) {
         gudangId: String(r.gudang_id),
         harvestId: r.harvest_id != null ? String(r.harvest_id) : null,
         kodeBatchStok: r.kode_batch_stok,
+        ...traceLinks(req, r.kode_batch_stok),
         jenis: r.jenis || 'GABAH',
         asalBatch: r.asal_batch_id ? { id: String(r.asal_batch_id), kodeBatchStok: r.asal_kode_batch_stok } : null,
         kodePanen: r.kode_panen || null,
@@ -434,6 +436,7 @@ export async function getAllStockSorgum(req, res) {
         namaLahan: r.l_nama_lahan || null,
         harvestId: r.harvest_id != null ? String(r.harvest_id) : null,
         kodeBatchStok: r.kode_batch_stok,
+        ...traceLinks(req, r.kode_batch_stok),
         jenis: r.jenis || 'GABAH',
         asalBatch: r.asal_batch_id ? { id: String(r.asal_batch_id), kodeBatchStok: r.asal_kode_batch_stok } : null,
         kodePanen: r.kode_panen || null,

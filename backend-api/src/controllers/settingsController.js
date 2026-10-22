@@ -156,7 +156,6 @@ export async function seedDemoData(_req, res) {
         '/demo/lahan_mexico.webp',
         '/demo/lahan_elsalvador.webp',
         '/demo/lahan_ethiopia.webp',
-        '/demo/lahan_mesir.webp',
         '/demo/lahan_panen1.webp',
         '/demo/lahan_siappanen.webp',
       ],
@@ -168,20 +167,21 @@ export async function seedDemoData(_req, res) {
         '/demo/panen_4.webp',
         '/demo/sorghum_grain.webp',
       ],
-      // foto produk olahan
+      // foto produk olahan (foto produk asli proyek, sesuai jenisnya)
       produk: {
-        'Tepung Sorgum': '/demo/produk_3.webp',
-        'Beras Sorgum': '/demo/produk_4.webp',
-        'Keripik Sorgum': '/demo/produk_2.webp',
-        'Gula Cair Nira Sorgum': '/demo/produk_1.webp',
+        'Tepung Sorgum': '/demo/produk_tepung.webp',
+        'Beras Sorgum': '/demo/produk_beras.webp',
+        'Keripik Sorgum': '/demo/produk_keripik.webp',
+        'Gula Cair Nira Sorgum': '/demo/produk_gula_cair.webp',
       },
       biji: '/demo/sorghum_grain.webp',
-      // foto kemasan sesuai jenisnya
+      // foto pendukung jenis kemasan
       kemasan: {
-        pouch: ['/demo/kemasan_pouch_1.webp', '/demo/kemasan_pouch_2.webp', '/demo/kemasan_pouch_3.webp'],
-        botol: ['/demo/kemasan_botol_1.webp', '/demo/kemasan_botol_2.webp', '/demo/kemasan_pouch_2.webp'],
-        box: ['/demo/kemasan_box_1.webp', '/demo/kemasan_pouch_3.webp', '/demo/kemasan_pouch_1.webp'],
-        karung: ['/demo/kemasan_karung_1.webp', '/demo/kemasan_box_1.webp', '/demo/kemasan_pouch_2.webp'],
+        pouch: '/demo/kemasan_pouch_1.webp',
+        botol: '/demo/kemasan_botol_1.webp',
+        box: '/demo/kemasan_box_1.webp',
+        tepung: '/demo/produk_3.webp',
+        beras: '/demo/produk_4.webp',
       },
     };
 
@@ -527,19 +527,33 @@ export async function seedDemoData(_req, res) {
     }
     counts.certificates = certs.length;
 
-    // 7) Data kemasan (foto relevan sesuai jenis: pouch / botol / box / karung)
+    // 7) Data kemasan produk — terhubung ke produk olahan (QR kemasan → halaman produk).
+    //    Foto utama = foto produknya, foto tambahan = jenis kemasannya.
     const packs = [
-      ['Standing Pouch 500g', 'Standing Pouch', '500 gram', 2000, 200, 'CV Kemas Jaya', 1500, 'Stok Cukup', IMG.kemasan.pouch],
-      ['Standing Pouch 1kg', 'Standing Pouch', '1 kg', 1200, 200, 'CV Kemas Jaya', 2200, 'Stok Cukup', IMG.kemasan.pouch],
-      ['Botol Kaca 250ml', 'Botol Kaca', '250 ml', 300, 100, 'PT Gelas Nusantara', 4500, 'Stok Menipis', IMG.kemasan.botol],
-      ['Box Custom Olahan', 'Box Custom', '20x15x8 cm', 500, 150, 'Percetakan Sinar', 3200, 'Stok Cukup', IMG.kemasan.box],
-      ['Karung Bulk 50kg', 'Karung Bulk', '50 kg', 150, 30, 'UD Karung Sejahtera', 8000, 'Stok Cukup', IMG.kemasan.karung],
+      ['Tepung Sorgum 500 g', 'Tepung Sorgum', 'Standing Pouch', '500 gram', 2000, 200, 'CV Kemas Jaya', 1500,
+        [IMG.produk['Tepung Sorgum'], IMG.kemasan.tepung, IMG.kemasan.pouch],
+        'Tepung sorgum (Sorghum bicolor) 100%, tanpa pengawet, tanpa pewarna.'],
+      ['Beras Sorgum 1 kg', 'Beras Sorgum', 'Standing Pouch', '1 kg', 1200, 200, 'CV Kemas Jaya', 2200,
+        [IMG.produk['Beras Sorgum'], IMG.kemasan.beras, IMG.kemasan.pouch],
+        'Biji sorgum sosoh 100%.'],
+      ['Keripik Sorgum 100 g', 'Keripik Sorgum', 'Standing Pouch', '100 gram', 800, 150, 'CV Kemas Jaya', 900,
+        [IMG.produk['Keripik Sorgum'], IMG.kemasan.pouch],
+        'Tepung sorgum, minyak sayur, bawang putih, garam.'],
+      ['Gula Cair Nira Sorgum 250 ml', 'Gula Cair Nira Sorgum', 'Botol Kaca', '250 ml', 90, 100, 'PT Gelas Nusantara', 4500,
+        [IMG.produk['Gula Cair Nira Sorgum'], IMG.kemasan.botol],
+        'Nira batang sorgum manis 100%, dimasak tanpa tambahan gula.'],
+      ['Box Kardus Keripik Sorgum isi 10', 'Keripik Sorgum', 'Box Custom', '20x15x8 cm', 300, 50, 'Percetakan Sinar', 3200,
+        [IMG.kemasan.box, IMG.produk['Keripik Sorgum']],
+        'Isi 10 pouch Keripik Sorgum 100 g.'],
     ];
     for (let i = 0; i < packs.length; i += 1) {
-      const [nama, kategori, kapasitas, stok, minimal, pemasok, harga, status, fotos] = packs[i];
+      const [nama, produk, kategori, kapasitas, stok, minimal, pemasok, harga, fotos, komposisi] = packs[i];
+      const [pr] = await pool.execute('SELECT id FROM products WHERE name = ? LIMIT 1', [produk]);
+      const status = stok <= 0 ? 'Habis' : stok <= minimal ? 'Stok Menipis' : 'Stok Cukup';
       await ins('packaging_materials', {
-        kode_kemasan: `PKG-${String(i + 1).padStart(2, '0')}`,
+        kode_kemasan: `KMG-${String(i + 1).padStart(3, '0')}`,
         nama_kemasan: nama,
+        product_id: pr[0]?.id || null,
         kategori,
         kapasitas,
         stok_tersedia: stok,
@@ -549,7 +563,7 @@ export async function seedDemoData(_req, res) {
         harga_per_unit_rp: harga,
         status_stok: status,
         extra_data: JSON.stringify({
-          komposisi: '',
+          komposisi,
           nilaiGizi: {},
           akg: [],
           riwayat: [],

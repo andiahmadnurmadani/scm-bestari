@@ -840,6 +840,20 @@ export async function initDatabase() {
     console.warn('⚠ Migrasi extra_data kemasan dilewati:', extraErr.message);
   }
 
+  // Migrasi: kemasan terhubung ke master produk olahan (untuk QR kemasan → produk)
+  try {
+    const [pkProd] = await pool.query(
+      `SELECT COUNT(*) AS total FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'packaging_materials' AND COLUMN_NAME = 'product_id'`
+    );
+    if (Number(pkProd[0].total) === 0) {
+      await pool.query(`ALTER TABLE packaging_materials ADD COLUMN product_id BIGINT UNSIGNED NULL AFTER nama_kemasan`);
+      console.log('✓ Kolom "packaging_materials.product_id" ditambahkan.');
+    }
+  } catch (e) {
+    console.warn('⚠ Migrasi packaging_materials.product_id dilewati:', e.message);
+  }
+
   // Seed kemasan awal (DINONAKTIFKAN — user minta data kosong)
   const [pkCount] = await pool.query('SELECT COUNT(*) AS total FROM packaging_materials');
   if (false && Number(pkCount[0].total) === 0) {

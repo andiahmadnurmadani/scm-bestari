@@ -117,9 +117,9 @@ export const LiteLahanPage: React.FC = () => {
   const openPlantingEdit = (p: Planting, lahan: LandPlot) => {
     setPlantingLahan(lahan);
     setEditingPlantingId(p.id);
-    const asli = (p.jumlahLubang ?? 0) / 3; // DB tersimpan ×3
+    const asli = (p.jumlahLubang ?? 0) / 3; // DB tersimpan ×3 (0 = belum diisi)
     setAddingNewVariety(false);
-    setPlantingForm({ tanggalTanam: p.tanggalTanam, varietas: p.varietas, jumlahLubang: String(Number.isInteger(asli) ? asli : asli.toFixed(1)), petugas: p.petugas || '', lamaPanen: '' });
+    setPlantingForm({ tanggalTanam: p.tanggalTanam, varietas: p.varietas, jumlahLubang: asli > 0 ? String(Number.isInteger(asli) ? asli : asli.toFixed(1)) : '', petugas: p.petugas || '', lamaPanen: '' });
     setPlantingModalOpen(true);
   };
 
@@ -145,8 +145,8 @@ export const LiteLahanPage: React.FC = () => {
       setToast({ msg: 'Tanggal tanam dan varietas wajib diisi.', type: 'error' });
       return;
     }
-    if (!plantingForm.jumlahLubang || Number(plantingForm.jumlahLubang) <= 0) {
-      setToast({ msg: 'Jumlah lubang harus lebih dari 0.', type: 'error' });
+    if (plantingForm.jumlahLubang && Number(plantingForm.jumlahLubang) < 0) {
+      setToast({ msg: 'Jumlah lubang tidak boleh minus.', type: 'error' });
       return;
     }
     const varietasBaru = !varietyOptions.some((x) => x.name === plantingForm.varietas.trim());
@@ -395,7 +395,7 @@ export const LiteLahanPage: React.FC = () => {
                               Varietas: <b>{p.varietas}</b>
                             </div>
                             <div className="text-xs text-[#44483e]">
-                              Lubang: <b>{Math.round(Number(p.jumlahLubang) / 3)}</b>
+                              Lubang: <b>{Number(p.jumlahLubang) > 0 ? Math.round(Number(p.jumlahLubang) / 3) : '-'}</b>
                             </div>
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.statusTanam === 'Dipanen' ? 'bg-emerald-100 text-emerald-700' : p.statusTanam === 'Siap Panen' ? 'bg-amber-100 text-amber-700' : p.statusTanam === 'Gagal' ? 'bg-red-100 text-red-600' : 'bg-[#C3E28D]/40 text-[#2C4219]'}`}>
                               {p.statusTanam}
@@ -510,13 +510,13 @@ export const LiteLahanPage: React.FC = () => {
               )}
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#2C4219] mb-1">Jumlah Lubang *</label>
+              <label className="block text-xs font-bold text-[#2C4219] mb-1">Jumlah Lubang (opsional)</label>
               <input
                 type="number"
                 min="0"
                 value={plantingForm.jumlahLubang}
                 onChange={(e) => setPlantingForm({ ...plantingForm, jumlahLubang: e.target.value })}
-                placeholder="Contoh: 1200"
+                placeholder="Contoh: 1200 (boleh dikosongkan)"
                 className="w-full p-2.5 bg-[#fff1e5] border border-[#c4c8bb]/30 rounded-xl text-sm"
               />
             </div>

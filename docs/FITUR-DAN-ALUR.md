@@ -148,6 +148,7 @@ flowchart TD
 ```
 
 - Panen hanya bisa dari **lahan yang sedang ditanami** (status aktif).
+- Saat catat tanam, **jumlah lubang opsional** (boleh dikosongkan).
 - Satu penanaman maksimal **3 kali panen**, ditampilkan sebagai **Panen 1/3, 2/3, 3/3** (pertama / kedua / terakhir).
 - Form menampilkan **Prediksi Panen**: sisa hari menuju perkiraan panen (tanggal tanam + umur panen varietas) dan umur tanaman.
 - Tanggal panen tidak boleh sebelum tanggal tanam dan harus urut (panen ke-2 tidak lebih awal dari ke-1).
@@ -230,6 +231,9 @@ Tabel utama backend: `users`, `cms_settings`, `lands`, `plantings`, `harvests`, 
 
 ### Kemasan
 - Kelola stok bahan kemasan; deteksi **menipis / habis**.
+- Setiap kemasan dihubungkan ke **Produk Olahan** dan punya **QR Kemasan** (bisa diunduh). Pembeli yang memindai
+  QR melihat halaman `/kemasan/<kode>`: foto produk, komposisi, nilai gizi, dan batch produksi yang bisa dilacak
+  sampai lahan asalnya.
 - Dashboard menampilkan jenis kemasan yang perlu perhatian.
 
 ### Peralatan (Sarana)
