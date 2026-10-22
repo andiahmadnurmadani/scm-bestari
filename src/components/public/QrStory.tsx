@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sprout, Wheat, HandHeart, PackageCheck, Quote, MapPin, Heart, Leaf, Search } from 'lucide-react';
+import { Sprout, Wheat, HandHeart, PackageCheck, Quote, MapPin, Leaf, Search } from 'lucide-react';
 import { useCms } from '../../context/CmsContext';
 import { formatTanggalId } from '../../utils/dateUtils';
 import { isDemoMode } from '../common/DemoBanner';
@@ -199,13 +199,7 @@ export const QrStory: React.FC<{ data: QrStoryData }> = ({ data }) => {
           </section>
         )}
 
-        {/* Penutup */}
-        <footer className="pt-2 pb-6 text-center">
-          <p className="text-base font-semibold text-[#2C4219]">
-            Dibuat dengan <Heart className="inline w-4 h-4 -mt-0.5 fill-[#D32F2F] text-[#D32F2F]" /> oleh petani perempuan desa
-          </p>
-          <p className="mt-1 text-sm text-[#6B7280]">Terima kasih sudah mendukung pangan lokal.</p>
-        </footer>
+        <div className="pb-4" />
       </div>
     </Shell>
   );
