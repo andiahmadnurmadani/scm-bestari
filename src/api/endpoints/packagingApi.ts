@@ -17,7 +17,7 @@ export interface PackagingListResponse {
 }
 
 export const packagingApi = {
-  getAll: async (params?: { page?: number; limit?: number; search?: string; kategori?: string }) => {
+  getAll: async (params?: { page?: number; limit?: number; search?: string; kategori?: string; productId?: string }) => {
     const response = await axiosClient.get('/packaging', { params });
     return response.data as PackagingListResponse;
   },

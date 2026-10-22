@@ -146,6 +146,14 @@ export interface ProductionBatch {
   harvest?: HarvestRecord | null;
   gudang?: { id: string; kodeGudang: string; namaGudang: string } | null;
   stockBatch?: { id: string; kodeBatchStok: string; jenis?: 'GABAH' | 'SORGUM'; asalBatch?: { kodeBatchStok: string } | null } | null;
+  /** Kemasan yang dipakai batch ini (stok kemasan berkurang sebanyak jumlahKemasan) */
+  packagingId?: string | null;
+  jumlahKemasan?: number | null;
+  packaging?: { id: string; kodeKemasan: string; namaKemasan: string; kapasitas?: string } | null;
+  /** 1 olahan = 1 QR: halaman produk batch ini & gambar QR-nya */
+  publicUrl?: string | null;
+  qrUrl?: string | null;
+  traceUrl?: string | null;
 }
 
 export interface Certificate {

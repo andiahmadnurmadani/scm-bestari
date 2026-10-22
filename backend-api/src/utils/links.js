@@ -34,3 +34,11 @@ export function kemasanLinks(req, kodeKemasan) {
   const kode = encodeURIComponent(kodeKemasan);
   return { publicUrl: `${base}/kemasan/${kode}`, qrUrl: `${base}/api/public/qr/kemasan/${kode}` };
 }
+
+/** Link halaman publik satu batch olahan (/produk) + gambar QR-nya (1 olahan = 1 QR). */
+export function produkLinks(req, kodeBatch) {
+  if (!kodeBatch) return { publicUrl: null, qrUrl: null };
+  const base = baseUrl(req);
+  const kode = encodeURIComponent(kodeBatch);
+  return { publicUrl: `${base}/produk/${kode}`, qrUrl: `${base}/api/public/qr/produk/${kode}` };
+}

@@ -574,6 +574,16 @@ export async function seedDemoData(_req, res) {
     }
     counts.packaging = packs.length;
 
+    // Hubungkan tiap batch olahan ke kemasan produknya (1 olahan = 1 QR).
+    // Stok kemasan di atas dianggap SISA setelah dipakai, jadi tidak dikurangi lagi.
+    await pool.execute(
+      `UPDATE production_batches b
+       JOIN (SELECT product_id, MIN(id) AS pk_id FROM packaging_materials WHERE product_id IS NOT NULL GROUP BY product_id) k
+         ON k.product_id = b.product_id
+       SET b.packaging_id = k.pk_id, b.jumlah_kemasan = b.jumlah_hasil
+       WHERE b.packaging_id IS NULL`
+    );
+
     // 8) Logistik & biaya
     const logis = [
       ['Bahan Baku', 'Pembelian bahan pendukung produksi', 1500000, 'LUNAS', 'Transfer Bank', -30],

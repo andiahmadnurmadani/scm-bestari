@@ -546,8 +546,8 @@ export const KemasanPage: React.FC = () => {
                                   <div className="flex items-center gap-3 bg-white rounded-2xl border border-[#c4c8bb]/30 p-3">
                                     <QRCodeCanvas id={`qr-kemasan-${item.kodeKemasan}`} value={kemasanUrl(item.kodeKemasan)} size={96} level="M" includeMargin fgColor="#172C05" bgColor="#ffffff" />
                                     <div className="space-y-1.5">
-                                      <p className="text-xs font-bold text-[#172C05] flex items-center gap-1.5"><QrCode className="w-3.5 h-3.5" /> QR Kemasan</p>
-                                      <p className="text-[11px] text-[#6B7280] max-w-[13rem]">Tempel di kemasan. Pembeli memindai untuk melihat produk & asal-usulnya.</p>
+                                      <p className="text-xs font-bold text-[#172C05] flex items-center gap-1.5"><QrCode className="w-3.5 h-3.5" /> QR Umum Produk</p>
+                                      <p className="text-[11px] text-[#6B7280] max-w-[14rem]">Untuk dicetak di desain kemasan (menampilkan produksi terbaru). QR khusus tiap produksi ada di tombol Lacak, menu Kelola Olahan.</p>
                                       <div className="flex flex-wrap gap-1.5">
                                         <button type="button" onClick={() => unduhQr(item.kodeKemasan)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#2C4219] text-white text-[11px] font-bold cursor-pointer hover:bg-[#172C05]">
                                           <Download className="w-3.5 h-3.5" /> Unduh QR

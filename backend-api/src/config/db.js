@@ -597,6 +597,9 @@ export async function initDatabase() {
     ['planting_id', 'BIGINT UNSIGNED NULL'],
     ['harvest_id', 'BIGINT UNSIGNED NULL'],
     ['stock_batch_id', 'BIGINT UNSIGNED NULL'],
+    // kemasan yang dipakai batch olahan ini + jumlahnya (stok kemasan berkurang)
+    ['packaging_id', 'BIGINT UNSIGNED NULL'],
+    ['jumlah_kemasan', 'INT UNSIGNED NULL'],
   ]) {
     try {
       const [pr] = await pool.query(`SELECT COUNT(*) AS total FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='production_batches' AND COLUMN_NAME=?`, [col]);

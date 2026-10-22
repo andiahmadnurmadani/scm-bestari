@@ -68,3 +68,31 @@ export async function kembalikanStokBatch(conn, batchId, qty) {
   await conn.execute('UPDATE warehouse_stock_batches SET sisa_kg = sisa_kg + ? WHERE id = ?', [tambah, batchId]);
   await conn.execute('UPDATE warehouses SET total_stok_kg = total_stok_kg + ? WHERE id = ?', [tambah, b[0].gudang_id]);
 }
+
+/** Status stok kemasan dihitung ulang dari stok tersedia & minimal (SQL). */
+const STATUS_KEMASAN_SQL = `status_stok = CASE WHEN stok_tersedia <= 0 THEN 'Habis'
+  WHEN stok_tersedia <= stok_minimal THEN 'Stok Menipis' ELSE 'Stok Cukup' END`;
+
+/** Kurangi stok kemasan (atomik). Melempar StokError bila tidak cukup. */
+export async function kurangiStokKemasan(conn, packagingId, qty) {
+  const jumlah = Math.round(Number(qty) || 0);
+  if (!packagingId || jumlah <= 0) return;
+  const [r] = await conn.execute(
+    'UPDATE packaging_materials SET stok_tersedia = stok_tersedia - ? WHERE id = ? AND stok_tersedia >= ?',
+    [jumlah, packagingId, jumlah]
+  );
+  if (r.affectedRows === 0) {
+    const [k] = await conn.execute('SELECT nama_kemasan, stok_tersedia, satuan FROM packaging_materials WHERE id = ? LIMIT 1', [packagingId]);
+    if (!k.length) throw new StokError('Kemasan tidak ditemukan.', 404);
+    throw new StokError(`Stok kemasan "${k[0].nama_kemasan}" tidak cukup (tersisa ${Number(k[0].stok_tersedia)} ${k[0].satuan || 'Pcs'}).`);
+  }
+  await conn.execute(`UPDATE packaging_materials SET ${STATUS_KEMASAN_SQL} WHERE id = ?`, [packagingId]);
+}
+
+/** Kembalikan stok kemasan (mis. olahan dihapus / jumlah dikurangi). */
+export async function kembalikanStokKemasan(conn, packagingId, qty) {
+  const jumlah = Math.round(Number(qty) || 0);
+  if (!packagingId || jumlah <= 0) return;
+  await conn.execute('UPDATE packaging_materials SET stok_tersedia = stok_tersedia + ? WHERE id = ?', [jumlah, packagingId]);
+  await conn.execute(`UPDATE packaging_materials SET ${STATUS_KEMASAN_SQL} WHERE id = ?`, [packagingId]);
+}

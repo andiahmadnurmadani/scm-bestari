@@ -1,10 +1,26 @@
 import { getPool } from '../config/db.js';
-import { traceLinks } from '../utils/links.js';
+import { traceLinks, produkLinks } from '../utils/links.js';
 
 /** Link lacak + QR dari batch stok bahan (bila olahan tertaut stok gudang). */
-const withTrace = (req, b) => ({ ...b, ...traceLinks(req, b.stockBatch?.kodeBatchStok) });
+// 1 batch olahan = 1 QR: publicUrl/qrUrl menuju halaman produk batch ini;
+// traceUrl/traceQrUrl = jejak batch bahan sorgum di gudang.
+const withTrace = (req, b) => {
+  const t = traceLinks(req, b.stockBatch?.kodeBatchStok);
+  return { ...b, ...produkLinks(req, b.kodeBatch), traceUrl: t.traceUrl, traceQrUrl: t.qrUrl };
+};
 import { slugNama, tanggalKode, kodeUnik, buatCekAda, toISODate, todayISO } from '../utils/kodeUtil.js';
-import { withTransaction, kurangiStokBatch, kembalikanStokBatch, StokError } from '../utils/stokUtil.js';
+import { withTransaction, kurangiStokBatch, kembalikanStokBatch, kurangiStokKemasan, kembalikanStokKemasan, StokError } from '../utils/stokUtil.js';
+
+/** Validasi kemasan untuk produk; kembalikan id kemasan (number) atau null. */
+async function cekKemasan(pool, packagingId, productId) {
+  if (!packagingId) return null;
+  const [k] = await pool.execute('SELECT id, product_id, nama_kemasan FROM packaging_materials WHERE id = ? LIMIT 1', [packagingId]);
+  if (!k.length) throw new StokError('Kemasan tidak ditemukan.');
+  if (productId && k[0].product_id && String(k[0].product_id) !== String(productId)) {
+    throw new StokError(`Kemasan "${k[0].nama_kemasan}" bukan untuk produk ini. Pilih kemasan yang sesuai.`);
+  }
+  return Number(k[0].id);
+}
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -33,6 +49,10 @@ function mapRowToBatch(row) {
     planting: row.planting_id ? { id: String(row.planting_id), kodeTanam: row.kode_tanam, tanggalTanam: toISODate(row.tanggal_tanam), estimasiPanen: row.estimasi_panen ? toISODate(row.estimasi_panen) : null, varietas: row.p_varietas, jumlahLubang: row.jumlah_lubang != null ? Number(row.jumlah_lubang) : null, petugas: row.petugas } : null,
     harvest: row.harvest_id ? { id: String(row.harvest_id), kodePanen: row.kode_panen, tanggalPanen: toISODate(row.tanggal_panen), periodeHari: row.periode_hari } : null,
     stockBatchId: row.stock_batch_id != null ? String(row.stock_batch_id) : null,
+    // kemasan yang dipakai (stok kemasan berkurang sebanyak jumlahKemasan)
+    packagingId: row.packaging_id != null ? String(row.packaging_id) : null,
+    jumlahKemasan: row.jumlah_kemasan != null ? Number(row.jumlah_kemasan) : null,
+    packaging: row.packaging_id && row.pk_kode ? { id: String(row.packaging_id), kodeKemasan: row.pk_kode, namaKemasan: row.pk_nama, kapasitas: row.pk_kapasitas || '' } : null,
     // lineage gudang & batch stok (untuk detail)
     gudang: row.gudang_id ? { id: String(row.gudang_id), kodeGudang: row.w_kode_gudang, namaGudang: row.w_nama_gudang } : null,
     stockBatch: row.stock_batch_id
@@ -90,7 +110,8 @@ export async function getBatches(req, res) {
 
     const [rows] = await pool.query(
       `SELECT b.id, b.kode_batch, b.nama_produk, b.product_id, b.tanggal_produksi, b.tanggal_kadaluarsa,
-              b.jumlah_hasil, b.satuan, b.bahan_digunakan, b.satuan_bahan, b.nomor_batch_bahan_baku, b.operator_produksi, b.status_qc, b.lokasi_gudang, b.lahan_id, b.planting_id, b.harvest_id, b.gudang_id, b.stock_batch_id, b.created_at,
+              b.jumlah_hasil, b.satuan, b.bahan_digunakan, b.satuan_bahan, b.nomor_batch_bahan_baku, b.operator_produksi, b.status_qc, b.lokasi_gudang, b.lahan_id, b.planting_id, b.harvest_id, b.gudang_id, b.stock_batch_id, b.packaging_id, b.jumlah_kemasan, b.created_at,
+              pk.kode_kemasan AS pk_kode, pk.nama_kemasan AS pk_nama, pk.kapasitas AS pk_kapasitas,
               l.kode_lahan, l.nama_lahan, p.kode_tanam, p.tanggal_tanam, h.kode_panen, h.tanggal_panen, h.periode_hari,
               w.kode_gudang AS w_kode_gudang, w.nama_gudang AS w_nama_gudang,
               sb.kode_batch_stok AS sb_kode_batch_stok, sb.jenis AS sb_jenis,
@@ -102,6 +123,7 @@ export async function getBatches(req, res) {
        LEFT JOIN warehouses w ON b.gudang_id=w.id
        LEFT JOIN warehouse_stock_batches sb ON b.stock_batch_id=sb.id
        LEFT JOIN warehouse_stock_batches ab ON sb.asal_batch_id=ab.id
+       LEFT JOIN packaging_materials pk ON pk.id = b.packaging_id
         ${whereClause}
         ORDER BY b.created_at DESC, b.id DESC
         LIMIT ? OFFSET ?`,
@@ -125,7 +147,8 @@ export async function getBatchById(req, res) {
   try {
     const [rows] = await getPool().execute(
       `SELECT b.id, b.kode_batch, b.nama_produk, b.product_id, b.tanggal_produksi, b.tanggal_kadaluarsa,
-              b.jumlah_hasil, b.satuan, b.bahan_digunakan, b.satuan_bahan, b.nomor_batch_bahan_baku, b.operator_produksi, b.status_qc, b.lokasi_gudang, b.lahan_id, b.planting_id, b.harvest_id, b.gudang_id, b.stock_batch_id, b.created_at,
+              b.jumlah_hasil, b.satuan, b.bahan_digunakan, b.satuan_bahan, b.nomor_batch_bahan_baku, b.operator_produksi, b.status_qc, b.lokasi_gudang, b.lahan_id, b.planting_id, b.harvest_id, b.gudang_id, b.stock_batch_id, b.packaging_id, b.jumlah_kemasan, b.created_at,
+              pk.kode_kemasan AS pk_kode, pk.nama_kemasan AS pk_nama, pk.kapasitas AS pk_kapasitas,
               l.kode_lahan, l.nama_lahan, p.kode_tanam, p.tanggal_tanam, h.kode_panen, h.tanggal_panen, h.periode_hari,
               w.kode_gudang AS w_kode_gudang, w.nama_gudang AS w_nama_gudang,
               sb.kode_batch_stok AS sb_kode_batch_stok, sb.jenis AS sb_jenis,
@@ -137,6 +160,7 @@ export async function getBatchById(req, res) {
        LEFT JOIN warehouses w ON b.gudang_id=w.id
        LEFT JOIN warehouse_stock_batches sb ON b.stock_batch_id=sb.id
        LEFT JOIN warehouse_stock_batches ab ON sb.asal_batch_id=ab.id
+       LEFT JOIN packaging_materials pk ON pk.id = b.packaging_id
        WHERE b.id = ? LIMIT 1`,
       [req.params.id]
     );
@@ -253,12 +277,22 @@ export async function createBatch(req, res) {
       }
     }
 
+    // Kemasan yang dipakai: stok kemasan berkurang sebanyak jumlahKemasan (default = jumlah hasil)
+    const packagingId = await cekKemasan(pool, data.packagingId, data.productId);
+    const jumlahKemasan = packagingId
+      ? Math.round(data.jumlahKemasan != null && data.jumlahKemasan !== '' ? Number(data.jumlahKemasan) : Number(data.jumlahHasil) || 0)
+      : null;
+    if (jumlahKemasan != null && (isNaN(jumlahKemasan) || jumlahKemasan < 0)) {
+      return res.status(400).json({ success: false, message: 'Jumlah kemasan tidak valid.' });
+    }
+
     const result = await withTransaction(pool, async (conn) => {
     const [result] = await conn.execute(
       `INSERT INTO production_batches
         (kode_batch, nama_produk, product_id, tanggal_produksi, tanggal_kadaluarsa,
-         jumlah_hasil, satuan, bahan_digunakan, satuan_bahan, nomor_batch_bahan_baku, operator_produksi, status_qc, lokasi_gudang, lahan_id, planting_id, harvest_id, gudang_id, stock_batch_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         jumlah_hasil, satuan, bahan_digunakan, satuan_bahan, nomor_batch_bahan_baku, operator_produksi, status_qc, lokasi_gudang, lahan_id, planting_id, harvest_id, gudang_id, stock_batch_id,
+         packaging_id, jumlah_kemasan)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         kodeBatch,
         String(data.namaProduk).trim(),
@@ -278,8 +312,13 @@ export async function createBatch(req, res) {
         harvestId,
         data.gudangId ? Number(data.gudangId) : null,
         data.stockBatchId ? Number(data.stockBatchId) : null,
+        packagingId,
+        jumlahKemasan,
       ]
     );
+
+    // Kurangi stok kemasan (gagal bila tidak cukup → batch olahan batal disimpan)
+    if (packagingId && jumlahKemasan > 0) await kurangiStokKemasan(conn, packagingId, jumlahKemasan);
 
     // Kurangi stok gudang dari batch yang dipilih (atomik: gagal → batch olahan batal disimpan)
     if (gudangId && stockBatchId && qtyBahan > 0) {
@@ -295,7 +334,8 @@ export async function createBatch(req, res) {
 
     const [newRow] = await pool.execute(
       `SELECT b.id, b.kode_batch, b.nama_produk, b.product_id, b.tanggal_produksi, b.tanggal_kadaluarsa,
-              b.jumlah_hasil, b.satuan, b.bahan_digunakan, b.satuan_bahan, b.nomor_batch_bahan_baku, b.operator_produksi, b.status_qc, b.lokasi_gudang, b.lahan_id, b.planting_id, b.harvest_id, b.gudang_id, b.stock_batch_id, b.created_at,
+              b.jumlah_hasil, b.satuan, b.bahan_digunakan, b.satuan_bahan, b.nomor_batch_bahan_baku, b.operator_produksi, b.status_qc, b.lokasi_gudang, b.lahan_id, b.planting_id, b.harvest_id, b.gudang_id, b.stock_batch_id, b.packaging_id, b.jumlah_kemasan, b.created_at,
+              pk.kode_kemasan AS pk_kode, pk.nama_kemasan AS pk_nama, pk.kapasitas AS pk_kapasitas,
               l.kode_lahan, l.nama_lahan, p.kode_tanam, p.tanggal_tanam, h.kode_panen, h.tanggal_panen, h.periode_hari,
               w.kode_gudang AS w_kode_gudang, w.nama_gudang AS w_nama_gudang,
               sb.kode_batch_stok AS sb_kode_batch_stok, sb.jenis AS sb_jenis,
@@ -307,6 +347,7 @@ export async function createBatch(req, res) {
        LEFT JOIN warehouses w ON b.gudang_id=w.id
        LEFT JOIN warehouse_stock_batches sb ON b.stock_batch_id=sb.id
        LEFT JOIN warehouse_stock_batches ab ON sb.asal_batch_id=ab.id
+       LEFT JOIN packaging_materials pk ON pk.id = b.packaging_id
        WHERE b.id = ? LIMIT 1`,
       [result.insertId]
     );
@@ -337,7 +378,7 @@ export async function updateBatch(req, res) {
     const pool = getPool();
 
     const [existing] = await pool.execute(
-      'SELECT id, kode_batch, nama_produk, stock_batch_id, bahan_digunakan, harvest_id FROM production_batches WHERE id = ? LIMIT 1',
+      'SELECT id, kode_batch, nama_produk, product_id, stock_batch_id, bahan_digunakan, harvest_id, packaging_id, jumlah_kemasan, jumlah_hasil FROM production_batches WHERE id = ? LIMIT 1',
       [id]
     );
     if (existing.length === 0) {
@@ -352,6 +393,25 @@ export async function updateBatch(req, res) {
     const baruSb = data.stockBatchId !== undefined ? (data.stockBatchId ? Number(data.stockBatchId) : null) : lamaSb;
     const baruQty = data.bahanDigunakan !== undefined ? (Number(data.bahanDigunakan) || 0) : lamaQty;
     const stokBerubah = lamaSb !== baruSb || Math.abs(lamaQty - baruQty) > 0.0001;
+    // Kemasan: ganti kemasan / ubah jumlah → stok kemasan lama dikembalikan, yang baru dikurangi
+    const lamaPk = existing[0].packaging_id ? Number(existing[0].packaging_id) : null;
+    const lamaPkQty = Number(existing[0].jumlah_kemasan) || 0;
+    const baruPk = data.packagingId !== undefined
+      ? await cekKemasan(pool, data.packagingId || null, data.productId ?? existing[0].product_id)
+      : lamaPk;
+    let baruPkQty = 0;
+    if (baruPk) {
+      if (data.jumlahKemasan !== undefined && data.jumlahKemasan !== null && data.jumlahKemasan !== '') baruPkQty = Math.round(Number(data.jumlahKemasan));
+      else if (baruPk !== lamaPk || !lamaPkQty) {
+        // kemasan baru dipasang tanpa jumlah → pakai jumlah hasil (yang dikirim atau yang tersimpan)
+        baruPkQty = Math.round(Number(data.jumlahHasil !== undefined ? data.jumlahHasil : existing[0].jumlah_hasil) || 0);
+      } else baruPkQty = lamaPkQty;
+      if (isNaN(baruPkQty) || baruPkQty < 0) return res.status(400).json({ success: false, message: 'Jumlah kemasan tidak valid.' });
+    }
+    const kemasanBerubah = lamaPk !== baruPk || lamaPkQty !== baruPkQty;
+    if (kemasanBerubah) { data.packagingId = baruPk; data.jumlahKemasan = baruPk ? baruPkQty : null; }
+    else { delete data.packagingId; delete data.jumlahKemasan; }
+
     let baruBatch = null;
     if (stokBerubah && baruSb && baruQty > 0) {
       const [bt] = await pool.execute('SELECT id, gudang_id, jenis, kode_batch_stok, harvest_id FROM warehouse_stock_batches WHERE id = ? LIMIT 1', [baruSb]);
@@ -395,6 +455,8 @@ export async function updateBatch(req, res) {
       lokasiGudang: 'lokasi_gudang',
       gudangId: 'gudang_id',
       stockBatchId: 'stock_batch_id',
+      packagingId: 'packaging_id',
+      jumlahKemasan: 'jumlah_kemasan',
       lahanId: 'lahan_id',
       plantingId: 'planting_id',
       harvestId: 'harvest_id',
@@ -409,6 +471,10 @@ export async function updateBatch(req, res) {
       }
     }
     await withTransaction(pool, async (conn) => {
+      if (kemasanBerubah) {
+        if (lamaPk && lamaPkQty > 0) await kembalikanStokKemasan(conn, lamaPk, lamaPkQty);
+        if (baruPk && baruPkQty > 0) await kurangiStokKemasan(conn, baruPk, baruPkQty);
+      }
       if (stokBerubah) {
         // 1) kembalikan bahan lama ke batch asalnya & hapus catatan keluarnya
         if (lamaSb && lamaQty > 0) await kembalikanStokBatch(conn, lamaSb, lamaQty);
@@ -430,7 +496,8 @@ export async function updateBatch(req, res) {
 
     const [updatedRow] = await pool.execute(
       `SELECT b.id, b.kode_batch, b.nama_produk, b.product_id, b.tanggal_produksi, b.tanggal_kadaluarsa,
-              b.jumlah_hasil, b.satuan, b.bahan_digunakan, b.satuan_bahan, b.nomor_batch_bahan_baku, b.operator_produksi, b.status_qc, b.lokasi_gudang, b.lahan_id, b.planting_id, b.harvest_id, b.gudang_id, b.stock_batch_id, b.created_at,
+              b.jumlah_hasil, b.satuan, b.bahan_digunakan, b.satuan_bahan, b.nomor_batch_bahan_baku, b.operator_produksi, b.status_qc, b.lokasi_gudang, b.lahan_id, b.planting_id, b.harvest_id, b.gudang_id, b.stock_batch_id, b.packaging_id, b.jumlah_kemasan, b.created_at,
+              pk.kode_kemasan AS pk_kode, pk.nama_kemasan AS pk_nama, pk.kapasitas AS pk_kapasitas,
               l.kode_lahan, l.nama_lahan, p.kode_tanam, p.tanggal_tanam, h.kode_panen, h.tanggal_panen, h.periode_hari,
               w.kode_gudang AS w_kode_gudang, w.nama_gudang AS w_nama_gudang,
               sb.kode_batch_stok AS sb_kode_batch_stok, sb.jenis AS sb_jenis,
@@ -442,6 +509,7 @@ export async function updateBatch(req, res) {
        LEFT JOIN warehouses w ON b.gudang_id=w.id
        LEFT JOIN warehouse_stock_batches sb ON b.stock_batch_id=sb.id
        LEFT JOIN warehouse_stock_batches ab ON sb.asal_batch_id=ab.id
+       LEFT JOIN packaging_materials pk ON pk.id = b.packaging_id
        WHERE b.id = ? LIMIT 1`,
       [id]
     );
@@ -465,7 +533,7 @@ export async function updateBatch(req, res) {
 export async function deleteBatch(req, res) {
   try {
     const pool = getPool();
-    const [existing] = await pool.execute('SELECT id, stock_batch_id, bahan_digunakan FROM production_batches WHERE id = ? LIMIT 1', [req.params.id]);
+    const [existing] = await pool.execute('SELECT id, stock_batch_id, bahan_digunakan, packaging_id, jumlah_kemasan FROM production_batches WHERE id = ? LIMIT 1', [req.params.id]);
     if (existing.length === 0) {
       return res.status(404).json({ success: false, message: 'Batch produksi tidak ditemukan.' });
     }
@@ -474,10 +542,13 @@ export async function deleteBatch(req, res) {
       if (existing[0].stock_batch_id && Number(existing[0].bahan_digunakan) > 0) {
         await kembalikanStokBatch(conn, existing[0].stock_batch_id, Number(existing[0].bahan_digunakan));
       }
+      if (existing[0].packaging_id && Number(existing[0].jumlah_kemasan) > 0) {
+        await kembalikanStokKemasan(conn, existing[0].packaging_id, Number(existing[0].jumlah_kemasan));
+      }
       await conn.execute("DELETE FROM warehouse_movements WHERE production_id = ? AND tipe = 'KELUAR'", [req.params.id]);
       await conn.execute('DELETE FROM production_batches WHERE id = ?', [req.params.id]);
     });
-    return res.status(200).json({ success: true, message: 'Batch produksi berhasil dihapus. Bahan dikembalikan ke stok gudang.' });
+    return res.status(200).json({ success: true, message: 'Batch produksi berhasil dihapus. Bahan & kemasan dikembalikan ke stok.' });
   } catch (error) {
     console.error('[deleteBatch] Error:', error.message);
     return res.status(500).json({ success: false, message: 'Gagal menghapus batch produksi.' });

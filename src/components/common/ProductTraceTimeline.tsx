@@ -126,8 +126,8 @@ function buildSteps(batch: ProductionBatch) {
 
 export const ProductTraceTimeline: React.FC<Props> = ({ batch, variant = 'full', showQr = true }) => {
   const steps = buildSteps(batch);
-  const kodeStok = batch.stockBatch?.kodeBatchStok;
-  const traceUrl = kodeStok && typeof window !== 'undefined' ? `${window.location.origin}/trace/${kodeStok}` : '';
+  // 1 batch olahan = 1 QR → halaman cerita produk batch ini
+  const produkUrl = typeof window !== 'undefined' ? `${window.location.origin}/produk/${encodeURIComponent(batch.kodeBatch)}` : '';
 
   // ── Compact: rantai ringkas satu baris (pratinjau di form) ────────────────
   if (variant === 'compact') {
@@ -156,6 +156,7 @@ export const ProductTraceTimeline: React.FC<Props> = ({ batch, variant = 'full',
     { label: 'Tanggal panen', value: fmtDate(batch.harvest?.tanggalPanen) },
     { label: 'Tanggal produksi', value: fmtDate(batch.tanggalProduksi) },
     { label: 'Hasil', value: `${Number(batch.jumlahHasil || 0).toLocaleString('id-ID')} ${batch.satuan || ''}`.trim() },
+    { label: 'Kemasan', value: batch.packaging ? `${batch.packaging.namaKemasan}${batch.jumlahKemasan ? ` • ${Number(batch.jumlahKemasan).toLocaleString('id-ID')} pcs` : ''}` : 'Belum dipilih' },
   ];
 
   const unduhQr = () => {
@@ -175,16 +176,17 @@ export const ProductTraceTimeline: React.FC<Props> = ({ batch, variant = 'full',
         <p className="text-sm text-[#6B7280] mt-0.5">Kode batch {shortKode(batch.kodeBatch)}</p>
       </div>
 
-      {/* QR untuk lacak publik */}
+      {/* QR batch olahan ini (tempel di kemasan batch ini) */}
       {showQr && (
-        kodeStok ? (
-          <div className="flex flex-col items-center gap-3">
-            <div className="rounded-2xl border border-[#c4c8bb]/30 p-3 bg-white">
-              <QRCodeCanvas id="qr-canvas-produk" value={traceUrl} size={200} level="M" includeMargin fgColor="#172C05" bgColor="#ffffff" />
-            </div>
-            <p className="text-base font-bold text-[#172C05] flex items-center gap-1.5">
-              <QrCode className="w-4 h-4 text-[#2C4219]" /> Pindai untuk melihat asal-usul produk
-            </p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="rounded-2xl border border-[#c4c8bb]/30 p-3 bg-white">
+            <QRCodeCanvas id="qr-canvas-produk" value={produkUrl} size={200} level="M" includeMargin fgColor="#172C05" bgColor="#ffffff" />
+          </div>
+          <p className="text-base font-bold text-[#172C05] flex items-center gap-1.5">
+            <QrCode className="w-4 h-4 text-[#2C4219]" /> QR khusus batch ini
+          </p>
+          <p className="text-sm text-center text-[#6B7280] max-w-xs">Tempel di kemasan hasil produksi ini. Pembeli memindai untuk melihat cerita produk dari ladang.</p>
+          <div className="flex flex-wrap justify-center gap-2">
             <button
               type="button"
               onClick={unduhQr}
@@ -192,12 +194,11 @@ export const ProductTraceTimeline: React.FC<Props> = ({ batch, variant = 'full',
             >
               <Download className="w-4 h-4" /> Unduh QR
             </button>
+            <a href={produkUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#c4c8bb]/50 text-[#2C4219] text-sm font-bold hover:bg-[#F7F7F5]">
+              Lihat halaman
+            </a>
           </div>
-        ) : (
-          <p className="text-base text-center text-[#9CA3AF] bg-[#F7F7F5] rounded-2xl p-4">
-            QR belum tersedia karena batch ini belum tertaut ke stok gudang.
-          </p>
-        )
+        </div>
       )}
 
       {/* Info singkat */}

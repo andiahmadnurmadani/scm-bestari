@@ -100,9 +100,10 @@ export const openApiSpec = {
       '- Stok panen yang sudah disosoh/dipakai olahan tidak bisa diubah/dihapus lewat panen (respons 409).\n' +
       '- Mengubah/menghapus olahan otomatis menyesuaikan/mengembalikan stok bahan.\n\n' +
       '## QR Code\n' +
-      '- Batch stok & olahan punya `traceUrl` (halaman lacak) dan `qrUrl` (gambar QR) di respons API.\n' +
-      '- Kemasan punya `publicUrl` (halaman produk) dan `qrUrl`. Kemasan dihubungkan ke produk lewat `productId`.\n' +
-      '- Gambar QR publik: `GET /public/qr/trace/{kodeBatchStok}` dan `GET /public/qr/kemasan/{kodeKemasan}` (`?format=png|svg&size=512`).\n\n' +
+      '- **1 batch olahan = 1 QR**: olahan punya `publicUrl` + `qrUrl` (halaman /produk). Saat catat olahan pilih `packagingId` → stok kemasan berkurang `jumlahKemasan`.\n' +
+      '- Kemasan punya `publicUrl` + `qrUrl` sebagai QR umum produk (menampilkan produksi terbaru). Kemasan dihubungkan ke produk lewat `productId`.\n' +
+      '- Batch stok gudang punya `traceUrl` + `qrUrl` (halaman /trace).\n' +
+      '- Gambar QR publik: `/public/qr/produk/{kodeBatch}`, `/public/qr/kemasan/{kodeKemasan}`, `/public/qr/trace/{kodeBatchStok}` (`?format=png|svg&size=512`).\n\n' +
       '## Server\n' +
       '- Utama (data asli): `https://scm.livinglabs.id/api`\n' +
       '- Demo (data contoh): `https://scm1.livinglabs.id/api`\n' +
@@ -355,8 +356,13 @@ export const openApiSpec = {
           lahan: { type: 'object', nullable: true }, planting: { type: 'object', nullable: true }, harvest: { type: 'object', nullable: true },
           gudang: { type: 'object', nullable: true },
           stockBatch: { type: 'object', nullable: true, properties: { id: { type: 'string' }, kodeBatchStok: { type: 'string' }, jenis: { type: 'string' }, asalBatch: { type: 'object', nullable: true } } },
-          traceUrl: { type: 'string', nullable: true, description: 'Halaman lacak publik (isi QR)', example: 'https://scm.livinglabs.id/trace/SRG-BAS-19102026-01' },
-          qrUrl: { type: 'string', nullable: true, description: 'Gambar QR (PNG; tambah ?format=svg)', example: 'https://scm.livinglabs.id/api/public/qr/trace/SRG-BAS-19102026-01' },
+          packagingId: { ...nullableStr, description: 'Kemasan yang dipakai' },
+          jumlahKemasan: { type: 'integer', nullable: true, description: 'Jumlah kemasan terpakai (mengurangi stok kemasan)' },
+          packaging: { type: 'object', nullable: true, properties: { id: { type: 'string' }, kodeKemasan: { type: 'string' }, namaKemasan: { type: 'string' }, kapasitas: { type: 'string' } } },
+          publicUrl: { type: 'string', description: '1 olahan = 1 QR: halaman cerita produk batch ini', example: 'https://scm.livinglabs.id/produk/PRD-BAS-19102026-01' },
+          qrUrl: { type: 'string', description: 'Gambar QR batch olahan ini (PNG; ?format=svg)', example: 'https://scm.livinglabs.id/api/public/qr/produk/PRD-BAS-19102026-01' },
+          traceUrl: { type: 'string', nullable: true, description: 'Jejak batch bahan sorgum di gudang' },
+          traceQrUrl: { type: 'string', nullable: true, description: 'Gambar QR jejak batch bahan' },
           createdAt: { type: 'string' },
         },
       },
@@ -368,6 +374,8 @@ export const openApiSpec = {
           productId: { type: 'string' }, tanggalProduksi: tanggal('2026-10-21'), tanggalKadaluarsa: tanggal('2027-04-21'),
           jumlahHasil: { type: 'number' }, satuan: { type: 'string' },
           bahanDigunakan: { type: 'number', description: 'Kg sorgum dipakai — mengurangi stok batch (harus jenis SORGUM)' },
+          packagingId: { type: 'string', nullable: true, description: 'Kemasan yang dipakai (harus milik produk yang sama)' },
+          jumlahKemasan: { type: 'integer', description: 'Jumlah kemasan dipakai — default = jumlahHasil; stok kemasan berkurang (409/400 bila tidak cukup)' },
           satuanBahan: { type: 'string', default: 'Kg' }, gudangId: { type: 'string' }, stockBatchId: { type: 'string' },
           harvestId: { type: 'string' }, nomorBatchBahanBaku: { type: 'string' }, operatorProduksi: { type: 'string' },
           statusQC: { type: 'string', enum: ['Lolos QC', 'Pending QC', 'Revisi Batch'] }, lokasiGudang: { type: 'string' },
@@ -491,6 +499,18 @@ export const openApiSpec = {
           nomorNotaReceipt: { type: 'string' },
           detailItem: { type: 'array', items: { type: 'object', properties: { nama: { type: 'string' }, qty: { type: 'number' }, hargaSatuan: { type: 'number' } } } },
           catatanNota: { type: 'string' }, notaUrl: { type: 'string', description: 'Data URL base64' },
+        },
+      },
+      PublicProduk: {
+        type: 'object',
+        description: 'Cerita satu batch olahan untuk pembeli (tanpa kode internal, harga, pemasok, stok)',
+        properties: {
+          namaProduk: { type: 'string' }, deskripsi: { type: 'string' }, namaKemasan: nullableStr, kapasitas: { type: 'string' },
+          fotos: { type: 'array', items: { type: 'string' } }, komposisi: { type: 'string' }, nilaiGizi: { type: 'object' },
+          tanggalProduksi: nullableStr, tanggalKadaluarsa: nullableStr, jumlahHasil: { type: 'number' }, satuan: { type: 'string' },
+          pengolah: nullableStr, lokasiDesa: nullableStr, kecamatan: nullableStr, kelompokTani: nullableStr, varietas: nullableStr,
+          tanggalTanam: nullableStr, tanggalPanen: nullableStr, umurTanamHari: { type: 'integer', nullable: true }, petani: nullableStr,
+          publicUrl: { type: 'string' }, qrUrl: { type: 'string' }, traceUrl: nullableStr,
         },
       },
       PublicKemasan: {
@@ -719,6 +739,26 @@ export const openApiSpec = {
     },
 
     // ── Publik ────────────────────────────────────────────────────────────
+    '/public/produk/{kodeBatch}': {
+      get: {
+        tags: ['Publik'], summary: 'Cerita satu batch olahan (1 olahan = 1 QR)',
+        parameters: [idParam('kodeBatch', 'Kode batch olahan, mis. PRD-BAS-19102026-01')],
+        responses: { 200: ok(ref('PublicProduk')), 404: E404 },
+      },
+    },
+    '/public/qr/produk/{kodeBatch}': {
+      get: {
+        tags: ['Publik'], summary: 'Gambar QR batch olahan (menuju /produk/{kode}) — tempel di kemasan hasil produksi',
+        parameters: [idParam('kodeBatch', 'Kode batch olahan'), ...[
+          q('format', { type: 'string', enum: ['png', 'svg'], default: 'png' }),
+          q('size', { type: 'integer', minimum: 128, maximum: 1024, default: 512 }, 'Lebar gambar PNG (px)'),
+        ]],
+        responses: {
+          200: { description: 'Gambar QR', content: { 'image/png': { schema: { type: 'string', format: 'binary' } }, 'image/svg+xml': { schema: { type: 'string' } } } },
+          404: E404,
+        },
+      },
+    },
     '/public/kemasan/{kodeKemasan}': {
       get: {
         tags: ['Publik'], summary: 'Info produk dari QR kemasan (komposisi, gizi, batch yang bisa dilacak)',

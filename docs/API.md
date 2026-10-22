@@ -85,8 +85,17 @@ Lahan → Penanaman → Panen (maks 3x) → Gudang: GABAH → Sosoh → SORGUM �
    diubah atau dihapus lewat panen (respons **409**). Mengubah data lain panen (catatan, foto)
    tanpa mengirim `stokBatch` tidak mengubah stok.
 
-6. **Kemasan ↔ produk**: setiap kemasan dihubungkan ke produk olahan (`productId`). QR kemasan
-   membuka halaman produk berisi komposisi, gizi, dan batch-batch produk itu yang bisa dilacak.
+6. **Kemasan ↔ produk ↔ olahan**: kemasan dihubungkan ke produk (`productId`). Saat catat olahan,
+   pilih kemasan yang dipakai (`packagingId`, harus milik produk yang sama) → stok kemasan berkurang
+   `jumlahKemasan` (default = `jumlahHasil`). Ubah/hapus olahan mengembalikan stok kemasan.
+7. **1 batch olahan = 1 QR**: setiap olahan punya QR sendiri (`/produk/<kode>`) yang menampilkan
+   perjalanan persis batch itu. QR kemasan (`/kemasan/<kode>`) adalah QR umum produk untuk desain
+   kemasan cetak massal — menampilkan produksi terbaru.
+
+```
+Kemasan (produk X) ──dipakai──▶ Batch olahan (produk X, jumlah hasil, bahan sorgum)
+   stok −jumlahKemasan              └──▶ QR batch → /produk/<kode>: lahan, tanam, panen, petani, olah
+```
 
 ---
 
@@ -95,9 +104,11 @@ Lahan → Penanaman → Panen (maks 3x) → Gudang: GABAH → Sosoh → SORGUM �
 | Kebutuhan | Cara |
 |---|---|
 | Link & QR batch stok | Field `traceUrl` + `qrUrl` di `GET /warehouse/:id/stock-batches`, `GET /warehouse/stock-sorgum/all`, `GET /warehouse/:id` (`stockBatches`), `GET /harvest/:id` (`stockBatches`) |
-| Link & QR produk olahan | Field `traceUrl` + `qrUrl` di `GET /production` & `GET /production/:id` (dari batch stok bahannya; `null` bila belum tertaut stok) |
+| Link & QR batch olahan (1 olahan = 1 QR) | Field `publicUrl` + `qrUrl` di `GET /production` & `GET /production/:id`; `traceUrl` + `traceQrUrl` = jejak batch bahan sorgum |
 | Link & QR kemasan | Field `publicUrl` + `qrUrl` di `GET /packaging` & `GET /packaging/:id` |
-| Gambar QR batch | `GET /public/qr/trace/:kodeBatchStok` — publik, PNG (default) atau `?format=svg`, `?size=128–1024` |
+| Gambar QR batch olahan | `GET /public/qr/produk/:kodeBatch` — publik, PNG/SVG |
+| Data halaman batch olahan | `GET /public/produk/:kodeBatch` — publik |
+| Gambar QR batch stok | `GET /public/qr/trace/:kodeBatchStok` — publik, PNG (default) atau `?format=svg`, `?size=128–1024` |
 | Gambar QR kemasan | `GET /public/qr/kemasan/:kodeKemasan` — publik, PNG/SVG |
 | Data halaman kemasan | `GET /public/kemasan/:kodeKemasan` — publik (tanpa harga/pemasok/stok) |
 
@@ -188,9 +199,9 @@ Keterangan Auth: **R** = JWT atau API key · **W** = wajib JWT · **—** = publ
 |---|---|---|---|
 | GET | `/production` | R | List (`page`, `limit`, `search`, `lahanId`, `harvestId`) + data asal (lahan, tanam, panen, gudang, batch) |
 | GET | `/production/:id` | R | Detail |
-| POST | `/production` | W | Tambah (`namaProduk`, `productId`, `tanggalProduksi`, `jumlahHasil`, `stockBatchId`, `bahanDigunakan`, …) |
-| PUT | `/production/:id` | W | Update — stok bahan ikut disesuaikan |
-| DELETE | `/production/:id` | W | Hapus — bahan dikembalikan ke stok |
+| POST | `/production` | W | Tambah (`namaProduk`, `productId`, `tanggalProduksi`, `jumlahHasil`, `stockBatchId`, `bahanDigunakan`, `packagingId`, `jumlahKemasan`, …) |
+| PUT | `/production/:id` | W | Update — stok bahan & kemasan ikut disesuaikan |
+| DELETE | `/production/:id` | W | Hapus — bahan & kemasan dikembalikan ke stok |
 
 ### Master Data
 | Method | Path | Auth | Keterangan |
@@ -239,6 +250,8 @@ Kemasan: kirim `productId` untuk menghubungkan ke produk olahan; minimal 1 foto 
 | Method | Path | Auth | Keterangan |
 |---|---|---|---|
 | GET | `/public/trace/:kodeBatchStok` | — | Lacak asal-usul batch (dipakai QR batch) |
+| GET | `/public/produk/:kodeBatch` | — | Cerita satu batch olahan (dipakai QR batch olahan) |
+| GET | `/public/qr/produk/:kodeBatch` | — | Gambar QR batch olahan (`?format=png\|svg&size=`) |
 | GET | `/public/kemasan/:kodeKemasan` | — | Info produk dari kemasan (dipakai QR kemasan) |
 | GET | `/public/qr/trace/:kodeBatchStok` | — | Gambar QR batch (`?format=png\|svg&size=`) |
 | GET | `/public/qr/kemasan/:kodeKemasan` | — | Gambar QR kemasan (`?format=png\|svg&size=`) |

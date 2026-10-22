@@ -12,6 +12,7 @@ import { useUnitSettings } from '../../context/UnitSettingsContext';
 import { warehouseApi } from '../../api/endpoints/warehouseApi';
 import { Toast } from '../../components/common/Toast';
 import { Combobox } from '../../components/common/Combobox';
+import { KemasanPicker } from '../../components/common/KemasanPicker';
 import { formatTanggalId, formatDateTimeId, parseTanggal } from '../../utils/dateUtils';
 import { todayLocalISO, toLocalISODate } from '../../utils/tanggal';
 
@@ -24,6 +25,9 @@ export const ProduksiPage: React.FC = () => {
   // Master produk (dropdown pilihan produk olahan)
   const [productOptions, setProductOptions] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  // Kemasan yang dipakai batch ini (stok kemasan berkurang otomatis saat disimpan)
+  const [kemasanForm, setKemasanForm] = useState<{ packagingId: string; jumlahKemasan: string }>({ packagingId: '', jumlahKemasan: '' });
+  const [kemasanAwal, setKemasanAwal] = useState<{ packagingId: string | null; jumlah: number }>({ packagingId: null, jumlah: 0 });
   // Input produk olahan manual → otomatis masuk Master Produk
   const [addingNewProduct, setAddingNewProduct] = useState(false);
   const [newProductName, setNewProductName] = useState('');
@@ -145,6 +149,8 @@ export const ProduksiPage: React.FC = () => {
     setEditId(null);
     setSelectedStockBatch(null);
     setSelectedProductId(null);
+    setKemasanForm({ packagingId: '', jumlahKemasan: '' });
+    setKemasanAwal({ packagingId: null, jumlah: 0 });
     setAddingNewProduct(false);
     setNewProductName('');
     setNewProductSatuan('Pouch');
@@ -184,6 +190,8 @@ export const ProduksiPage: React.FC = () => {
       gudangId: (item as any).gudangId || null,
     });
     setSelectedProductId((item as any).productId || null);
+    setKemasanForm({ packagingId: item.packagingId || '', jumlahKemasan: item.jumlahKemasan != null ? String(item.jumlahKemasan) : '' });
+    setKemasanAwal({ packagingId: item.packagingId || null, jumlah: Number(item.jumlahKemasan) || 0 });
     // Batch stok terhubung → cari dari daftar global & tampilkan info gudangnya
     const sbId = (item as any).stockBatchId;
     if (sbId) {
@@ -226,6 +234,7 @@ export const ProduksiPage: React.FC = () => {
     }
     const prod = productOptions.find((x) => String(x.id) === productId) || null;
     setSelectedProductId(prod ? String(prod.id) : null);
+    setKemasanForm({ packagingId: '', jumlahKemasan: '' });
     setFormData((prev) => ({
       ...prev,
       productId: prod ? String(prod.id) : (null as any),
@@ -297,6 +306,10 @@ export const ProduksiPage: React.FC = () => {
       bahanDigunakan: bahan > 0 ? bahan : null,
       gudangId: formData.gudangId ? String(formData.gudangId) : null,
       stockBatchId: formData.stockBatchId ? String(formData.stockBatchId) : null,
+      packagingId: kemasanForm.packagingId || null,
+      jumlahKemasan: kemasanForm.packagingId
+        ? (kemasanForm.jumlahKemasan !== '' ? Number(kemasanForm.jumlahKemasan) : Number(formData.jumlahHasil) || 0)
+        : null,
     };
     try {
       if (editId) {
@@ -656,6 +669,16 @@ export const ProduksiPage: React.FC = () => {
                 />
               </div>
             </div>
+
+            <KemasanPicker
+              productId={selectedProductId}
+              packagingId={kemasanForm.packagingId}
+              jumlahKemasan={kemasanForm.jumlahKemasan}
+              jumlahHasil={String(formData.jumlahHasil || '')}
+              terpakaiSebelumnya={kemasanAwal}
+              autoPilih={!editId}
+              onChange={setKemasanForm}
+            />
 
             {/* Bahan yang Digunakan — jumlah & satuan bahan baku */}
             <div className="p-4 bg-[#F1F8E9] border border-[#C3E28D]/50 rounded-2xl space-y-3">

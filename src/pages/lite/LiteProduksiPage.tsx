@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { KemasanPicker } from '../../components/common/KemasanPicker';
 import { todayLocalISO } from '../../utils/tanggal';
 import { Link } from 'react-router-dom';
 import { Plus, Factory, Trash2, Boxes, QrCode, Check, ArrowRight } from 'lucide-react';
@@ -25,6 +26,9 @@ export const LiteProduksiPage: React.FC = () => {
   // Master produk untuk dropdown
   const [productOptions, setProductOptions] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  // Kemasan yang dipakai (stok kemasan berkurang otomatis) — 1 olahan = 1 QR
+  const [kemasanForm, setKemasanForm] = useState<{ packagingId: string; jumlahKemasan: string }>({ packagingId: '', jumlahKemasan: '' });
+  const [kemasanAwal, setKemasanAwal] = useState<{ packagingId: string | null; jumlah: number }>({ packagingId: null, jumlah: 0 });
 
   // Bahan baku: pilih batch stok SORGUM langsung (membawa info gudang asal — seperti Mode Pro)
   const [allStockSorgum, setAllStockSorgum] = useState<
@@ -92,6 +96,8 @@ export const LiteProduksiPage: React.FC = () => {
   const resetForm = () => {
     setEditingId(null);
     setSelectedProductId(null);
+    setKemasanForm({ packagingId: '', jumlahKemasan: '' });
+    setKemasanAwal({ packagingId: null, jumlah: 0 });
     setSelectedStockBatch(null);
     setAddingNewProduct(false);
     setNewProductName('');
@@ -116,6 +122,7 @@ export const LiteProduksiPage: React.FC = () => {
     }
     const prod = productOptions.find((x) => String(x.id) === productId) || null;
     setSelectedProductId(prod ? String(prod.id) : null);
+    setKemasanForm({ packagingId: '', jumlahKemasan: '' });
     setFormData((prev) => ({
       ...prev,
       satuan: prod ? prod.satuanHasil || 'Pouch' : prev.satuan,
@@ -135,6 +142,8 @@ export const LiteProduksiPage: React.FC = () => {
   const handleOpenEdit = (item: ProductionBatch) => {
     setEditingId(item.id);
     setSelectedProductId((item as any).productId ? String((item as any).productId) : null);
+    setKemasanForm({ packagingId: item.packagingId || '', jumlahKemasan: item.jumlahKemasan != null ? String(item.jumlahKemasan) : '' });
+    setKemasanAwal({ packagingId: item.packagingId || null, jumlah: Number(item.jumlahKemasan) || 0 });
     setFormData({
       tanggalProduksi: item.tanggalProduksi ? String(item.tanggalProduksi).slice(0, 10) : '',
       tanggalKadaluarsa: item.tanggalKadaluarsa ? String(item.tanggalKadaluarsa).slice(0, 10) : '',
@@ -211,6 +220,8 @@ export const LiteProduksiPage: React.FC = () => {
       tanggalProduksi: formData.tanggalProduksi,
       tanggalKadaluarsa: formData.tanggalKadaluarsa || null,
       jumlahHasil,
+      packagingId: kemasanForm.packagingId || null,
+      jumlahKemasan: kemasanForm.packagingId ? (kemasanForm.jumlahKemasan !== '' ? Number(kemasanForm.jumlahKemasan) : jumlahHasil) : null,
       bahanDigunakan: bahan > 0 ? bahan : null,
       satuanBahan: 'Kg',
       nomorBatchBahanBaku: bahan > 0 && selectedStockBatch ? selectedStockBatch.kodeBatchStok : '',
@@ -492,6 +503,15 @@ export const LiteProduksiPage: React.FC = () => {
                 />
                 {selectedProductId && <p className="text-[13px] text-[#6B7280] mt-1">Satuan: <b className="text-[#2C4219]">{formData.satuan}</b></p>}
               </div>
+              <KemasanPicker
+                productId={selectedProductId}
+                packagingId={kemasanForm.packagingId}
+                jumlahKemasan={kemasanForm.jumlahKemasan}
+                jumlahHasil={String(formData.jumlahHasil || '')}
+                terpakaiSebelumnya={kemasanAwal}
+                autoPilih={!editingId}
+                onChange={setKemasanForm}
+              />
               <div>
                 <label className="block text-sm font-bold text-[#2C4219] mb-1.5">Tanggal Kadaluarsa <span className="font-normal text-[#6B7280]">— opsional</span></label>
                 <input

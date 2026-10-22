@@ -255,7 +255,10 @@ Tabel utama backend: `users`, `cms_settings`, `lands`, `plantings`, `harvests`, 
 ### Olahan & Lacak
 - Batch olahan wajib punya **Tanggal Produksi**; bahan diambil dari stok **Sorgum Sosoh** dan mengurangi stok gudang.
 - Ubah jumlah bahan → stok disesuaikan; hapus olahan → bahan kembali ke stok.
-- Tombol **Lacak** menampilkan info singkat + **QR** (bisa diunduh). Konsumen memindai QR untuk melihat asal-usul produk.
+- Saat catat olahan, pilih **Kemasan yang Dipakai** (hanya kemasan milik produk itu) → stok kemasan berkurang otomatis.
+- **1 batch olahan = 1 QR**: tombol **Lacak** menampilkan QR khusus batch itu (bisa diunduh) untuk ditempel di
+  kemasan hasil produksi tersebut. Pembeli melihat cerita persis batch itu: desa, tanggal tanam & panen, petani,
+  pengolah, bahan, gizi, dan pesan dari petani — tanpa kode internal.
 
 ### Profil
 - Ubah data profil, **foto avatar** (base64), ganti password.

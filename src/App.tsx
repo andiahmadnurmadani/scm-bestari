@@ -12,6 +12,7 @@ import { LandingPage } from './pages/public/LandingPage';
 import { LoginPage } from './pages/public/LoginPage';
 import { TracePage } from './pages/public/TracePage';
 import { KemasanPublicPage } from './pages/public/KemasanPublicPage';
+import { ProdukPublicPage } from './pages/public/ProdukPublicPage';
 
 // Admin Layout & Pages
 import { AdminLayout } from './components/layout/AdminLayout';
@@ -52,6 +53,7 @@ export default function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/trace/:kodeBatchStok" element={<TracePage />} />
                 <Route path="/kemasan/:kodeKemasan" element={<KemasanPublicPage />} />
+                <Route path="/produk/:kodeBatch" element={<ProdukPublicPage />} />
 
                 {/* Lite Mode Routes (Mode Mudah KWT) */}
                 <Route

@@ -13,7 +13,7 @@ export const DemoBanner: React.FC = () => {
   if (!isDemoMode) return null;
 
   // Halaman QR untuk pembeli: strip tipis di atas agar tidak menutupi cerita produk
-  if (pathname.startsWith('/kemasan/') || pathname.startsWith('/trace/')) {
+  if (pathname.startsWith('/kemasan/') || pathname.startsWith('/trace/') || pathname.startsWith('/produk/')) {
     return (
       <div className="fixed top-0 inset-x-0 z-[60] pointer-events-none bg-amber-100/95 text-amber-900 text-xs font-semibold text-center py-1">
         Mode Demo — data contoh, bukan data asli
