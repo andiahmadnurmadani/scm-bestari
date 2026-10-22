@@ -206,7 +206,7 @@ Keterangan Auth: **R** = JWT atau API key · **W** = wajib JWT · **—** = publ
 ### Master Data
 | Method | Path | Auth | Keterangan |
 |---|---|---|---|
-| GET | `/products` | R | Produk olahan (`isActive`) |
+| GET | `/products` | R | Produk olahan (`isActive`). `satuanHasil`: `Pcs`, `Pouch`, `Kg`, `Botol`, `Box`, `Toples`, `Kemasan` |
 | GET | `/products/:id` | R | Detail produk |
 | POST / PUT / DELETE | `/products`, `/products/:id` | W | Kelola produk (`name`, `satuanHasil`, `deskripsi`, `fotoUrl`, `isActive`) |
 | GET | `/varieties` | R | Varietas (termasuk `lamaPanen` = umur panen hari) |
@@ -238,7 +238,7 @@ Kemasan: kirim `productId` untuk menghubungkan ke produk olahan; minimal 1 foto 
 ### CMS & Pengaturan
 | Method | Path | Auth | Keterangan |
 |---|---|---|---|
-| GET | `/cms` | — | Konten landing page |
+| GET | `/cms` | — | Konten landing page (termasuk `qrPesanPetani`, `qrPesanPengirim` untuk halaman QR) |
 | PUT | `/cms` | W | Simpan konten (objek lengkap) |
 | DELETE | `/cms` | W | Reset ke default |
 | GET | `/cms/settings/:key` | R | Pengaturan aplikasi (mis. `app_units`) |

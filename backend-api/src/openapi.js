@@ -721,7 +721,7 @@ export const openApiSpec = {
 
     // ── CMS ───────────────────────────────────────────────────────────────
     '/cms': {
-      get: { tags: ['CMS'], summary: 'Konten landing page (publik)', responses: { 200: ok({ type: 'object', description: 'Objek konten (siteName, hero*, stats, featureCards, footer*, …)' }) } },
+      get: { tags: ['CMS'], summary: 'Konten landing page (publik)', responses: { 200: ok({ type: 'object', description: 'Objek konten (siteName, hero*, stats, featureCards, footer*, trace*, …) termasuk qrPesanPetani & qrPesanPengirim = pesan dari petani yang tampil di halaman QR pembeli' }) } },
       put: { security: WRITE, tags: ['CMS'], summary: 'Simpan konten landing page (kirim objek konten lengkap)', requestBody: body({ type: 'object' }), responses: { 200: { description: 'Tersimpan' }, 401: E401W } },
       delete: { security: WRITE, tags: ['CMS'], summary: 'Reset konten ke bawaan', responses: { 200: { description: 'Direset' }, 401: E401W } },
     },
