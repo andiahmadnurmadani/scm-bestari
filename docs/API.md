@@ -101,6 +101,8 @@ Kemasan (produk X) ──dipakai──▶ Batch olahan (produk X, jumlah hasil, 
 
 ## 5. QR Code
 
+> Di `/api/docs` semua endpoint QR ada di grup **QR Code**, dan juga muncul di grup **Produksi** (QR batch olahan), **Kemasan** (QR kemasan), dan **Gudang** (QR batch stok).
+
 | Kebutuhan | Cara |
 |---|---|
 | Link & QR batch stok | Field `traceUrl` + `qrUrl` di `GET /warehouse/:id/stock-batches`, `GET /warehouse/stock-sorgum/all`, `GET /warehouse/:id` (`stockBatches`), `GET /harvest/:id` (`stockBatches`) |
