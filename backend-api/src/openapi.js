@@ -127,12 +127,13 @@ export const openApiSpec = {
     {
       name: 'QR Code',
       description:
-        'Semua endpoint QR dalam satu tempat (publik, tanpa login). Ada 3 jenis QR:\n\n' +
-        '| QR | Gambar QR (PNG/SVG) | Data halaman |\n|---|---|---|\n' +
-        '| **Batch olahan** (1 olahan = 1 QR) | `GET /public/qr/produk/{kodeBatch}` | `GET /public/produk/{kodeBatch}` |\n' +
-        '| **Kemasan** (QR umum produk) | `GET /public/qr/kemasan/{kodeKemasan}` | `GET /public/kemasan/{kodeKemasan}` |\n' +
-        '| **Batch stok gudang** (jejak bahan) | `GET /public/qr/trace/{kodeBatchStok}` | `GET /public/trace/{kodeBatchStok}` |\n\n' +
-        'Parameter gambar: `?format=png|svg` dan `?size=128–1024`. Alamat QR juga ada di data API: `qrUrl` / `publicUrl` pada olahan, kemasan, dan batch stok.',
+        'Endpoint untuk **mengambil gambar QR** (publik, tanpa login, format PNG atau SVG). Ada 3 jenis QR:\n\n' +
+        '| QR | Endpoint gambar | Kegunaan |\n|---|---|---|\n' +
+        '| **Batch olahan** (1 olahan = 1 QR) | `GET /public/qr/produk/{kodeBatch}` | Ditempel di kemasan hasil produksi |\n' +
+        '| **Kemasan** | `GET /public/qr/kemasan/{kodeKemasan}` | QR umum untuk desain kemasan cetak massal |\n' +
+        '| **Batch stok gudang** | `GET /public/qr/trace/{kodeBatchStok}` | Jejak bahan sorgum dari gudang |\n\n' +
+        'Parameter: `?format=png|svg` dan `?size=128–1024`. Alamat QR juga ada di data API (`qrUrl` / `publicUrl` pada olahan, kemasan, dan batch stok). ' +
+        'Data halaman yang dibuka saat QR dipindai ada di grup masing-masing: Produksi, Kemasan, dan Gudang.',
     },
     { name: 'Produk Olahan', description: 'Master produk olahan (nama, satuan, foto). QR tersedia per **batch olahan** (grup Produksi) dan per **kemasan** (grup Kemasan) — lihat juga grup **QR Code**.' },
     { name: 'Varietas', description: 'Master varietas sorgum' },
@@ -750,7 +751,7 @@ export const openApiSpec = {
     // ── Publik ────────────────────────────────────────────────────────────
     '/public/produk/{kodeBatch}': {
       get: {
-        tags: ['QR Code', 'Produksi'], summary: 'Data halaman QR batch olahan (1 olahan = 1 QR)',
+        tags: ['Produksi'], summary: 'Data halaman QR batch olahan (1 olahan = 1 QR)',
         parameters: [idParam('kodeBatch', 'Kode batch olahan, mis. PRD-BAS-19102026-01')],
         responses: { 200: ok(ref('PublicProduk')), 404: E404 },
       },
@@ -770,7 +771,7 @@ export const openApiSpec = {
     },
     '/public/kemasan/{kodeKemasan}': {
       get: {
-        tags: ['QR Code', 'Kemasan'], summary: 'Data halaman QR kemasan (komposisi, gizi, batch yang bisa dilacak)',
+        tags: ['Kemasan'], summary: 'Data halaman QR kemasan (komposisi, gizi, batch yang bisa dilacak)',
         parameters: [idParam('kodeKemasan', 'Kode kemasan, mis. KMG-001')],
         responses: { 200: ok(ref('PublicKemasan')), 404: E404 },
       },
@@ -803,7 +804,7 @@ export const openApiSpec = {
     },
     '/public/trace/{kodeBatchStok}': {
       get: {
-        tags: ['QR Code', 'Gudang'], summary: 'Data halaman lacak batch stok gudang (dipakai QR batch stok)',
+        tags: ['Gudang'], summary: 'Data halaman lacak batch stok gudang (dipakai QR batch stok)',
         parameters: [idParam('kodeBatchStok', 'Kode batch stok, mis. SRG-BAS-19102026-01')],
         responses: { 200: ok(ref('BatchTrace')), 404: E404 },
       },

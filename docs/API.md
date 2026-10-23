@@ -101,7 +101,7 @@ Kemasan (produk X) ──dipakai──▶ Batch olahan (produk X, jumlah hasil, 
 
 ## 5. QR Code
 
-> Di `/api/docs` semua endpoint QR ada di grup **QR Code**, dan juga muncul di grup **Produksi** (QR batch olahan), **Kemasan** (QR kemasan), dan **Gudang** (QR batch stok).
+> Di `/api/docs`, grup **QR Code** berisi 3 endpoint **gambar QR** (batch olahan, kemasan, batch stok). Endpoint **data halaman** QR ada di grup **Produksi**, **Kemasan**, dan **Gudang**.
 
 | Kebutuhan | Cara |
 |---|---|
